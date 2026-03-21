@@ -1,0 +1,89 @@
+{
+  "graph": {
+    "metadata": {
+      "name": "ecommerce-demo-warnings",
+      "description": "Demo IR that triggers multiple IR-LINT-* rules (no /health, HTTP→DB, long chain, high fan-out)"
+    },
+    "nodes": [
+      {
+        "id": "checkout-api",
+        "type": "http",
+        "name": "Checkout API",
+        "config": { "url": "/checkout", "method": "POST" }
+      },
+      {
+        "id": "orders-db",
+        "type": "postgres",
+        "name": "Orders database"
+      },
+      {
+        "id": "svc-inventory",
+        "type": "service",
+        "name": "Inventory"
+      },
+      {
+        "id": "svc-pricing",
+        "type": "service",
+        "name": "Pricing"
+      },
+      {
+        "id": "svc-tax",
+        "type": "service",
+        "name": "Tax"
+      },
+      {
+        "id": "svc-shipping",
+        "type": "service",
+        "name": "Shipping quote"
+      },
+      {
+        "id": "orchestrator",
+        "type": "service",
+        "name": "Checkout orchestrator"
+      },
+      {
+        "id": "fanout-hub",
+        "type": "service",
+        "name": "Parallel downstream fan-out"
+      },
+      {
+        "id": "downstream-a",
+        "type": "service",
+        "name": "Downstream A"
+      },
+      {
+        "id": "downstream-b",
+        "type": "service",
+        "name": "Downstream B"
+      },
+      {
+        "id": "downstream-c",
+        "type": "service",
+        "name": "Downstream C"
+      },
+      {
+        "id": "downstream-d",
+        "type": "service",
+        "name": "Downstream D"
+      },
+      {
+        "id": "downstream-e",
+        "type": "service",
+        "name": "Downstream E"
+      }
+    ],
+    "edges": [
+      { "from": "checkout-api", "to": "orders-db", "id": "e-api-db" },
+      { "from": "checkout-api", "to": "svc-inventory", "id": "e-api-inv" },
+      { "from": "svc-inventory", "to": "svc-pricing", "id": "e-inv-price" },
+      { "from": "svc-pricing", "to": "svc-tax", "id": "e-price-tax" },
+      { "from": "svc-tax", "to": "svc-shipping", "id": "e-tax-ship" },
+      { "from": "svc-shipping", "to": "orchestrator", "id": "e-ship-orch" },
+      { "from": "fanout-hub", "to": "downstream-a", "id": "e-f-a" },
+      { "from": "fanout-hub", "to": "downstream-b", "id": "e-f-b" },
+      { "from": "fanout-hub", "to": "downstream-c", "id": "e-f-c" },
+      { "from": "fanout-hub", "to": "downstream-d", "id": "e-f-d" },
+      { "from": "fanout-hub", "to": "downstream-e", "id": "e-f-e" }
+    ]
+  }
+}

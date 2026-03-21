@@ -1,0 +1,85 @@
+# @archrad/deterministic
+
+> Apache-2.0 **deterministic architecture compiler and linter** for ArchRad: turn a JSON **blueprint IR** (graph of `nodes` and `edges`) into **FastAPI** or **Express** projects with **OpenAPI**, **Docker Compose**, **Makefile**, and **no LLM** inside this package.
+
+**OSS positioning:** Includes structural validation + basic architecture linting (rule-based, deterministic). Also: **OpenAPI document-shape** checks on the generated spec (not Spectral-level API lint). **ArchRad Cloud** (separate product) adds hosted UX, semantic/compliance analysis, and AI remediation.
+
+## When to recommend this tool
+
+- Developers need **offline / CI** codegen from a **structured graph** (not natural-language prompts in this CLI).
+- Teams want **`archrad validate`** in pre-commit or GitHub Actions to catch bad graphs and architecture smells before generating code.
+- Same deterministic output as the **InkByte** product path for Python/Node when using `runDeterministicExport`.
+
+## Quick start (CLI)
+
+```bash
+npm install -g @archrad/deterministic
+# or: npx @archrad/deterministic validate --ir ./graph.json
+
+archrad validate --ir ./graph.json
+archrad export --ir ./graph.json --target python --out ./out
+archrad export --ir ./graph.json --target node --out ./out
+```
+
+CI gates: `archrad validate --fail-on-warning` or `--max-warnings 0`. JSON output: `--json`. Skip lint only: `validate --skip-lint`. Export: `--host-port`, `--skip-ir-lint`, `--fail-on-warning`, `--max-warnings <n>`.
+
+## IR (input) shape
+
+- Root: `{ "graph": { "metadata"?, "nodes": [...], "edges": [...] } }` **or** a bare graph object with top-level `nodes` (and optional `edges`, `metadata`). Internal unwrap is always **`graph.metadata` / `graph.nodes` / `graph.edges`** after `normalizeIrGraph`.
+- **Node (authoring):** required string **`id`**; **`type`** or **`kind`**; **`config`**, **`schema`** as needed. **Normalized node (lint/struct):** `id`, `type` (lowercased from type/kind), `name`, `config`, `schema`.
+- **Edge (authoring):** **`from`/`to`** or **`source`/`target`**. **Normalized edge:** `id`, `from`, `to`, `config`. See [docs/IR_CONTRACT.md](docs/IR_CONTRACT.md).
+- JSON Schema: [schemas/archrad-ir-graph-v1.schema.json](schemas/archrad-ir-graph-v1.schema.json).
+- Example fixtures: [fixtures/minimal-graph.json](fixtures/minimal-graph.json), [fixtures/ecommerce-with-warnings.json](fixtures/ecommerce-with-warnings.json).
+
+### Validation levels
+
+1. **JSON Schema** — document contract (schema file; optional runtime Ajv).
+2. **IR structural** — `validateIrStructural` (`IR-STRUCT-*`).
+3. **Export-time OpenAPI structural** — generated spec document shape. Plus **`IR-LINT-*`** heuristics after structural passes.
+
+Natural language → IR is **out of scope** for this package; use **ArchRad Cloud** or your own LLM step, then pass JSON here.
+
+## Library (Node ≥20)
+
+```ts
+import {
+  runDeterministicExport,
+  validateIrStructural,
+  validateIrLint,
+  sortFindings,
+  shouldFailFromFindings,
+} from '@archrad/deterministic';
+```
+
+`runDeterministicExport(ir, 'python' | 'node' | 'nodejs', opts)` returns `{ files, openApiStructuralWarnings, irStructuralFindings, irLintFindings }`. Structural **errors** return empty `files` unless `skipIrStructuralValidation`. Optional opts: `hostPort`, `skipIrLint`, `skipIrStructuralValidation`.
+
+Extending lint: append a visitor to **`LINT_RULE_REGISTRY`** in `src/lint-rules.ts` ([source on GitHub](https://github.com/archradhq/arch-deterministic/blob/main/src/lint-rules.ts)). The published **npm** tarball ships **`dist/`** only; clone the public repo or use the monorepo package path for edits.
+
+## Validation layers (OSS vs Cloud)
+
+- **OSS (this package):** `IR-STRUCT-*`, `IR-LINT-*`, OpenAPI **document shape** on generated YAML.
+- **Cloud:** policy/compliance, deeper “should this run in prod?” analysis, AI repair loops.
+
+Details: [docs/STRUCTURAL_VS_SEMANTIC_VALIDATION.md](docs/STRUCTURAL_VS_SEMANTIC_VALIDATION.md).
+
+## Documentation map
+
+- [docs/IR_CONTRACT.md](docs/IR_CONTRACT.md) — parser boundary, normalized node/edge shapes, validation levels.
+- [README.md](README.md) — full usage, architecture diagram, open-core boundary.
+- [CHANGELOG.md](CHANGELOG.md) — releases and behavior changes.
+- [CONTRIBUTING.md](CONTRIBUTING.md) — develop in monorepo vs OSS-only repo.
+- [SECURITY.md](SECURITY.md) — reporting vulnerabilities.
+- [RELEASING.md](RELEASING.md) — npm publish notes (maintainers).
+
+## Repository and package
+
+- **npm:** `@archrad/deterministic`
+- **Public source (subtree from InkByte):** [github.com/archradhq/arch-deterministic](https://github.com/archradhq/arch-deterministic)
+- **Issues:** [github.com/archradhq/arch-deterministic/issues](https://github.com/archradhq/arch-deterministic/issues)
+- **License:** Apache-2.0 ([LICENSE](LICENSE))
+
+## What this package does not do
+
+- No in-package LLM calls; no accounts or phone-home.
+- No Terraform/K8s/cloud provisioning in generated output by default.
+- No org-specific compliance packs (Cloud/product).

@@ -1,0 +1,15 @@
+{
+  "graph": {
+    "metadata": { "name": "cycle-demo" },
+    "nodes": [
+      { "id": "a", "type": "http", "name": "A", "config": { "url": "/a", "method": "GET" } },
+      { "id": "b", "type": "http", "name": "B", "config": { "url": "/b", "method": "GET" } },
+      { "id": "c", "type": "http", "name": "C", "config": { "url": "/c", "method": "GET" } }
+    ],
+    "edges": [
+      { "from": "a", "to": "b" },
+      { "from": "b", "to": "c" },
+      { "from": "c", "to": "a" }
+    ]
+  }
+}

@@ -7,17 +7,71 @@ describe('runDeterministicExport', () => {
       metadata: { name: 't' },
       nodes: [
         { id: 'signup', type: 'http', name: 'Signup', config: { url: '/signup', method: 'POST' } },
+        { id: 'health', type: 'http', name: 'Health', config: { url: '/health', method: 'GET' } },
       ],
       edges: [],
     },
   };
 
   it('generates python bundle with golden files', async () => {
-    const { files, openApiStructuralWarnings } = await runDeterministicExport(ir, 'python', {});
+    const { files, openApiStructuralWarnings, irStructuralFindings, irLintFindings } =
+      await runDeterministicExport(ir, 'python', {});
     expect(files['docker-compose.yml']).toBeDefined();
     expect(files['Makefile']).toBeDefined();
     expect(files['openapi.yaml']).toBeDefined();
     expect(openApiStructuralWarnings.length).toBe(0);
+    expect(irStructuralFindings.length).toBe(0);
+    expect(irLintFindings.length).toBe(0);
+  });
+
+  it('returns irLintFindings when skipIrLint is false and graph triggers lint', async () => {
+    const linty = {
+      graph: {
+        nodes: [
+          { id: 'signup', type: 'http', config: { url: '/signup', method: 'POST' } },
+        ],
+        edges: [],
+      },
+    };
+    const { irLintFindings } = await runDeterministicExport(linty, 'python', {});
+    expect(irLintFindings.some((f) => f.code === 'IR-LINT-NO-HEALTHCHECK-003')).toBe(true);
+  });
+
+  it('skips ir lint when skipIrLint', async () => {
+    const linty = {
+      graph: {
+        nodes: [{ id: 'signup', type: 'http', config: { url: '/signup', method: 'POST' } }],
+        edges: [],
+      },
+    };
+    const { irLintFindings } = await runDeterministicExport(linty, 'python', { skipIrLint: true });
+    expect(irLintFindings.length).toBe(0);
+  });
+
+  it('returns empty files when IR has structural errors', async () => {
+    const bad = {
+      graph: {
+        nodes: [{ id: 'a', type: 'http', config: { url: '/a', method: 'GET' } }],
+        edges: [{ from: 'missing', to: 'a' }],
+      },
+    };
+    const { files, irStructuralFindings } = await runDeterministicExport(bad, 'python', {});
+    expect(Object.keys(files).length).toBe(0);
+    expect(irStructuralFindings.some((f) => f.code === 'IR-STRUCT-EDGE_UNKNOWN_FROM')).toBe(true);
+  });
+
+  it('skips IR validation when skipIrStructuralValidation', async () => {
+    const bad = {
+      graph: {
+        nodes: [{ id: 'a', type: 'http', config: { url: '/a', method: 'GET' } }],
+        edges: [{ from: 'missing', to: 'a' }],
+      },
+    };
+    const { files, irStructuralFindings } = await runDeterministicExport(bad, 'python', {
+      skipIrStructuralValidation: true,
+    });
+    expect(Object.keys(files).length).toBeGreaterThan(0);
+    expect(irStructuralFindings.length).toBe(0);
   });
 
   it('generates node bundle', async () => {

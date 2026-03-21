@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseOpenApiString, validateOpenApiStructural, validateOpenApiInBundleStructural } from './openapi-structural.js';
 
-describe('@archrad/deterministic openapi', () => {
+describe('@archrad/deterministic openapi document-shape', () => {
   it('accepts minimal OpenAPI 3.0', () => {
     const yaml = `openapi: 3.0.0
 info:

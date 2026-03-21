@@ -1,5 +1,7 @@
 /**
- * OpenAPI 3.x structural validation (parse + minimal shape checks). No LLM, no network.
+ * OpenAPI 3.x **document shape**: parse JSON/YAML and check required top-level fields
+ * (`openapi` version, `paths`, `info.title`, `info.version`). Not Spectral-style API lint
+ * (no `security`, `operationId`, or style rules). No LLM, no network.
  */
 
 import yaml from 'js-yaml';
@@ -30,7 +32,7 @@ export function parseOpenApiString(content: string): { doc: Record<string, unkno
   return null;
 }
 
-/** Minimal structural validation (parseable OpenAPI 3.x with paths + info). */
+/** Minimal **document shape** validation (parseable OpenAPI 3.x with paths + info). */
 export function validateOpenApiStructural(doc: unknown): { ok: boolean; errors: string[] } {
   const errors: string[] = [];
   if (!doc || typeof doc !== 'object') {
@@ -59,7 +61,7 @@ export function serializeOpenApiDoc(doc: Record<string, unknown>, format: 'yaml'
   return yaml.dump(doc, { lineWidth: 120, noRefs: true, skipInvalid: true });
 }
 
-/** Validate OpenAPI in bundle without mutation or LLM repair. */
+/** Validate generated OpenAPI file in bundle (document shape only; no mutation or LLM repair). */
 export function validateOpenApiInBundleStructural(files: Record<string, string>): {
   ok: boolean;
   path: string | null;

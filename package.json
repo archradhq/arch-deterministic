@@ -1,12 +1,29 @@
 {
   "name": "@archrad/deterministic",
   "version": "0.1.0",
-  "description": "Deterministic FastAPI/Express export: generators, structural OpenAPI, golden Docker/Makefile — no LLM.",
+  "description": "Deterministic architecture compiler & linter. OSS: structural validation + basic architecture linting (rule-based, deterministic); FastAPI/Express export; OpenAPI document-shape; golden Docker/Makefile — no LLM.",
+  "keywords": [
+    "archrad",
+    "openapi",
+    "fastapi",
+    "express",
+    "deterministic",
+    "codegen",
+    "docker",
+    "cli"
+  ],
+  "homepage": "https://github.com/archradhq/arch-deterministic#readme",
+  "bugs": {
+    "url": "https://github.com/archradhq/arch-deterministic/issues"
+  },
   "type": "module",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/archradhq/arch-deterministic.git"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -23,10 +40,15 @@
   "files": [
     "dist",
     "fixtures",
+    "schemas",
     "scripts",
     "LICENSE",
     "README.md",
-    "CONTRIBUTING.md"
+    "llms.txt",
+    "docs",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

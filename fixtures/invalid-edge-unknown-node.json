@@ -1,0 +1,14 @@
+{
+  "graph": {
+    "metadata": { "name": "bad-edge" },
+    "nodes": [
+      {
+        "id": "signup",
+        "type": "http",
+        "name": "Signup",
+        "config": { "url": "/signup", "method": "POST" }
+      }
+    ],
+    "edges": [{ "from": "ghost", "to": "signup" }]
+  }
+}
