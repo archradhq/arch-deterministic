@@ -1,0 +1,9 @@
+# Active when this folder is the root of the public OSS repo (after subtree split / export).
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
