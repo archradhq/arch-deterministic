@@ -7,6 +7,7 @@ import generatePythonFastAPIFiles from './pythonFastAPI.js';
 import generateNodeExpressFiles from './nodeExpress.js';
 import { applyFastApiGoldenLayer, applyNodeExpressGoldenLayer } from './golden-bundle.js';
 import { validateOpenApiInBundleStructural } from './openapi-structural.js';
+import { normalizeGoldenHostPort } from './hostPort.js';
 
 export type DeterministicExportResult = {
   files: Record<string, string>;
@@ -24,23 +25,17 @@ export async function runDeterministicExport(
 ): Promise<DeterministicExportResult> {
   const t = String(target || '').toLowerCase();
   let files: Record<string, string> = {};
+  const hostPort = normalizeGoldenHostPort(
+    opts.hostPort ?? opts.goldenHostPort ?? process.env.ARCHRAD_HOST_PORT
+  );
+  const goldenOpts = { hostPort };
 
   if (t === 'python') {
     files = await generatePythonFastAPIFiles(actualIR, opts).catch(() => ({} as Record<string, string>));
-    applyFastApiGoldenLayer(files);
+    applyFastApiGoldenLayer(files, goldenOpts);
   } else if (t === 'node' || t === 'nodejs') {
     files = await generateNodeExpressFiles(actualIR, opts).catch(() => ({} as Record<string, string>));
-    const det = await generateNodeExpressFiles(actualIR, opts).catch(() => ({} as Record<string, string>));
-    if (det['openapi.yaml']) {
-      files['openapi.yaml'] = det['openapi.yaml'];
-    }
-    if (!files['app/index.js'] && det['app/index.js']) {
-      files['app/index.js'] = det['app/index.js'];
-    }
-    if (!files['package.json'] && det['package.json']) {
-      files['package.json'] = det['package.json'];
-    }
-    applyNodeExpressGoldenLayer(files);
+    applyNodeExpressGoldenLayer(files, goldenOpts);
   } else {
     throw new Error(
       `runDeterministicExport: unsupported target "${target}". Use "python", "node", or "nodejs".`

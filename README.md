@@ -13,7 +13,7 @@ IR (nodes/edges)  →  pythonFastAPI | nodeExpress generators
                            ↓
               openapi.yaml + app code + package metadata
                            ↓
-              golden layer (Dockerfile, docker-compose.yml, Makefile, README, port 8080)
+              golden layer (Dockerfile, docker-compose.yml, Makefile, README; host→container e.g. 8080:8080)
                            ↓
               validateOpenApiInBundleStructural(openapi.yaml)  →  warnings (no silent broken spec)
                            ↓
@@ -37,6 +37,8 @@ IR (nodes/edges)  →  pythonFastAPI | nodeExpress generators
 
 ### CLI
 
+**Input is structured IR (JSON), not natural language.** There is no `archrad export --prompt "..."`. You pass a **graph file** (nodes/edges) like `fixtures/minimal-graph.json`. To go from **plain English → IR**, use **ArchRad Cloud** or your own LLM step; this package only does **IR → files**.
+
 After `npm run build` (or `npm install`, which runs `prepare`):
 
 ```bash
@@ -48,15 +50,31 @@ archrad export --ir ./graph.json --target node --out ./my-express-api
 - **`--ir`** — JSON: `{ "graph": { "nodes", "edges", "metadata" } }` or a raw graph (CLI wraps it).
 - **`--target`** — `python` \| `node` \| `nodejs`
 - **`--out`** — output directory (created if needed)
+- **`--host-port <n>`** — host port Docker publishes (default **8080**; container still listens on **8080** inside). Same as env **`ARCHRAD_HOST_PORT`**.
+- **`--skip-host-port-check`** — don’t probe `127.0.0.1` before export.
+- **`--strict-host-port`** — **exit with error** if the host port appears **in use** (CI-friendly).
+
+By default, if **8080** (or your `--host-port`) looks **busy** on localhost, the CLI **warns** so you can change the port before `docker compose` fails with a bind error.
+
+### Validate the package as a developer
+
+1. `cd packages/deterministic && npm ci && npm run build && npm test`
+2. `node dist/cli.js export --ir fixtures/minimal-graph.json --target python --out ./tmp-out`
+3. `cd tmp-out && make run` then `curl` the URL shown in the generated **README** (port matches `--host-port` if you set it).
+4. Optional: `node dist/cli.js export ... --host-port 18080` if **8080** is already taken.
 
 ### Library
 
 ```typescript
 import { runDeterministicExport } from '@archrad/deterministic';
 
-const { files, openApiStructuralWarnings } = await runDeterministicExport(ir, 'python', {});
+const { files, openApiStructuralWarnings } = await runDeterministicExport(ir, 'python', {
+  hostPort: 8080, // optional; docker-compose publishes hostPort:8080
+});
 // Integrate `files` into your zip/IDP pipeline; log or surface warnings in your UI.
 ```
+
+Optional: `isLocalHostPortFree` / `normalizeGoldenHostPort` from the same package if you want your own preflight.
 
 ---
 
@@ -101,7 +119,7 @@ You can depend on this CLI and library **without** ArchRad Cloud. The cloud prod
 
 ## Monorepo vs public OSS repo
 
-The **canonical source** for this engine may live in a **private monorepo** next to the full product; `server` can depend on `file:../packages/deterministic`. The **public** GitHub repo should contain **only** this package — see **`docs/OSS_VS_PRODUCT_REPOS.md`** and **`docs/PUBLISH_DETERMINISTIC_OSS.md`** (in the product monorepo) for subtree publish steps.
+The **canonical source** for this engine may live in a **private monorepo** next to the full product; `server` can depend on `file:../packages/deterministic`. The **public** GitHub repo should contain **only** this package — canonical clone: **`https://github.com/archradhq/arch-deterministic`**. Subtree publish: **`docs/OSS_VS_PRODUCT_REPOS.md`** and **`docs/PUBLISH_DETERMINISTIC_OSS.md`** (in the product monorepo).
 
 ---
 

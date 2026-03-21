@@ -1,4 +1,4 @@
-# Runs when this directory is the Git repository root (public archradhq/deterministic).
+# Runs when this directory is the Git repository root (public archradhq/arch-deterministic).
 # In the full monorepo, GitHub only loads workflows from repo root — this file is inactive here until subtree-split or copy-export.
 
 name: CI

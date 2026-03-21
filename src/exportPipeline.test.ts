@@ -25,4 +25,10 @@ describe('runDeterministicExport', () => {
     expect(files['docker-compose.yml']).toBeDefined();
     expect(files['package.json']).toBeDefined();
   });
+
+  it('maps custom golden host port in compose and README', async () => {
+    const { files } = await runDeterministicExport(ir, 'python', { hostPort: 18080 });
+    expect(files['docker-compose.yml']).toContain('"18080:8080"');
+    expect(files['README.md']).toContain('localhost:18080');
+  });
 });

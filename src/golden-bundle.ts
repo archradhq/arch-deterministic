@@ -1,21 +1,30 @@
 /**
  * Golden-path assets: IR-aligned OpenAPI is supplied by the caller (deterministic exporter).
  * This module only applies Docker Compose, Dockerfile, Makefile, README section, and port patches.
+ *
+ * `hostPort` is the machine port (left side of docker publish). Container listens on 8080.
  */
 
-const GOLDEN_COMPOSE = `version: '3.8'
+export type GoldenLayerOptions = {
+  /** Host port for `docker compose` publish (default 8080). Container port stays 8080. */
+  hostPort?: number;
+};
+
+function fastApiCompose(hostPort: number): string {
+  return `version: '3.8'
 
 services:
   api:
     build: .
     ports:
-      - "8080:8080"
+      - "${hostPort}:8080"
     volumes:
       - .:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
     environment:
       - PYTHONUNBUFFERED=1
 `;
+}
 
 const GOLDEN_DOCKERFILE = `FROM python:3.11-slim
 WORKDIR /app
@@ -26,13 +35,14 @@ EXPOSE 8080
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
 `;
 
-const GOLDEN_NODE_COMPOSE = `version: '3.8'
+function nodeCompose(hostPort: number): string {
+  return `version: '3.8'
 
 services:
   api:
     build: .
     ports:
-      - "8080:8080"
+      - "${hostPort}:8080"
     volumes:
       - .:/app
     working_dir: /app
@@ -41,6 +51,7 @@ services:
       - PORT=8080
       - NODE_ENV=development
 `;
+}
 
 const GOLDEN_NODE_DOCKERFILE = `FROM node:20-bookworm-slim
 WORKDIR /app
@@ -77,20 +88,25 @@ const README_GOLDEN_MARKER = '<!-- ARCHRAD_GOLDEN_PATH -->';
 
 export type GoldenStack = 'fastapi' | 'express';
 
-function appendGoldenReadmeSection(readme: string, stack: GoldenStack = 'fastapi'): string {
+function appendGoldenReadmeSection(
+  readme: string,
+  stack: GoldenStack = 'fastapi',
+  hostPort: number = 8080
+): string {
+  const hp = hostPort;
   const validationBlurb =
     stack === 'express'
       ? `Try validation on a signup-style POST (empty body should fail schema checks):
 
 \`\`\`bash
-curl -sS -X POST http://localhost:8080/signup -H "Content-Type: application/json" -d '{}'
+curl -sS -X POST http://localhost:${hp}/signup -H "Content-Type: application/json" -d '{}'
 \`\`\`
 
 Expect **400 Bad Request** (or **422** if mapped) with **details** when routes use Ajv/OpenAPI-style validation — field errors should list missing/invalid keys.`
       : `Try validation on a signup-style POST (empty body should fail FastAPI/Pydantic checks):
 
 \`\`\`bash
-curl -sS -X POST http://localhost:8080/signup -H "Content-Type: application/json" -d '{}'
+curl -sS -X POST http://localhost:${hp}/signup -H "Content-Type: application/json" -d '{}'
 \`\`\`
 
 Expect **422 Unprocessable Entity** (default FastAPI) or **400** if routes use custom validation — field errors should list missing/invalid keys.`;
@@ -105,7 +121,7 @@ make run
 # or: docker compose up --build
 \`\`\`
 
-Service listens on **http://localhost:8080** (hot reload: **FastAPI** = uvicorn --reload; **Express** = \`node --watch\` in compose).
+Service listens on **http://localhost:${hp}** (maps host **${hp}** → container **8080**; hot reload: **FastAPI** = uvicorn --reload; **Express** = \`node --watch\` in compose).
 
 ${validationBlurb}
 
@@ -127,15 +143,23 @@ export function patchMainPyPort8080(content: string): string {
 }
 
 /** Merge golden Docker/Makefile/README into an existing FastAPI file map. Caller must already set openapi.yaml from the deterministic exporter. */
-export function applyFastApiGoldenLayer(filesMap: Record<string, string>): void {
-  filesMap['docker-compose.yml'] = GOLDEN_COMPOSE;
+export function applyFastApiGoldenLayer(
+  filesMap: Record<string, string>,
+  options: GoldenLayerOptions = {}
+): void {
+  const hostPort = options.hostPort ?? 8080;
+  filesMap['docker-compose.yml'] = fastApiCompose(hostPort);
   filesMap['Dockerfile'] = GOLDEN_DOCKERFILE;
   filesMap['Makefile'] = GOLDEN_MAKEFILE;
 
   if (filesMap['app/main.py']) {
     filesMap['app/main.py'] = patchMainPyPort8080(filesMap['app/main.py']);
   }
-  filesMap['README.md'] = appendGoldenReadmeSection(filesMap['README.md'] || '# Generated API\n', 'fastapi');
+  filesMap['README.md'] = appendGoldenReadmeSection(
+    filesMap['README.md'] || '# Generated API\n',
+    'fastapi',
+    hostPort
+  );
 }
 
 /** Normalize Express entry to listen on 8080 by default. */
@@ -158,8 +182,12 @@ export function mergePackageJsonScripts(pkg: string): string {
 }
 
 /** Golden layer for Express: expects openapi.yaml (and app files) from caller when available. */
-export function applyNodeExpressGoldenLayer(filesMap: Record<string, string>): void {
-  filesMap['docker-compose.yml'] = GOLDEN_NODE_COMPOSE;
+export function applyNodeExpressGoldenLayer(
+  filesMap: Record<string, string>,
+  options: GoldenLayerOptions = {}
+): void {
+  const hostPort = options.hostPort ?? 8080;
+  filesMap['docker-compose.yml'] = nodeCompose(hostPort);
   filesMap['Dockerfile'] = GOLDEN_NODE_DOCKERFILE;
   filesMap['Makefile'] = GOLDEN_NODE_MAKEFILE;
 
@@ -172,6 +200,7 @@ export function applyNodeExpressGoldenLayer(filesMap: Record<string, string>): v
 
   filesMap['README.md'] = appendGoldenReadmeSection(
     filesMap['README.md'] || '# Generated Express API\n',
-    'express'
+    'express',
+    hostPort
   );
 }

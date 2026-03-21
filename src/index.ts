@@ -17,7 +17,14 @@ export {
   patchExpressIndexPort8080,
   mergePackageJsonScripts,
   type GoldenStack,
+  type GoldenLayerOptions,
 } from './golden-bundle.js';
+
+export {
+  DEFAULT_GOLDEN_HOST_PORT,
+  normalizeGoldenHostPort,
+  isLocalHostPortFree,
+} from './hostPort.js';
 
 export * from './edgeConfigCodeGenerator.js';
 
