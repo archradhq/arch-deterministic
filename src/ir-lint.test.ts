@@ -10,6 +10,11 @@ const readFixture = (name: string) =>
   JSON.parse(readFileSync(join(__dirname, '..', 'fixtures', name), 'utf8'));
 
 describe('validateIrLint', () => {
+  it('returns structural findings when IR root is invalid (not silent [])', () => {
+    const f = validateIrLint(null);
+    expect(f.some((x) => x.code === 'IR-STRUCT-INVALID_ROOT')).toBe(true);
+  });
+
   it('flags HTTP → database direct edge', () => {
     const ir = {
       graph: {
@@ -33,6 +38,17 @@ describe('validateIrLint', () => {
     };
     const f = validateIrLint(ir);
     expect(f.some((x) => x.code === 'IR-LINT-NO-HEALTHCHECK-003')).toBe(true);
+  });
+
+  it('does not flag health when /ping present', () => {
+    const ir = {
+      graph: {
+        nodes: [{ id: 'api', type: 'http', config: { url: '/internal/ping', method: 'GET' } }],
+        edges: [],
+      },
+    };
+    const f = validateIrLint(ir);
+    expect(f.some((x) => x.code === 'IR-LINT-NO-HEALTHCHECK-003')).toBe(false);
   });
 
   it('does not flag health when /health present', () => {
@@ -78,7 +94,27 @@ describe('validateIrLint', () => {
     expect(f.some((x) => x.code === 'IR-LINT-SYNC-CHAIN-001')).toBe(true);
   });
 
-  it('ecommerce-with-warnings.json is structurally valid and triggers all four IR-LINT categories', () => {
+  it('IR-LINT-SYNC-CHAIN-001 skips edges marked async (metadata.protocol)', () => {
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'a', type: 'http', config: { url: '/a', method: 'GET' } },
+          { id: 'b', type: 'service' },
+          { id: 'c', type: 'service' },
+          { id: 'd', type: 'service' },
+        ],
+        edges: [
+          { from: 'a', to: 'b' },
+          { from: 'b', to: 'c', metadata: { protocol: 'async' } },
+          { from: 'c', to: 'd' },
+        ],
+      },
+    };
+    const f = validateIrLint(ir);
+    expect(f.some((x) => x.code === 'IR-LINT-SYNC-CHAIN-001')).toBe(false);
+  });
+
+  it('ecommerce-with-warnings.json is structurally valid and triggers baseline IR-LINT categories', () => {
     const ir = readFixture('ecommerce-with-warnings.json');
     const structural = validateIrStructural(ir);
     expect(structural.filter((x) => x.severity === 'error')).toHaveLength(0);
@@ -88,5 +124,76 @@ describe('validateIrLint', () => {
     expect(codes.has('IR-LINT-HIGH-FANOUT-004')).toBe(true);
     expect(codes.has('IR-LINT-SYNC-CHAIN-001')).toBe(true);
     expect(codes.has('IR-LINT-NO-HEALTHCHECK-003')).toBe(true);
+  });
+
+  it('IR-LINT-ISOLATED-NODE-005 when a node has no edges but graph has other edges', () => {
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'a', type: 'http', name: 'A', config: { url: '/a', method: 'GET' } },
+          { id: 'b', type: 'service', name: 'B' },
+          { id: 'orphan', type: 'service', name: 'Orphan' },
+        ],
+        edges: [{ from: 'a', to: 'b' }],
+      },
+    };
+    const f = validateIrLint(ir);
+    expect(f.some((x) => x.code === 'IR-LINT-ISOLATED-NODE-005' && x.nodeId === 'orphan')).toBe(true);
+  });
+
+  it('IR-LINT-DUPLICATE-EDGE-006', () => {
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'x', type: 'http', name: 'X', config: { url: '/x', method: 'GET' } },
+          { id: 'y', type: 'service', name: 'Y' },
+        ],
+        edges: [
+          { from: 'x', to: 'y' },
+          { from: 'x', to: 'y' },
+        ],
+      },
+    };
+    const f = validateIrLint(ir);
+    expect(f.some((x) => x.code === 'IR-LINT-DUPLICATE-EDGE-006')).toBe(true);
+  });
+
+  it('IR-LINT-HTTP-MISSING-NAME-007', () => {
+    const ir = {
+      graph: {
+        nodes: [{ id: 'api', type: 'http', config: { url: '/x', method: 'GET' } }],
+        edges: [],
+      },
+    };
+    const f = validateIrLint(ir);
+    expect(f.some((x) => x.code === 'IR-LINT-HTTP-MISSING-NAME-007')).toBe(true);
+  });
+
+  it('IR-LINT-DATASTORE-NO-INCOMING-008', () => {
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'api', type: 'http', name: 'API', config: { url: '/x', method: 'GET' } },
+          { id: 'db', type: 'postgres', name: 'DB' },
+        ],
+        edges: [],
+      },
+    };
+    const f = validateIrLint(ir);
+    expect(f.some((x) => x.code === 'IR-LINT-DATASTORE-NO-INCOMING-008')).toBe(true);
+  });
+
+  it('IR-LINT-MULTIPLE-HTTP-ENTRIES-009', () => {
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'a', type: 'http', name: 'A', config: { url: '/a', method: 'GET' } },
+          { id: 'b', type: 'http', name: 'B', config: { url: '/b', method: 'GET' } },
+        ],
+        edges: [],
+      },
+    };
+    const f = validateIrLint(ir);
+    expect(f.some((x) => x.code === 'IR-LINT-MULTIPLE-HTTP-ENTRIES-009')).toBe(true);
   });
 });

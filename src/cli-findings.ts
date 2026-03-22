@@ -20,9 +20,7 @@ export function formatFindingLines(f: IrStructuralFinding): string[] {
   return lines;
 }
 
-export function printFindingsPretty(findings: IrStructuralFinding[], header?: string): void {
-  if (!findings.length) return;
-  if (header) console.error(header);
+function printFindingBlock(findings: IrStructuralFinding[]): void {
   for (const f of findings) {
     for (const line of formatFindingLines(f)) {
       console.error(line);
@@ -31,8 +29,41 @@ export function printFindingsPretty(findings: IrStructuralFinding[], header?: st
   }
 }
 
+/**
+ * Pretty-print findings. By default groups **IR structural (IR-STRUCT-*)** and **architecture lint (IR-LINT-*)** so both are obvious in CI logs.
+ */
+export function printFindingsPretty(
+  findings: IrStructuralFinding[],
+  header?: string,
+  options?: { groupByLayer?: boolean }
+): void {
+  if (!findings.length) return;
+  if (header) console.error(header);
+  const group = options?.groupByLayer !== false;
+  if (!group) {
+    printFindingBlock(findings);
+    return;
+  }
+  const structural = findings.filter((f) => f.code.startsWith('IR-STRUCT-'));
+  const lint = findings.filter((f) => f.code.startsWith('IR-LINT-'));
+  const other = findings.filter((f) => !f.code.startsWith('IR-STRUCT-') && !f.code.startsWith('IR-LINT-'));
+  if (structural.length) {
+    console.error('IR structural (IR-STRUCT-*):');
+    printFindingBlock(structural);
+  }
+  if (lint.length) {
+    console.error('Architecture lint (IR-LINT-*):');
+    printFindingBlock(lint);
+  }
+  if (other.length) {
+    console.error('Other findings:');
+    printFindingBlock(other);
+  }
+}
+
 export type ValidationExitPolicy = {
-  failOnWarning: boolean;
+  /** When true, any warning fails the run (CI gate). */
+  failOnWarning?: boolean;
   /** Fail when warning count is strictly greater than this (undefined = no limit) */
   maxWarnings?: number;
 };
@@ -45,7 +76,7 @@ export function countBySeverity(findings: IrStructuralFinding[], sev: IrStructur
 export function shouldFailFromFindings(findings: IrStructuralFinding[], policy: ValidationExitPolicy): boolean {
   if (findings.some((f) => f.severity === 'error')) return true;
   const w = countBySeverity(findings, 'warning');
-  if (policy.failOnWarning && w > 0) return true;
+  if (Boolean(policy.failOnWarning) && w > 0) return true;
   if (policy.maxWarnings != null && w > policy.maxWarnings) return true;
   return false;
 }

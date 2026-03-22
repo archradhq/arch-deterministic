@@ -1,7 +1,7 @@
 {
   "name": "@archrad/deterministic",
   "version": "0.1.0",
-  "description": "Deterministic architecture compiler & linter. OSS: structural validation + basic architecture linting (rule-based, deterministic); FastAPI/Express export; OpenAPI document-shape; golden Docker/Makefile — no LLM.",
+  "description": "A deterministic compiler and linter for system architecture. Validate your architecture before you write code. OSS: structural validation + basic architecture lint (rule-based); FastAPI/Express export; OpenAPI document-shape; golden Docker/Makefile — no LLM.",
   "keywords": [
     "archrad",
     "openapi",
@@ -39,6 +39,8 @@
   },
   "files": [
     "dist",
+    "demo-validate.gif",
+    "demo.gif",
     "fixtures",
     "schemas",
     "scripts",
@@ -48,18 +50,23 @@
     "docs",
     "CONTRIBUTING.md",
     "SECURITY.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "biome.json"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "prepare": "npm run build",
-    "test": "vitest run"
+    "prepublishOnly": "npm run build",
+    "test": "tsc -p tsconfig.build.json --noEmit && vitest run",
+    "lint": "biome check ./src",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit"
   },
   "dependencies": {
     "commander": "^12.1.0",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/js-yaml": "^4.0.9",
     "typescript": "^5.9.3",
     "vitest": "^4.0.15"
   },

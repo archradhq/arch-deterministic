@@ -55,6 +55,19 @@ export {
 
 export { validateIrLint } from './ir-lint.js';
 export { runArchitectureLinting, LINT_RULE_REGISTRY } from './lint-rules.js';
-export { buildParsedLintGraph, type ParsedLintGraph } from './lint-graph.js';
+export {
+  buildParsedLintGraph,
+  isParsedLintGraph,
+  type ParsedLintGraph,
+  type BuildParsedLintGraphResult,
+} from './lint-graph.js';
+
+export { isHttpLikeType, isDbLikeType, isQueueLikeNodeType } from './graphPredicates.js';
 
 export { sortFindings, shouldFailFromFindings, type ValidationExitPolicy } from './cli-findings.js';
+
+export {
+  parseYamlToCanonicalIr,
+  canonicalIrToJsonString,
+  YamlGraphParseError,
+} from './yamlToIr.js';

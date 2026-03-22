@@ -8,8 +8,8 @@ If you clone **only** this repository (`archradhq/arch-deterministic`):
 
 ```bash
 npm ci
-npm run build
-npm test
+npm run build   # required: there is no prepare script (see docs/ENGINEERING_NOTES.md)
+npm test        # runs tsc --noEmit then vitest
 ```
 
 PRs: keep changes **free of product-specific** imports (no Firestore, no `server/` paths). Apache-2.0 — see `LICENSE`.

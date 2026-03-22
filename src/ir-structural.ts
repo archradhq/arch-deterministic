@@ -3,6 +3,7 @@
  * OSS boundary: shape, references, cycles — not security/compliance semantics (ArchRad Cloud).
  */
 
+import { isHttpLikeType } from './graphPredicates.js';
 import { materializeNormalizedGraph } from './ir-normalize.js';
 
 export type IrStructuralSeverity = 'error' | 'warning' | 'info';
@@ -97,7 +98,6 @@ export function validateIrStructural(ir: unknown): IrStructuralFinding[] {
     });
     return findings;
   }
-
   const { normalized, edgesInputWasMalformed } = materializeNormalizedGraph(graph);
   if (edgesInputWasMalformed) {
     findings.push({
@@ -110,7 +110,11 @@ export function validateIrStructural(ir: unknown): IrStructuralFinding[] {
 
   const edges: unknown[] = Array.isArray(graph.edges) ? (graph.edges as unknown[]) : [];
 
-  const nodeIds = new Set<string>();
+  /** Ids that appear on at least one valid node object with a non-empty id */
+  const seenIds = new Set<string>();
+  /** Ids that appear on more than one node — edges must not treat these as unambiguous */
+  const duplicateIds = new Set<string>();
+
   for (let i = 0; i < nodes.length; i++) {
     const n = nodes[i];
     const nn = normalized.nodes[i];
@@ -133,7 +137,8 @@ export function validateIrStructural(ir: unknown): IrStructuralFinding[] {
       });
       continue;
     }
-    if (nodeIds.has(id)) {
+    if (seenIds.has(id)) {
+      duplicateIds.add(id);
       findings.push({
         code: 'IR-STRUCT-DUP_NODE_ID',
         severity: 'error',
@@ -141,10 +146,11 @@ export function validateIrStructural(ir: unknown): IrStructuralFinding[] {
         nodeId: id,
         fixHint: 'Ids must be unique across nodes.',
       });
+    } else {
+      seenIds.add(id);
     }
-    nodeIds.add(id);
 
-    if (nn.type === 'http') {
+    if (isHttpLikeType(nn.type)) {
       const cfg = nn.config;
       const url = String(cfg.url ?? '').trim();
       // Align default with generators (pythonFastAPI / nodeExpress use post when omitted)
@@ -153,7 +159,7 @@ export function validateIrStructural(ir: unknown): IrStructuralFinding[] {
         findings.push({
           code: 'IR-STRUCT-HTTP_PATH',
           severity: 'error',
-          message: `HTTP node "${id}" has invalid path: config.url must be a non-empty string starting with /`,
+          message: `HTTP-like node "${id}" has invalid path: config.url must be a non-empty string starting with /`,
           nodeId: id,
           fixHint: 'Set config.url to e.g. "/signup".',
         });
@@ -163,13 +169,15 @@ export function validateIrStructural(ir: unknown): IrStructuralFinding[] {
         findings.push({
           code: 'IR-STRUCT-HTTP_METHOD',
           severity: 'error',
-          message: `HTTP node "${id}" has unsupported method "${method}"`,
+          message: `HTTP-like node "${id}" has unsupported method "${method}"`,
           nodeId: id,
           fixHint: 'Use GET, POST, PUT, PATCH, DELETE, HEAD, or OPTIONS.',
         });
       }
     }
   }
+
+  const isUniqueNodeRef = (id: string): boolean => seenIds.has(id) && !duplicateIds.has(id);
 
   for (let i = 0; i < edges.length; i++) {
     const e = edges[i];
@@ -195,7 +203,16 @@ export function validateIrStructural(ir: unknown): IrStructuralFinding[] {
       });
       continue;
     }
-    if (!nodeIds.has(from)) {
+    if (duplicateIds.has(from)) {
+      findings.push({
+        code: 'IR-STRUCT-EDGE_AMBIGUOUS_FROM',
+        severity: 'error',
+        message: `Edge at index ${i} references duplicate node id "${from}" (ambiguous source)`,
+        edgeIndex: i,
+        nodeId: from,
+        fixHint: 'Resolve duplicate node ids before edges can reference them unambiguously.',
+      });
+    } else if (!seenIds.has(from)) {
       findings.push({
         code: 'IR-STRUCT-EDGE_UNKNOWN_FROM',
         severity: 'error',
@@ -205,7 +222,16 @@ export function validateIrStructural(ir: unknown): IrStructuralFinding[] {
         fixHint: 'Create a node with this id or fix the edge endpoint.',
       });
     }
-    if (!nodeIds.has(to)) {
+    if (duplicateIds.has(to)) {
+      findings.push({
+        code: 'IR-STRUCT-EDGE_AMBIGUOUS_TO',
+        severity: 'error',
+        message: `Edge at index ${i} references duplicate node id "${to}" (ambiguous target)`,
+        edgeIndex: i,
+        nodeId: to,
+        fixHint: 'Resolve duplicate node ids before edges can reference them unambiguously.',
+      });
+    } else if (!seenIds.has(to)) {
       findings.push({
         code: 'IR-STRUCT-EDGE_UNKNOWN_TO',
         severity: 'error',
@@ -220,17 +246,20 @@ export function validateIrStructural(ir: unknown): IrStructuralFinding[] {
   const adj = new Map<string, string[]>();
   for (const ne of normalized.edges) {
     const { from, to } = ne;
-    if (!from || !to || !nodeIds.has(from) || !nodeIds.has(to)) continue;
+    if (!from || !to || !isUniqueNodeRef(from) || !isUniqueNodeRef(to)) continue;
     if (!adj.has(from)) adj.set(from, []);
     adj.get(from)!.push(to);
   }
 
   const visiting = new Set<string>();
   const done = new Set<string>();
-  let hasCycle = false;
+  let cycleExampleNode: string | undefined;
 
   function dfs(u: string): boolean {
-    if (visiting.has(u)) return true;
+    if (visiting.has(u)) {
+      cycleExampleNode = u;
+      return true;
+    }
     if (done.has(u)) return false;
     visiting.add(u);
     for (const v of adj.get(u) || []) {
@@ -241,7 +270,9 @@ export function validateIrStructural(ir: unknown): IrStructuralFinding[] {
     return false;
   }
 
-  for (const id of nodeIds) {
+  let hasCycle = false;
+  for (const id of seenIds) {
+    if (duplicateIds.has(id)) continue;
     if (!done.has(id) && dfs(id)) {
       hasCycle = true;
       break;
@@ -249,10 +280,15 @@ export function validateIrStructural(ir: unknown): IrStructuralFinding[] {
   }
 
   if (hasCycle) {
+    const hint =
+      cycleExampleNode != null
+        ? `Directed cycle detected (node "${cycleExampleNode}" was reached again while traversing dependencies).`
+        : 'Dependency graph contains a directed cycle';
     findings.push({
       code: 'IR-STRUCT-CYCLE',
       severity: 'error',
-      message: 'Dependency graph contains a directed cycle',
+      message: hint,
+      nodeId: cycleExampleNode,
       fixHint: 'Remove or break cyclic edges unless your tooling explicitly allows execution loops.',
     });
   }

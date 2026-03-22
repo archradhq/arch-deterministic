@@ -39,6 +39,18 @@ describe('ir-normalize', () => {
       from: 'a',
       to: 'b',
       config: { retry: true },
+      metadata: {},
+    });
+  });
+
+  it('normalizeEdgeSlot promotes top-level kind into metadata when metadata.kind absent', () => {
+    expect(normalizeEdgeSlot({ from: 'a', to: 'b', kind: 'queue' })).toMatchObject({
+      metadata: { kind: 'queue' },
+    });
+    expect(
+      normalizeEdgeSlot({ from: 'a', to: 'b', kind: 'queue', metadata: { kind: 'topic' } }),
+    ).toMatchObject({
+      metadata: { kind: 'topic' },
     });
   });
 

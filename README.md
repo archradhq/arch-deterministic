@@ -1,19 +1,26 @@
 # @archrad/deterministic
 
-<!--
-  README GIF: from `packages/deterministic` run `vhs scripts/record-demo.tape` → writes `demo.gif`.
-  Then add a line below this comment, e.g. ![Demo: archrad export](demo.gif)
--->
+![archrad validate — IR-STRUCT and IR-LINT findings](demo-validate.gif)
+
+<!-- Regenerate: `npm run build && vhs scripts/record-demo-validate.tape` (see scripts/README_DEMO_RECORDING.md). Ships in npm tarball via package.json `files`. -->
+
+**A deterministic compiler and linter for system architecture.**
+
+**Validate your architecture before you write code.**
 
 **For AI agents / IDE assistants:** see **`llms.txt`** in this package (llms.txt-style project summary for tools like Claude Code, Devin, etc.).
 
-**Apache-2.0** — a **deterministic compiler and linter for system architecture**: blueprint **IR** (JSON graph) → **FastAPI** or **Express** + **OpenAPI**, **Docker**, **Makefile** — **no LLM**, **no account**, **offline**.
+**Apache-2.0** — blueprint **IR** (JSON graph) → **FastAPI** or **Express** + **OpenAPI**, **Docker**, **Makefile** — **no LLM**, **no account**, **offline**.
 
 **OSS positioning:** *Includes structural validation + basic architecture linting (rule-based, deterministic).*
 
 > This is not only a generator: **`archrad validate`** treats your graph like source code — **IR-STRUCT-*** (shape/refs/cycles) and **IR-LINT-*** (light architecture heuristics: health routes, fan-out, sync chains, HTTP→DB coupling). Then **`archrad export`** compiles to runnable projects. Generated **OpenAPI** gets a **document-shape** pass (parse + required fields — **not** Spectral-style spec lint).
 
 **Open core (OSS):** **IR structural validation**, **basic architecture lint** (rule-based, deterministic), **OpenAPI document-shape** checks. **ArchRad Cloud** adds **policy / compliance**, deeper **architecture intelligence**, and **AI remediation** — see **`docs/STRUCTURAL_VS_SEMANTIC_VALIDATION.md`**.
+
+### Concept, cold start, and strategy (honest scope)
+
+The **core idea** is sound: **IR = what to build**, **codegen = how** — with compiler-style validation and deterministic output. **Adoption friction** is real: this repo is a **compiler with no bundled authoring UI** (JSON/graph in; you bring **ArchRad Cloud**, another tool, or hand-written IR). **Export is one-way** (no built-in round-trip from edited code back to IR)—best thought of as **scaffold + contract validation**, not full lifecycle architecture sync unless you own that workflow. Many teams will still treat the OSS layer as a **trust and CI artifact** that makes the Cloud/AI path auditable. Read **`docs/CONCEPT_ADOPTION_AND_LIMITS.md`** for the full framing and future directions (e.g. lightweight YAML/IDE ergonomics).
 
 ---
 
@@ -58,7 +65,7 @@ IR (nodes/edges)  →  validateIrStructural (IR-STRUCT-*)  →  errors block exp
 | **AI remediation** | Repair loops, suggested edits |
 
 1. **IR structural validation:** duplicate/missing node ids, bad HTTP `config.url` / `config.method`, unknown edge endpoints, directed cycles.
-2. **Architecture lint:** Implemented as a **registry of visitor functions** on a parsed graph (`buildParsedLintGraph` → **`LINT_RULE_REGISTRY`** in **`src/lint-rules.ts`**). Each rule returns **`IrStructuralFinding[]`**; **`runArchitectureLinting`** / **`validateIrLint`** flatten them. Add a rule by writing `(g) => findings` and pushing onto the registry. Codes include **IR-LINT-DIRECT-DB-ACCESS-002**, **IR-LINT-SYNC-CHAIN-001**, **IR-LINT-NO-HEALTHCHECK-003**, **IR-LINT-HIGH-FANOUT-004**. Sync-chain today treats **all** resolved edges as synchronous (no **`edge.metadata.protocol`** required); you can add a metadata-filtered rule alongside the registry if your IR encodes async/sync on edges.
+2. **Architecture lint:** Implemented as a **registry of visitor functions** on a parsed graph (`buildParsedLintGraph` → **`LINT_RULE_REGISTRY`** in **`src/lint-rules.ts`**). If the IR cannot be parsed, **`buildParsedLintGraph`** returns **`{ findings }`** (IR-STRUCT-*) instead of **`null`**; use **`isParsedLintGraph()`** or call **`validateIrLint`**, which forwards those findings. Each rule returns **`IrStructuralFinding[]`**; **`runArchitectureLinting`** / **`validateIrLint`** flatten them. Add a rule by writing `(g) => findings` and pushing onto the registry. CLI **`archrad validate`** / **`archrad export`** print lint under **Architecture lint (IR-LINT-*)** (grouped separately from structural). Codes include **IR-LINT-DIRECT-DB-ACCESS-002**, **IR-LINT-SYNC-CHAIN-001**, **IR-LINT-NO-HEALTHCHECK-003**, **IR-LINT-HIGH-FANOUT-004**, **IR-LINT-ISOLATED-NODE-005**, **IR-LINT-DUPLICATE-EDGE-006**, **IR-LINT-HTTP-MISSING-NAME-007**, **IR-LINT-DATASTORE-NO-INCOMING-008**, **IR-LINT-MULTIPLE-HTTP-ENTRIES-009**. **Sync-chain** depth counts **synchronous** edges only; mark message/queue/async hops via **`edge.metadata.protocol`** / **`config.async`** (see **`edgeRepresentsAsyncBoundary`** in **`lint-graph.ts`** and **`docs/ENGINEERING_NOTES.md`**).
 3. **Generators** → `openapi.yaml`, handlers, deps.
 4. **Golden path** → `make run` / `docker compose up --build`.
 5. **OpenAPI document shape** on the bundle — **not** [Spectral](https://github.com/stoplightio/spectral)-level lint. Issues → **`openApiStructuralWarnings`**.
@@ -78,6 +85,7 @@ Generators **may emit** retry/timeout/circuit-breaker **code** when the IR carri
 | Mode | Best for | Example |
 |------|-----------|---------|
 | **CLI** | Quick local scaffolding, CI, “no Node project” usage | `archrad export --ir graph.json --target python --out ./out` |
+| **YAML → IR** | Author graphs in YAML, emit JSON for validate/export | `archrad yaml-to-ir -y graph.yaml -o graph.json` |
 | **CLI validate** | CI / pre-commit: IR structural + architecture lint, no codegen | `archrad validate --ir graph.json` |
 | **Library** (`@archrad/deterministic`) | IDPs / pipelines | `runDeterministicExport` → files + `irStructuralFindings` + `irLintFindings` |
 
@@ -85,10 +93,21 @@ Generators **may emit** retry/timeout/circuit-breaker **code** when the IR carri
 
 **Input is structured IR (JSON), not natural language.** There is no `archrad export --prompt "..."`. You pass a **graph file** (nodes/edges) like **`fixtures/minimal-graph.json`**. For a graph that is structurally valid but hits every **architecture lint** rule at once, use **`fixtures/ecommerce-with-warnings.json`** (`archrad validate --ir fixtures/ecommerce-with-warnings.json`). To go from **plain English → IR**, use **ArchRad Cloud** or your own LLM step; this package only does **IR → files**.
 
-After `npm run build` (or `npm install`, which runs `prepare`):
+**YAML → JSON (lighter authoring):** edit **`fixtures/minimal-graph.yaml`** (or your own file) and compile to IR JSON, then validate or export:
+
+```bash
+archrad yaml-to-ir --yaml fixtures/minimal-graph.yaml --out ./graph.json
+archrad validate --ir ./graph.json
+# or pipe: archrad yaml-to-ir -y fixtures/minimal-graph.yaml | archrad validate --ir /dev/stdin   # on Unix; on Windows use --out then validate
+```
+
+YAML must have either top-level **`graph:`** (object) or top-level **`nodes:`** (array); bare graphs are wrapped as `{ "graph": { ... } }` automatically.
+
+After `npm run build` (required after `npm ci`; there is no `prepare` hook — see **`docs/ENGINEERING_NOTES.md`**):
 
 ```bash
 node dist/cli.js export --ir fixtures/minimal-graph.json --target python --out ./my-api
+node dist/cli.js yaml-to-ir --yaml fixtures/minimal-graph.yaml --out /tmp/ir.json
 # After global install / npx:
 archrad export --ir ./graph.json --target node --out ./my-express-api
 
@@ -126,13 +145,13 @@ Structural errors look like **`❌ IR-STRUCT-...`** with **`Fix:`** lines. Use *
 - **`--host-port <n>`** — host port Docker publishes (default **8080**; container still listens on **8080** inside). Same as env **`ARCHRAD_HOST_PORT`**.
 - **`--skip-host-port-check`** — don’t probe `127.0.0.1` before export.
 - **`--strict-host-port`** — **exit with error** if the host port appears **in use** (CI-friendly).
-- **`--skip-ir-structural-validation`** — skip **`validateIrStructural`** before export (debug only; not recommended).
+- **`--danger-skip-ir-structural-validation`** — **UNSAFE:** skip **`validateIrStructural`** before export (never in CI). **Parse/normalize failures** (invalid root, empty graph) are still detected via **`validateIrLint`** and **block** export with **`IR-STRUCT-*`** in **`irStructuralFindings`**. A hidden **`--skip-ir-structural-validation`** remains as a deprecated alias.
 - **`--skip-ir-lint`** — skip **`validateIrLint`** during export.
 - **`--fail-on-warning`** / **`--max-warnings <n>`** — if set, **no files are written** when IR structural + lint findings violate the policy (same semantics as **`validate`**).
 
 By default, if **8080** (or your `--host-port`) looks **busy** on localhost, the CLI **warns** so you can change the port before `docker compose` fails with a bind error.
 
-**Export** runs **IR structural validation**, then **architecture lint**, then codegen. **Structural errors** abort with **no files written**. **Lint warnings** print by default; use **`--fail-on-warning`** / **`--max-warnings`** to block writes for CI.
+**Export** runs **IR structural validation**, then **architecture lint**, then codegen. **Structural errors** abort with **no files written**. **`irLintFindings`** contains only **`IR-LINT-*`**; **`IR-STRUCT-*`** from a failed parse always appear under **`irStructuralFindings`** (including when structural validation was skipped). **Lint warnings** print by default; use **`--fail-on-warning`** / **`--max-warnings`** to block writes for CI.
 
 ### Validate the package as a developer
 

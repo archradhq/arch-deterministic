@@ -1,0 +1,13 @@
+# Same graph as minimal-graph.json — edit in YAML, compile to JSON for validate/export.
+graph:
+  metadata:
+    name: cli-demo
+    description: Minimal graph for archrad export
+  nodes:
+    - id: signup
+      type: http
+      name: Signup
+      config:
+        url: /signup
+        method: POST
+  edges: []

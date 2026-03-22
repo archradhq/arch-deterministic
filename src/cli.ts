@@ -6,7 +6,7 @@
 
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { runDeterministicExport } from './exportPipeline.js';
 import { isLocalHostPortFree, normalizeGoldenHostPort } from './hostPort.js';
 import { validateIrStructural, hasIrStructuralErrors } from './ir-structural.js';
@@ -17,6 +17,11 @@ import {
   sortFindings,
   type ValidationExitPolicy,
 } from './cli-findings.js';
+import {
+  parseYamlToCanonicalIr,
+  canonicalIrToJsonString,
+  YamlGraphParseError,
+} from './yamlToIr.js';
 
 async function writeTree(baseDir: string, files: Record<string, string>): Promise<void> {
   for (const [rel, content] of Object.entries(files)) {
@@ -44,13 +49,15 @@ const program = new Command();
 program
   .name('archrad')
   .description(
-    'Deterministic architecture compiler & linter — FastAPI / Express export (no LLM, no server)'
+    'Validate your architecture before you write code. Deterministic compiler + linter — FastAPI / Express (no LLM, no server).'
   )
   .version('0.1.0');
 
 program
   .command('validate')
-  .description('IR structural validation + architecture lint (no code generation)')
+  .description(
+    'Validate your architecture before you write code — IR structural (IR-STRUCT-*) + architecture lint (IR-LINT-*)'
+  )
   .requiredOption('-i, --ir <path>', 'Path to IR JSON (graph with nodes/edges or full wrapper)')
   .option('--json', 'Print findings as JSON array to stdout')
   .option('--skip-lint', 'Skip architecture lint (IR-LINT-*); structural only')
@@ -93,6 +100,7 @@ program
         if (combined.length) {
           printFindingsPretty(combined, 'archrad validate:');
         } else {
+          console.log('Validate your architecture before you write code.');
           console.log('archrad: IR structural validation + architecture lint passed (no findings).');
         }
       }
@@ -100,6 +108,46 @@ program
       const policy = exitPolicyFromOpts(cmdOpts);
       if (shouldFailFromFindings(combined, policy)) {
         process.exitCode = 1;
+      }
+    }
+  );
+
+program
+  .command('yaml-to-ir')
+  .description('Convert YAML graph → canonical IR JSON (for validate / export without hand-editing JSON)')
+  .requiredOption('-y, --yaml <path>', 'Path to YAML blueprint (`graph:` wrapper or bare `nodes:`)')
+  .option('-o, --out <path>', 'Write JSON to file (default: print to stdout)')
+  .action(
+    async (cmdOpts: { yaml: string; out?: string }) => {
+      const yamlPath = resolve(cmdOpts.yaml);
+      let text: string;
+      try {
+        text = await readFile(yamlPath, 'utf8');
+      } catch {
+        console.error('archrad yaml-to-ir: could not read --yaml file');
+        process.exitCode = 1;
+        return;
+      }
+      let ir: Record<string, unknown>;
+      try {
+        ir = parseYamlToCanonicalIr(text);
+      } catch (e) {
+        if (e instanceof YamlGraphParseError) {
+          console.error(`archrad yaml-to-ir: ${e.message}`);
+        } else {
+          console.error('archrad yaml-to-ir:', e);
+        }
+        process.exitCode = 1;
+        return;
+      }
+      const json = canonicalIrToJsonString(ir);
+      if (cmdOpts.out) {
+        const outPath = resolve(cmdOpts.out);
+        await mkdir(dirname(outPath), { recursive: true });
+        await writeFile(outPath, json, 'utf8');
+        console.log(`archrad: wrote IR JSON to ${outPath}`);
+      } else {
+        process.stdout.write(json);
       }
     }
   );
@@ -116,10 +164,13 @@ program
   )
   .option('--skip-host-port-check', 'Do not check if host port is free on 127.0.0.1')
   .option('--strict-host-port', 'Exit with error if host port is in use (implies check)')
-  .option(
-    '--skip-ir-structural-validation',
-    'Skip IR structural checks (not recommended; for debugging only)'
+  .addOption(
+    new Option(
+      '--danger-skip-ir-structural-validation',
+      'UNSAFE: skip validateIrStructural (invalid IR may still export; never use in CI)'
+    )
   )
+  .addOption(new Option('--skip-ir-structural-validation', 'Deprecated alias').hideHelp())
   .option('--skip-ir-lint', 'Skip architecture lint (IR-LINT-*) during export')
   .option(
     '--fail-on-warning',
@@ -172,11 +223,17 @@ program
       }
     }
 
+    const exportOpts = cmdOpts as typeof cmdOpts & {
+      dangerSkipIrStructuralValidation?: boolean;
+    };
+    const skipStruct = Boolean(
+      exportOpts.dangerSkipIrStructuralValidation || exportOpts.skipIrStructuralValidation
+    );
     try {
       const { files, openApiStructuralWarnings, irStructuralFindings, irLintFindings } =
         await runDeterministicExport(actualIR, cmdOpts.target, {
           hostPort,
-          skipIrStructuralValidation: cmdOpts.skipIrStructuralValidation,
+          skipIrStructuralValidation: skipStruct,
           skipIrLint: cmdOpts.skipIrLint,
         });
 

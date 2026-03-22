@@ -17,6 +17,8 @@ export type NormalizedEdge = {
   from: string;
   to: string;
   config: Record<string, unknown>;
+  /** Preserved for lint (e.g. async / protocol); generators still use raw IR. */
+  metadata: Record<string, unknown>;
 };
 
 export type NormalizedGraph = {
@@ -57,17 +59,26 @@ export function normalizeNodeSlot(raw: unknown): NormalizedNode {
  */
 export function normalizeEdgeSlot(raw: unknown): NormalizedEdge {
   if (raw == null || typeof raw !== 'object') {
-    return { id: '', from: '', to: '', config: {} };
+    return { id: '', from: '', to: '', config: {}, metadata: {} };
   }
   const r = raw as Record<string, unknown>;
   const from = String(r.from ?? r.source ?? '').trim();
   const to = String(r.to ?? r.target ?? '').trim();
   const id = String(r.id ?? '').trim();
+  const metadata = emptyRecord(r.metadata);
+  const topKind = r.kind;
+  if (topKind !== undefined && topKind !== null && String(topKind).trim() !== '') {
+    const k = String(topKind).trim();
+    if (metadata.kind == null || String(metadata.kind).trim() === '') {
+      metadata.kind = k;
+    }
+  }
   return {
     id,
     from,
     to,
     config: emptyRecord(r.config),
+    metadata,
   };
 }
 
@@ -80,6 +91,10 @@ export type MaterializeResult = {
 /**
  * Build internal normalized graph from an already-unwrapped `graph` object
  * (`normalizeIrGraph` must have succeeded). Does not validate semantics.
+ *
+ * **Contract:** `normalized.edges[i]` corresponds 1:1 to `graph.edges[i]` when `edges` is an array;
+ * structural validation and lint assume this index alignment. If edges are filtered or merged later,
+ * keep positions or re-run materialization from the same raw array.
  */
 export function materializeNormalizedGraph(graph: Record<string, unknown>): MaterializeResult {
   const metadata = emptyRecord(graph.metadata);

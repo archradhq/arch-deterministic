@@ -397,11 +397,16 @@ export default async function generateNodeExpressFiles(actualIR: any, opts: any 
   ].join('\n');
 
   // Non-http nodes
-  nodes.forEach((n) => {
-    if (!n || !n.type) return;
+  nodes.forEach((raw: unknown) => {
+    if (!raw || typeof raw !== 'object') return;
+    const n = raw as Record<string, unknown>;
+    if (!n.type) return;
     const t = String(n.type || '').toLowerCase();
     if (t.includes('http')) return;
-    const cfg: any = (n && (n as any).config) || {};
+    const cfg: Record<string, unknown> =
+      n.config && typeof n.config === 'object' && !Array.isArray(n.config)
+        ? (n.config as Record<string, unknown>)
+        : {};
     nonHttpNodes.push({
       id: String(n.id || ''),
       type: String(n.type || ''),

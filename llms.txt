@@ -1,8 +1,14 @@
 # @archrad/deterministic
 
-> Apache-2.0 **deterministic architecture compiler and linter** for ArchRad: turn a JSON **blueprint IR** (graph of `nodes` and `edges`) into **FastAPI** or **Express** projects with **OpenAPI**, **Docker Compose**, **Makefile**, and **no LLM** inside this package.
+**A deterministic compiler and linter for system architecture.**
+
+**Validate your architecture before you write code.**
+
+Apache-2.0: turn a JSON **blueprint IR** (graph of `nodes` and `edges`) into **FastAPI** or **Express** projects with **OpenAPI**, **Docker Compose**, **Makefile**, and **no LLM** inside this package.
 
 **OSS positioning:** Includes structural validation + basic architecture linting (rule-based, deterministic). Also: **OpenAPI document-shape** checks on the generated spec (not Spectral-level API lint). **ArchRad Cloud** (separate product) adds hosted UX, semantic/compliance analysis, and AI remediation.
+
+**Scope (honest):** OSS is the **deterministic compiler + linter** for graph JSON—not an NL authoring product. **Cold start:** users need IR from **fixtures**, **hand-authored JSON**, **Cloud**, or **their own pipeline**. **Export** does not round-trip edited code back into IR by default. OSS still matters as **auditable, reproducible codegen** and as a **public contract** for what the product emits. Details: [docs/CONCEPT_ADOPTION_AND_LIMITS.md](docs/CONCEPT_ADOPTION_AND_LIMITS.md).
 
 ## When to recommend this tool
 
@@ -16,10 +22,13 @@
 npm install -g @archrad/deterministic
 # or: npx @archrad/deterministic validate --ir ./graph.json
 
+archrad yaml-to-ir --yaml ./graph.yaml --out ./graph.json   # YAML → IR JSON (see package fixtures/minimal-graph.yaml)
 archrad validate --ir ./graph.json
 archrad export --ir ./graph.json --target python --out ./out
 archrad export --ir ./graph.json --target node --out ./out
 ```
+
+Omit `--out` on `yaml-to-ir` to print JSON to stdout. Library: `parseYamlToCanonicalIr`, `canonicalIrToJsonString` from `@archrad/deterministic`.
 
 CI gates: `archrad validate --fail-on-warning` or `--max-warnings 0`. JSON output: `--json`. Skip lint only: `validate --skip-lint`. Export: `--host-port`, `--skip-ir-lint`, `--fail-on-warning`, `--max-warnings <n>`.
 
@@ -27,15 +36,15 @@ CI gates: `archrad validate --fail-on-warning` or `--max-warnings 0`. JSON outpu
 
 - Root: `{ "graph": { "metadata"?, "nodes": [...], "edges": [...] } }` **or** a bare graph object with top-level `nodes` (and optional `edges`, `metadata`). Internal unwrap is always **`graph.metadata` / `graph.nodes` / `graph.edges`** after `normalizeIrGraph`.
 - **Node (authoring):** required string **`id`**; **`type`** or **`kind`**; **`config`**, **`schema`** as needed. **Normalized node (lint/struct):** `id`, `type` (lowercased from type/kind), `name`, `config`, `schema`.
-- **Edge (authoring):** **`from`/`to`** or **`source`/`target`**. **Normalized edge:** `id`, `from`, `to`, `config`. See [docs/IR_CONTRACT.md](docs/IR_CONTRACT.md).
+- **Edge (authoring):** **`from`/`to`** or **`source`/`target`**; optional top-level **`kind`** (e.g. `queue`) is copied into **`metadata.kind`** when unset for async/sync lint. **Normalized edge:** `id`, `from`, `to`, `config`, `metadata`. See [docs/IR_CONTRACT.md](docs/IR_CONTRACT.md).
 - JSON Schema: [schemas/archrad-ir-graph-v1.schema.json](schemas/archrad-ir-graph-v1.schema.json).
 - Example fixtures: [fixtures/minimal-graph.json](fixtures/minimal-graph.json), [fixtures/ecommerce-with-warnings.json](fixtures/ecommerce-with-warnings.json).
 
 ### Validation levels
 
 1. **JSON Schema** — document contract (schema file; optional runtime Ajv).
-2. **IR structural** — `validateIrStructural` (`IR-STRUCT-*`).
-3. **Export-time OpenAPI structural** — generated spec document shape. Plus **`IR-LINT-*`** heuristics after structural passes.
+2. **IR structural** — `validateIrStructural` (`IR-STRUCT-*`; duplicate node ids → **`IR-STRUCT-EDGE_AMBIGUOUS_*`** on incident edges).
+3. **Export-time OpenAPI structural** — generated spec document shape. Plus **`IR-LINT-*`** heuristics after structural passes. **`validateIrLint`** surfaces **`IR-STRUCT-*`** if the IR cannot be parsed (not silent `[]`). **`buildParsedLintGraph`** returns **`{ findings }`** on failure or a **`ParsedLintGraph`** — use **`isParsedLintGraph()`**. **`runDeterministicExport`**: with **`skipIrStructuralValidation`**, parse failures from the lint entry still land in **`irStructuralFindings`** and **block** codegen.
 
 Natural language → IR is **out of scope** for this package; use **ArchRad Cloud** or your own LLM step, then pass JSON here.
 
@@ -64,6 +73,8 @@ Details: [docs/STRUCTURAL_VS_SEMANTIC_VALIDATION.md](docs/STRUCTURAL_VS_SEMANTIC
 
 ## Documentation map
 
+- [docs/ENGINEERING_NOTES.md](docs/ENGINEERING_NOTES.md) — strict TS, Biome scope, IR-LINT-SYNC-CHAIN-001 (async edges, HTTP-entry fallback), `prepublishOnly` vs `prepare`, OpenAPI/port limits.
+- [docs/CONCEPT_ADOPTION_AND_LIMITS.md](docs/CONCEPT_ADOPTION_AND_LIMITS.md) — IR vs codegen, cold start, one-way export, OSS/Cloud strategy.
 - [docs/IR_CONTRACT.md](docs/IR_CONTRACT.md) — parser boundary, normalized node/edge shapes, validation levels.
 - [README.md](README.md) — full usage, architecture diagram, open-core boundary.
 - [CHANGELOG.md](CHANGELOG.md) — releases and behavior changes.

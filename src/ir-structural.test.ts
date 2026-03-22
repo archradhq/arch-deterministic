@@ -49,7 +49,10 @@ describe('ir-structural', () => {
   it('detects directed cycle', () => {
     const ir = readFixture('invalid-cycle.json');
     const f = validateIrStructural(ir);
-    expect(f.some((x) => x.code === 'IR-STRUCT-CYCLE')).toBe(true);
+    const c = f.find((x) => x.code === 'IR-STRUCT-CYCLE');
+    expect(c).toBeTruthy();
+    expect(c!.message).toMatch(/node "a"/);
+    expect(c!.nodeId).toBe('a');
   });
 
   it('detects duplicate node id', () => {
@@ -63,6 +66,38 @@ describe('ir-structural', () => {
       },
     });
     expect(f.some((x) => x.code === 'IR-STRUCT-DUP_NODE_ID')).toBe(true);
+  });
+
+  it('flags edges that reference a duplicate node id as ambiguous', () => {
+    const f = validateIrStructural({
+      graph: {
+        nodes: [
+          { id: 'x', type: 'service' },
+          { id: 'x', type: 'service' },
+          { id: 'y', type: 'service' },
+        ],
+        edges: [{ from: 'x', to: 'y' }],
+      },
+    });
+    expect(f.some((x) => x.code === 'IR-STRUCT-EDGE_AMBIGUOUS_FROM')).toBe(true);
+    expect(f.some((x) => x.code === 'IR-STRUCT-EDGE_UNKNOWN_FROM')).toBe(false);
+  });
+
+  it('validates HTTP path for rest-like node types (shared HTTP predicate)', () => {
+    const bad = validateIrStructural({
+      graph: {
+        nodes: [{ id: 'api', type: 'rest', config: { url: 'no-slash', method: 'GET' } }],
+        edges: [],
+      },
+    });
+    expect(bad.some((x) => x.code === 'IR-STRUCT-HTTP_PATH')).toBe(true);
+    const ok = validateIrStructural({
+      graph: {
+        nodes: [{ id: 'api', type: 'rest', config: { url: '/r', method: 'GET' } }],
+        edges: [],
+      },
+    });
+    expect(ok.filter((x) => x.severity === 'error')).toHaveLength(0);
   });
 
   it('detects bad HTTP path', () => {

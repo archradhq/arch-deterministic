@@ -9,7 +9,8 @@ describe('runDeterministicExport', () => {
         { id: 'signup', type: 'http', name: 'Signup', config: { url: '/signup', method: 'POST' } },
         { id: 'health', type: 'http', name: 'Health', config: { url: '/health', method: 'GET' } },
       ],
-      edges: [],
+      // Chain avoids IR-LINT-MULTIPLE-HTTP-ENTRIES-009 (two HTTP roots); not a semantic recommendation.
+      edges: [{ from: 'signup', to: 'health' }],
     },
   };
 
@@ -72,6 +73,15 @@ describe('runDeterministicExport', () => {
     });
     expect(Object.keys(files).length).toBeGreaterThan(0);
     expect(irStructuralFindings.length).toBe(0);
+  });
+
+  it('when skipIrStructuralValidation, still blocks on IR parse failure (structural findings from lint path)', async () => {
+    const { files, irStructuralFindings, irLintFindings } = await runDeterministicExport(null, 'python', {
+      skipIrStructuralValidation: true,
+    });
+    expect(Object.keys(files).length).toBe(0);
+    expect(irStructuralFindings.some((f) => f.code === 'IR-STRUCT-INVALID_ROOT')).toBe(true);
+    expect(irLintFindings.length).toBe(0);
   });
 
   it('generates node bundle', async () => {

@@ -11,6 +11,8 @@ import {
   isDbLikeType,
   isHttpLikeType,
   looksLikeHealthUrl,
+  buildSyncAdjacencyForLint,
+  edgeRepresentsAsyncBoundary,
 } from './lint-graph.js';
 
 const LAYER: IrStructuralFinding['layer'] = 'lint';
@@ -18,16 +20,20 @@ const LAYER: IrStructuralFinding['layer'] = 'lint';
 /** IR-LINT-DIRECT-DB-ACCESS-002 — HTTP-like → datastore-like in one hop (broader than strict api/gateway + database enum). */
 export function ruleDirectDbAccess(g: ParsedLintGraph): IrStructuralFinding[] {
   const findings: IrStructuralFinding[] = [];
+  const seenPair = new Set<string>();
   for (const e of g.edges) {
     if (!e || typeof e !== 'object') continue;
     const { from, to } = edgeEndpoints(e as Record<string, unknown>);
     if (!from || !to) continue;
+    const pairKey = `${from}\0${to}`;
     const a = g.nodeById.get(from);
     const b = g.nodeById.get(to);
     if (!a || !b) continue;
     const ta = nodeType(a);
     const tb = nodeType(b);
     if (isHttpLikeType(ta) && isDbLikeType(tb)) {
+      if (seenPair.has(pairKey)) continue;
+      seenPair.add(pairKey);
       findings.push({
         code: 'IR-LINT-DIRECT-DB-ACCESS-002',
         severity: 'warning',
@@ -64,18 +70,28 @@ export function ruleHighFanout(g: ParsedLintGraph): IrStructuralFinding[] {
   return findings;
 }
 
-/** IR-LINT-SYNC-CHAIN-001 — longest path from HTTP entry nodes (all edges treated as sync; no edge.metadata required). */
+/**
+ * IR-LINT-SYNC-CHAIN-001 — longest **synchronous** path from HTTP entry nodes.
+ * Edges marked async (see `edgeRepresentsAsyncBoundary` in `lint-graph.ts`) are excluded from depth.
+ *
+ * **HTTP entry roots:** Prefer HTTP-like nodes with **no incoming sync** edges. If every HTTP-like node
+ * has an incoming sync edge (e.g. internal-only graph shape), we **fall back** to treating **all** HTTP-like
+ * nodes as possible starts so the rule can still surface deep sync chains. See `docs/ENGINEERING_NOTES.md`.
+ */
 export function ruleSyncChainFromHttpEntry(g: ParsedLintGraph): IrStructuralFinding[] {
-  const { edges, adj, nodeById } = g;
-  const hasIncoming = new Set<string>();
+  const { edges, nodeById } = g;
+  const syncAdj = buildSyncAdjacencyForLint(g);
+  const hasIncomingSync = new Set<string>();
   for (const e of edges) {
     if (!e || typeof e !== 'object') continue;
-    const { to } = edgeEndpoints(e as Record<string, unknown>);
-    if (to) hasIncoming.add(to);
+    const rec = e as Record<string, unknown>;
+    if (edgeRepresentsAsyncBoundary(rec, g)) continue;
+    const { to } = edgeEndpoints(rec);
+    if (to) hasIncomingSync.add(to);
   }
   const httpEntryIds: string[] = [];
   for (const [id, n] of nodeById) {
-    if (isHttpLikeType(nodeType(n)) && !hasIncoming.has(id)) httpEntryIds.push(id);
+    if (isHttpLikeType(nodeType(n)) && !hasIncomingSync.has(id)) httpEntryIds.push(id);
   }
   const starts =
     httpEntryIds.length > 0
@@ -88,7 +104,7 @@ export function ruleSyncChainFromHttpEntry(g: ParsedLintGraph): IrStructuralFind
     if (memo.has(u)) return memo.get(u)!;
     stack.add(u);
     let d = 0;
-    for (const v of adj.get(u) || []) {
+    for (const v of syncAdj.get(u) || []) {
       d = Math.max(d, 1 + maxDepth(v, stack));
     }
     stack.delete(u);
@@ -109,10 +125,11 @@ export function ruleSyncChainFromHttpEntry(g: ParsedLintGraph): IrStructuralFind
         code: 'IR-LINT-SYNC-CHAIN-001',
         severity: 'warning',
         layer: LAYER,
-        message: `Long synchronous dependency chain from HTTP entry (depth ≈ ${maxChain} hops)`,
-        fixHint: 'Shorten the call graph or introduce async/events between services.',
-        suggestion: 'Break critical paths with queues, sagas, or parallel calls where safe.',
-        impact: 'High tail latency and failure amplification under load.',
+        message: `Long synchronous dependency chain from HTTP entry (depth ≈ ${maxChain} hops; async-marked edges excluded)`,
+        fixHint: 'Shorten the call graph or mark message/queue edges as async in edge metadata.',
+        suggestion:
+          'Set `metadata.protocol: "async"` or `config.async: true` on non-blocking edges, or use queues between services.',
+        impact: 'High tail latency and failure amplification under load when calls are actually synchronous.',
       },
     ];
   }
@@ -135,10 +152,129 @@ export function ruleNoHealthcheck(g: ParsedLintGraph): IrStructuralFinding[] {
       code: 'IR-LINT-NO-HEALTHCHECK-003',
       severity: 'warning',
       layer: LAYER,
-      message: 'No HTTP node exposes a typical health/readiness path (/health, /healthz, /live, /ready)',
+      message:
+        'No HTTP node exposes a typical health/readiness path (/health, /healthz, /healthcheck, /ping, /status, /live, /ready). Heuristic: one route per HTTP node; gateway/BFF with many routes may need a dedicated health node.',
       fixHint: 'Add a GET route such as /health for orchestrators and load balancers.',
       suggestion: 'Expose liveness vs readiness separately if your platform distinguishes them.',
       impact: 'Weaker deploy/rollback safety and harder operations automation.',
+    },
+  ];
+}
+
+/**
+ * IR-LINT-ISOLATED-NODE-005 — node with no incident edges while the graph has at least one edge elsewhere.
+ */
+export function ruleIsolatedNode(g: ParsedLintGraph): IrStructuralFinding[] {
+  if (g.edges.length === 0 || g.nodeById.size <= 1) return [];
+  const findings: IrStructuralFinding[] = [];
+  for (const [id] of g.nodeById) {
+    const out = g.outDegree.get(id) ?? 0;
+    const inn = g.inDegree.get(id) ?? 0;
+    if (out === 0 && inn === 0) {
+      findings.push({
+        code: 'IR-LINT-ISOLATED-NODE-005',
+        severity: 'warning',
+        layer: LAYER,
+        message: `Node "${id}" is not connected to any edge (disconnected subgraph)`,
+        nodeId: id,
+        fixHint: 'Remove the orphan node or add edges so it participates in the architecture.',
+        suggestion: 'Disconnected nodes often indicate stale IR or a missing integration step.',
+        impact: 'Export and reviews may not reflect real runtime behavior for this component.',
+      });
+    }
+  }
+  return findings;
+}
+
+/** IR-LINT-DUPLICATE-EDGE-006 — same from→to pair appears more than once. */
+export function ruleDuplicateEdge(g: ParsedLintGraph): IrStructuralFinding[] {
+  const seen = new Map<string, number>();
+  const findings: IrStructuralFinding[] = [];
+  for (let i = 0; i < g.edges.length; i++) {
+    const e = g.edges[i];
+    if (!e || typeof e !== 'object') continue;
+    const { from, to } = edgeEndpoints(e as Record<string, unknown>);
+    if (!from || !to) continue;
+    const key = `${from}\0${to}`;
+    if (seen.has(key)) {
+      findings.push({
+        code: 'IR-LINT-DUPLICATE-EDGE-006',
+        severity: 'warning',
+        layer: LAYER,
+        message: `Duplicate edge from "${from}" to "${to}" (also at index ${seen.get(key)})`,
+        edgeIndex: i,
+        nodeId: from,
+        fixHint: 'Collapse duplicate edges or distinguish them with metadata if your IR allows.',
+        suggestion: 'Parallel duplicate edges rarely add information and clutter graph views.',
+        impact: 'Downstream generators and metrics may double-count dependencies.',
+      });
+    } else {
+      seen.set(key, i);
+    }
+  }
+  return findings;
+}
+
+/** IR-LINT-HTTP-MISSING-NAME-007 */
+export function ruleHttpMissingName(g: ParsedLintGraph): IrStructuralFinding[] {
+  const findings: IrStructuralFinding[] = [];
+  for (const [id, n] of g.nodeById) {
+    if (!isHttpLikeType(nodeType(n))) continue;
+    const name = String((n as Record<string, unknown>).name ?? '').trim();
+    if (!name) {
+      findings.push({
+        code: 'IR-LINT-HTTP-MISSING-NAME-007',
+        severity: 'warning',
+        layer: LAYER,
+        message: `HTTP-like node "${id}" has no display name`,
+        nodeId: id,
+        fixHint: 'Set a short human-readable `name` for docs, OpenAPI titles, and team communication.',
+        suggestion: 'Names appear in generated README snippets and UI graph labels when mirrored from IR.',
+        impact: 'Harder to navigate large graphs and generated documentation.',
+      });
+    }
+  }
+  return findings;
+}
+
+/** IR-LINT-DATASTORE-NO-INCOMING-008 */
+export function ruleDatastoreNoIncoming(g: ParsedLintGraph): IrStructuralFinding[] {
+  const findings: IrStructuralFinding[] = [];
+  for (const [id, n] of g.nodeById) {
+    if (!isDbLikeType(nodeType(n))) continue;
+    if ((g.inDegree.get(id) ?? 0) === 0) {
+      findings.push({
+        code: 'IR-LINT-DATASTORE-NO-INCOMING-008',
+        severity: 'warning',
+        layer: LAYER,
+        message: `Datastore-like node "${id}" has no incoming edges`,
+        nodeId: id,
+        fixHint: 'Connect a service or migration path to this datastore, or remove it if unused.',
+        suggestion: 'Orphan persistence nodes often mean the IR is incomplete or a dead component.',
+        impact: 'Risk of shipping diagrams that do not match how data is actually written.',
+      });
+    }
+  }
+  return findings;
+}
+
+/** IR-LINT-MULTIPLE-HTTP-ENTRIES-009 — more than one HTTP node with no incoming edges (multiple public entry surfaces). */
+export function ruleMultipleHttpEntries(g: ParsedLintGraph): IrStructuralFinding[] {
+  const entries: string[] = [];
+  for (const [id, n] of g.nodeById) {
+    if (!isHttpLikeType(nodeType(n))) continue;
+    if ((g.inDegree.get(id) ?? 0) === 0) entries.push(id);
+  }
+  if (entries.length <= 1) return [];
+  return [
+    {
+      code: 'IR-LINT-MULTIPLE-HTTP-ENTRIES-009',
+      severity: 'warning',
+      layer: LAYER,
+      message: `Multiple HTTP entry nodes with no incoming edges (${entries.length}): ${entries.join(', ')}`,
+      fixHint: 'Consider a single API gateway or BFF, or document why multiple public surfaces are intentional.',
+      suggestion: 'Many teams standardize on one northbound HTTP edge for auth, rate limits, and observability.',
+      impact: 'Operational duplication and inconsistent cross-cutting concerns across entrypoints.',
     },
   ];
 }
@@ -151,6 +287,11 @@ export const LINT_RULE_REGISTRY: ReadonlyArray<(g: ParsedLintGraph) => IrStructu
   ruleHighFanout,
   ruleSyncChainFromHttpEntry,
   ruleNoHealthcheck,
+  ruleIsolatedNode,
+  ruleDuplicateEdge,
+  ruleHttpMissingName,
+  ruleDatastoreNoIncoming,
+  ruleMultipleHttpEntries,
 ];
 
 /** Run all registered architecture lint visitors (same as legacy `validateIrLint` behavior). */

@@ -23,8 +23,9 @@ This document defines how **@archrad/deterministic** (OSS) and **ArchRad Cloud**
 | Code | Meaning |
 |------|---------|
 | `IR-STRUCT-EDGE_UNKNOWN_FROM` | Edge references a node id that does not exist |
-| `IR-STRUCT-CYCLE` | Directed cycle in the dependency graph |
-| `IR-STRUCT-HTTP_PATH` | HTTP node `config.url` must start with `/` |
+| `IR-STRUCT-EDGE_AMBIGUOUS_FROM` / `…_TO` | Edge uses an id that appears on **more than one** node |
+| `IR-STRUCT-CYCLE` | Directed cycle (message names an example node on the cycle) |
+| `IR-STRUCT-HTTP_PATH` | HTTP-**like** node (`http`, `rest`, `gateway`, …) `config.url` must start with `/` |
 | `IR-STRUCT-DUP_NODE_ID` | Two nodes share the same `id` |
 
 Findings use **`severity`**: `error` (blocks export) or `warning` / `info` when applicable.
@@ -35,14 +36,19 @@ Findings use **`severity`**: `error` (blocks export) or `warning` / `info` when 
 
 **Question:** Does the graph trip **light, rule-based** architecture smells (still deterministic)?
 
-**Where:** `validateIrLint()`, `archrad validate` (after structural pass), `archrad export` (unless `--skip-ir-lint`).
+**Where:** `validateIrLint()` (returns **`IR-LINT-*`** when the graph parses; **`IR-STRUCT-*`** only if normalize fails — e.g. invalid root, empty nodes), `archrad validate` (after structural pass; structural errors skip the lint pass), `archrad export` (unless `--skip-ir-lint`). **`buildParsedLintGraph`** returns **`{ findings }`** with structural codes on failure instead of `null`; use **`isParsedLintGraph()`** to narrow.
 
 | Code | Meaning |
 |------|---------|
 | `IR-LINT-DIRECT-DB-ACCESS-002` | HTTP node has a direct edge to a datastore-like node |
-| `IR-LINT-SYNC-CHAIN-001` | Long synchronous dependency chain from an HTTP entry |
-| `IR-LINT-NO-HEALTHCHECK-003` | HTTP routes exist but no typical `/health` / `/live` / `/ready` path |
+| `IR-LINT-SYNC-CHAIN-001` | Long **synchronous** dependency chain from an HTTP entry (async-marked edges excluded; see `edgeRepresentsAsyncBoundary` in `lint-graph.ts`) |
+| `IR-LINT-NO-HEALTHCHECK-003` | HTTP routes exist but no typical health-like path (heuristic incl. `/health`, `/ping`, `/healthcheck`, …; one route per HTTP node) |
 | `IR-LINT-HIGH-FANOUT-004` | Node with ≥5 outgoing edges |
+| `IR-LINT-ISOLATED-NODE-005` | Node with no edges while the graph has other edges (disconnected subgraph) |
+| `IR-LINT-DUPLICATE-EDGE-006` | Same `from`→`to` edge appears more than once |
+| `IR-LINT-HTTP-MISSING-NAME-007` | HTTP-like node has empty `name` |
+| `IR-LINT-DATASTORE-NO-INCOMING-008` | Datastore-like node has no incoming edges |
+| `IR-LINT-MULTIPLE-HTTP-ENTRIES-009` | More than one HTTP node with no incoming edges |
 
 **CI:** `archrad validate --fail-on-warning` or `--max-warnings N`. Not org-specific policy — that stays in Cloud.
 

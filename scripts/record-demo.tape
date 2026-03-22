@@ -1,10 +1,9 @@
 # Record a README GIF with VHS: https://github.com/charmbracelet/vhs
 # Run from packages/deterministic (bash available): vhs scripts/record-demo.tape
-# → writes demo.gif next to package.json
-# From monorepo root instead: vhs packages/deterministic/scripts/record-demo.tape
-#   (then replace Hide block with: cd packages/deterministic + clear, or run shell cwd there)
+# → writes demo.gif next to package.json (packages/deterministic)
+# From monorepo root: cd packages/deterministic && vhs scripts/record-demo.tape
 
-Output ../demo.gif
+Output demo.gif
 Require echo
 
 Set Shell "bash"

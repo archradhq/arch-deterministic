@@ -19,9 +19,13 @@ export type DeterministicExportResult = {
   files: Record<string, string>;
   /** Human-readable lines when generated OpenAPI fails **document-shape** checks (not full spec lint) */
   openApiStructuralWarnings: string[];
-  /** OSS IR structural findings (errors block codegen unless skipIrStructuralValidation) */
+  /**
+   * IR-STRUCT-* from `validateIrStructural`, or — when **`skipIrStructuralValidation`** is set — the same
+   * codes surfaced by **`validateIrLint`** if the IR cannot be parsed (invalid root, empty graph, etc.).
+   * Errors block codegen; this field stays the single source for “graph does not compile.”
+   */
   irStructuralFindings: IrStructuralFinding[];
-  /** Deterministic architecture lint (IR-LINT-*); warnings only by default; does not block codegen */
+  /** IR-LINT-* heuristics only; does not include IR-STRUCT-* (those live in `irStructuralFindings`). */
   irLintFindings: IrStructuralFinding[];
 };
 
@@ -34,13 +38,29 @@ export async function runDeterministicExport(
   opts: Record<string, any> = {}
 ): Promise<DeterministicExportResult> {
   const skipIr = Boolean(opts.skipIrStructuralValidation);
-  const irStructuralFindings: IrStructuralFinding[] = skipIr ? [] : validateIrStructural(actualIR);
+  const skipLint = Boolean(opts.skipIrLint);
+
+  let irStructuralFindings: IrStructuralFinding[] = skipIr ? [] : validateIrStructural(actualIR);
   if (!skipIr && hasIrStructuralErrors(irStructuralFindings)) {
     return { files: {}, openApiStructuralWarnings: [], irStructuralFindings, irLintFindings: [] };
   }
 
-  const irLintFindings: IrStructuralFinding[] =
-    skipIr || Boolean(opts.skipIrLint) ? [] : validateIrLint(actualIR);
+  let irLintFindings: IrStructuralFinding[] = [];
+  if (!skipLint) {
+    const lintPass = validateIrLint(actualIR);
+    if (skipIr) {
+      // Dangerous mode: full structural pass is off, but parse/normalize failures still return IR-STRUCT-* from
+      // validateIrLint — fold those into irStructuralFindings so InkByte / CLI consumers block and log like normal.
+      const structFromLint = lintPass.filter((f) => f.code.startsWith('IR-STRUCT-'));
+      irLintFindings = lintPass.filter((f) => !f.code.startsWith('IR-STRUCT-'));
+      irStructuralFindings = structFromLint;
+      if (hasIrStructuralErrors(irStructuralFindings)) {
+        return { files: {}, openApiStructuralWarnings: [], irStructuralFindings, irLintFindings };
+      }
+    } else {
+      irLintFindings = lintPass;
+    }
+  }
 
   const t = String(target || '').toLowerCase();
   let files: Record<string, string> = {};
