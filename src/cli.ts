@@ -22,6 +22,8 @@ import {
   canonicalIrToJsonString,
   YamlGraphParseError,
 } from './yamlToIr.js';
+import { openApiStringToCanonicalIr, OpenApiIngestError } from './openapi-to-ir.js';
+import { runValidateDrift } from './validate-drift.js';
 
 async function writeTree(baseDir: string, files: Record<string, string>): Promise<void> {
   for (const [rel, content] of Object.entries(files)) {
@@ -152,6 +154,48 @@ program
     }
   );
 
+const ingest = program.command('ingest').description(
+  'Derive canonical IR from an external spec (structural surface — same JSON as yaml-to-ir for validate/export)'
+);
+
+ingest
+  .command('openapi')
+  .description('OpenAPI 3.x JSON/YAML → IR graph (HTTP nodes per operation; commit + archrad validate in CI)')
+  .requiredOption('-s, --spec <path>', 'Path to OpenAPI 3.x document (.json, .yaml, or .yml)')
+  .option('-o, --out <path>', 'Write IR JSON to file (default: print to stdout)')
+  .action(async (cmdOpts: { spec: string; out?: string }) => {
+    const specPath = resolve(cmdOpts.spec);
+    let text: string;
+    try {
+      text = await readFile(specPath, 'utf8');
+    } catch {
+      console.error('archrad ingest openapi: could not read --spec file');
+      process.exitCode = 1;
+      return;
+    }
+    let ir: Record<string, unknown>;
+    try {
+      ir = openApiStringToCanonicalIr(text);
+    } catch (e) {
+      if (e instanceof OpenApiIngestError) {
+        console.error(`archrad ingest openapi: ${e.message}`);
+      } else {
+        console.error('archrad ingest openapi:', e);
+      }
+      process.exitCode = 1;
+      return;
+    }
+    const json = canonicalIrToJsonString(ir);
+    if (cmdOpts.out) {
+      const outPath = resolve(cmdOpts.out);
+      await mkdir(dirname(outPath), { recursive: true });
+      await writeFile(outPath, json, 'utf8');
+      console.log(`archrad ingest openapi: wrote IR JSON to ${outPath}`);
+    } else {
+      process.stdout.write(json);
+    }
+  });
+
 program
   .command('export')
   .description('Generate project files from a blueprint IR JSON file')
@@ -276,6 +320,134 @@ program
       process.exitCode = 1;
     }
   });
+
+program
+  .command('validate-drift')
+  .description(
+    'Compare on-disk export to a fresh deterministic export from IR (missing/modified files = drift; not semantic analysis)'
+  )
+  .requiredOption('-i, --ir <path>', 'Path to IR JSON (graph with nodes/edges or full wrapper)')
+  .requiredOption('-t, --target <name>', 'python | node | nodejs')
+  .requiredOption('-o, --out <dir>', 'Directory containing a previous archrad export to compare')
+  .option(
+    '-p, --host-port <port>',
+    'Host port for golden compose (must match export). Env: ARCHRAD_HOST_PORT'
+  )
+  .option('--skip-host-port-check', 'Do not check if host port is free on 127.0.0.1')
+  .addOption(
+    new Option(
+      '--danger-skip-ir-structural-validation',
+      'UNSAFE: skip validateIrStructural during reference export'
+    )
+  )
+  .addOption(new Option('--skip-ir-structural-validation', 'Deprecated alias').hideHelp())
+  .option('--skip-ir-lint', 'Skip architecture lint when building reference export')
+  .option('--strict-extra', 'Fail if output directory contains files not in the reference export')
+  .option('--json', 'Print drift findings and export metadata as JSON')
+  .action(
+    async (cmdOpts: {
+      ir: string;
+      target: string;
+      out: string;
+      hostPort?: string;
+      skipHostPortCheck?: boolean;
+      skipIrStructuralValidation?: boolean;
+      dangerSkipIrStructuralValidation?: boolean;
+      skipIrLint?: boolean;
+      strictExtra?: boolean;
+      json?: boolean;
+    }) => {
+      const irPath = resolve(cmdOpts.ir);
+      const outDir = resolve(cmdOpts.out);
+      let ir: any;
+      try {
+        ir = JSON.parse(await readFile(irPath, 'utf8'));
+      } catch {
+        console.error('archrad: invalid JSON in --ir file');
+        process.exitCode = 1;
+        return;
+      }
+      const actualIR = ir.graph ? ir : { graph: ir };
+
+      const hostPort = normalizeGoldenHostPort(
+        cmdOpts.hostPort ?? process.env.ARCHRAD_HOST_PORT
+      );
+
+      if (!cmdOpts.skipHostPortCheck) {
+        const free = await isLocalHostPortFree(hostPort);
+        if (!free) {
+          console.warn(
+            `archrad: warning: host port ${hostPort} appears in use (use --skip-host-port-check to ignore)`
+          );
+        }
+      }
+
+      const skipStruct = Boolean(
+        cmdOpts.dangerSkipIrStructuralValidation || cmdOpts.skipIrStructuralValidation
+      );
+
+      try {
+        const result = await runValidateDrift(actualIR, cmdOpts.target, outDir, {
+          hostPort,
+          skipIrStructuralValidation: skipStruct,
+          skipIrLint: cmdOpts.skipIrLint,
+          strictExtra: cmdOpts.strictExtra,
+        });
+
+        const combined = sortFindings([
+          ...result.exportResult.irStructuralFindings,
+          ...result.exportResult.irLintFindings,
+        ]);
+        if (combined.length && !cmdOpts.json) {
+          printFindingsPretty(combined, 'archrad validate-drift (reference export):');
+        }
+
+        if (cmdOpts.json) {
+          console.log(
+            JSON.stringify(
+              {
+                ok: result.ok,
+                driftFindings: result.driftFindings,
+                extraBlocking: result.extraBlocking,
+                irStructuralFindings: result.exportResult.irStructuralFindings,
+                irLintFindings: result.exportResult.irLintFindings,
+                openApiStructuralWarnings: result.exportResult.openApiStructuralWarnings,
+                referenceFileCount: Object.keys(result.exportResult.files).length,
+              },
+              null,
+              2
+            )
+          );
+        } else {
+          if (result.driftFindings.length) {
+            console.error('archrad validate-drift:');
+            for (const f of result.driftFindings) {
+              const icon = f.code === 'DRIFT-EXTRA' ? 'ℹ️' : '❌';
+              console.error(`${icon} ${f.code}: ${f.path}`);
+              console.error(`   ${f.message}`);
+              console.error('');
+            }
+          }
+          if (result.ok) {
+            console.log(
+              'archrad: no deterministic drift (on-disk export matches fresh export from IR).'
+            );
+          } else {
+            console.error(
+              'archrad: drift detected — regenerate with `archrad export` or align the IR.'
+            );
+          }
+        }
+
+        if (!result.ok) {
+          process.exitCode = 1;
+        }
+      } catch (e: any) {
+        console.error('archrad:', e?.message || String(e));
+        process.exitCode = 1;
+      }
+    }
+  );
 
 program.parseAsync(process.argv).catch((e) => {
   console.error(e);

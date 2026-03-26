@@ -1,8 +1,8 @@
 # @archrad/deterministic
 
-![archrad validate — IR-STRUCT and IR-LINT findings](demo-validate.gif)
+![archrad validate — IR-LINT-DIRECT-DB-ACCESS-002 first, fix on the graph, clean gate](demo-validate.gif)
 
-<!-- Regenerate: `npm run build && vhs scripts/record-demo-validate.tape` (see scripts/README_DEMO_RECORDING.md). Ships in npm tarball via package.json `files`. -->
+<!-- GIFs: validate hero — `npm run build && vhs scripts/record-demo-validate.tape` → demo-validate.gif. Drift — `npm run record:demo:drift` → demo-drift.gif (terminal tape) or replay scripts + capture. For “edit → save → validate-drift” (IDE + terminal, skeptic-grade), see scripts/DEMO_GIF_STORYBOARD.md “Trust loop”. scripts/README_DEMO_RECORDING.md. package.json `files`. -->
 
 **A deterministic compiler and linter for system architecture.**
 
@@ -14,13 +14,13 @@
 
 **OSS positioning:** *Includes structural validation + basic architecture linting (rule-based, deterministic).*
 
-> This is not only a generator: **`archrad validate`** treats your graph like source code — **IR-STRUCT-*** (shape/refs/cycles) and **IR-LINT-*** (light architecture heuristics: health routes, fan-out, sync chains, HTTP→DB coupling). Then **`archrad export`** compiles to runnable projects. Generated **OpenAPI** gets a **document-shape** pass (parse + required fields — **not** Spectral-style spec lint).
+> This is not only a generator: **`archrad validate`** treats your graph like source code — **IR-STRUCT-*** (shape/refs/cycles) and **IR-LINT-*** (light architecture heuristics: health routes, fan-out, sync chains, HTTP→DB coupling). Then **`archrad export`** compiles to runnable projects. After you have a tree on disk, **`archrad validate-drift`** compares it to a **fresh** export from the same IR (missing/changed files — **not** semantic code review). Generated **OpenAPI** gets a **document-shape** pass (parse + required fields — **not** Spectral-style spec lint).
 
 **Open core (OSS):** **IR structural validation**, **basic architecture lint** (rule-based, deterministic), **OpenAPI document-shape** checks. **ArchRad Cloud** adds **policy / compliance**, deeper **architecture intelligence**, and **AI remediation** — see **`docs/STRUCTURAL_VS_SEMANTIC_VALIDATION.md`**.
 
 ### Concept, cold start, and strategy (honest scope)
 
-The **core idea** is sound: **IR = what to build**, **codegen = how** — with compiler-style validation and deterministic output. **Adoption friction** is real: this repo is a **compiler with no bundled authoring UI** (JSON/graph in; you bring **ArchRad Cloud**, another tool, or hand-written IR). **Export is one-way** (no built-in round-trip from edited code back to IR)—best thought of as **scaffold + contract validation**, not full lifecycle architecture sync unless you own that workflow. Many teams will still treat the OSS layer as a **trust and CI artifact** that makes the Cloud/AI path auditable. Read **`docs/CONCEPT_ADOPTION_AND_LIMITS.md`** for the full framing and future directions (e.g. lightweight YAML/IDE ergonomics).
+The **core idea** is sound: **IR = what to build**, **codegen = how** — with compiler-style validation and deterministic output. **Adoption friction** is real: this repo is a **compiler with no bundled authoring UI** (JSON/graph in; you bring **ArchRad Cloud**, another tool, or hand-written IR). **Where the IR comes from** is intentionally **plural**: **manual** graph JSON/YAML today, plus **`archrad ingest openapi`** (and more ingestion surfaces over time — e.g. **IaC**). Treat **OpenAPI → IR** as a **starting lane**, not the whole roadmap: regenerate IR in CI, then **`archrad validate`** / **`archrad export`** — structural HTTP surface only, not full system semantics. Draft language for “drift / where does IR come from?” threads: **`scripts/SOCIAL_POST_DRIFT_AND_INGESTION.md`**. **Export is one-way** (no built-in round-trip from edited code back to IR)—best thought of as **scaffold + contract validation**, not full lifecycle architecture sync unless you own that workflow. Many teams will still treat the OSS layer as a **trust and CI artifact** that makes the Cloud/AI path auditable. Read **`docs/CONCEPT_ADOPTION_AND_LIMITS.md`** for the full framing and future directions (e.g. lightweight YAML/IDE ergonomics).
 
 ---
 
@@ -40,6 +40,8 @@ IR (nodes/edges)  →  validateIrStructural (IR-STRUCT-*)  →  errors block exp
               validateOpenApiInBundleStructural(openapi.yaml)  →  document-shape warnings (not full API lint)
                            ↓
               { files, openApiStructuralWarnings, irStructuralFindings, irLintFindings }
+
+  Optional CI: archrad validate-drift  →  re-export IR in-memory, diff vs existing ./out  →  DRIFT-MISSING / DRIFT-MODIFIED (thin deterministic gate)
 ```
 
 ### Validation levels (quick contract)
@@ -65,7 +67,7 @@ IR (nodes/edges)  →  validateIrStructural (IR-STRUCT-*)  →  errors block exp
 | **AI remediation** | Repair loops, suggested edits |
 
 1. **IR structural validation:** duplicate/missing node ids, bad HTTP `config.url` / `config.method`, unknown edge endpoints, directed cycles.
-2. **Architecture lint:** Implemented as a **registry of visitor functions** on a parsed graph (`buildParsedLintGraph` → **`LINT_RULE_REGISTRY`** in **`src/lint-rules.ts`**). If the IR cannot be parsed, **`buildParsedLintGraph`** returns **`{ findings }`** (IR-STRUCT-*) instead of **`null`**; use **`isParsedLintGraph()`** or call **`validateIrLint`**, which forwards those findings. Each rule returns **`IrStructuralFinding[]`**; **`runArchitectureLinting`** / **`validateIrLint`** flatten them. Add a rule by writing `(g) => findings` and pushing onto the registry. CLI **`archrad validate`** / **`archrad export`** print lint under **Architecture lint (IR-LINT-*)** (grouped separately from structural). Codes include **IR-LINT-DIRECT-DB-ACCESS-002**, **IR-LINT-SYNC-CHAIN-001**, **IR-LINT-NO-HEALTHCHECK-003**, **IR-LINT-HIGH-FANOUT-004**, **IR-LINT-ISOLATED-NODE-005**, **IR-LINT-DUPLICATE-EDGE-006**, **IR-LINT-HTTP-MISSING-NAME-007**, **IR-LINT-DATASTORE-NO-INCOMING-008**, **IR-LINT-MULTIPLE-HTTP-ENTRIES-009**. **Sync-chain** depth counts **synchronous** edges only; mark message/queue/async hops via **`edge.metadata.protocol`** / **`config.async`** (see **`edgeRepresentsAsyncBoundary`** in **`lint-graph.ts`** and **`docs/ENGINEERING_NOTES.md`**).
+2. **Architecture lint:** Implemented as a **registry of visitor functions** on a parsed graph (`buildParsedLintGraph` → **`LINT_RULE_REGISTRY`** in **`src/lint-rules.ts`**). If the IR cannot be parsed, **`buildParsedLintGraph`** returns **`{ findings }`** (IR-STRUCT-*) instead of **`null`**; use **`isParsedLintGraph()`** or call **`validateIrLint`**, which forwards those findings. Each rule returns **`IrStructuralFinding[]`**; **`runArchitectureLinting`** / **`validateIrLint`** flatten them. **Custom org rules:** compose **`runArchitectureLinting`** with your own **`(g) => findings`** in CI (worked example: **`docs/CUSTOM_RULES.md`**), or **fork** and append to **`LINT_RULE_REGISTRY`** if the stock **`archrad validate`** CLI must emit your codes. CLI **`archrad validate`** / **`archrad export`** print lint under **Architecture lint (IR-LINT-*)** (grouped separately from structural). Codes include **IR-LINT-DIRECT-DB-ACCESS-002**, **IR-LINT-SYNC-CHAIN-001**, **IR-LINT-NO-HEALTHCHECK-003**, **IR-LINT-HIGH-FANOUT-004**, **IR-LINT-ISOLATED-NODE-005**, **IR-LINT-DUPLICATE-EDGE-006**, **IR-LINT-HTTP-MISSING-NAME-007**, **IR-LINT-DATASTORE-NO-INCOMING-008**, **IR-LINT-MULTIPLE-HTTP-ENTRIES-009**. **Sync-chain** depth counts **synchronous** edges only; mark message/queue/async hops via **`edge.metadata.protocol`** / **`config.async`** (see **`edgeRepresentsAsyncBoundary`** in **`lint-graph.ts`** and **`docs/ENGINEERING_NOTES.md`**).
 3. **Generators** → `openapi.yaml`, handlers, deps.
 4. **Golden path** → `make run` / `docker compose up --build`.
 5. **OpenAPI document shape** on the bundle — **not** [Spectral](https://github.com/stoplightio/spectral)-level lint. Issues → **`openApiStructuralWarnings`**.
@@ -86,12 +88,22 @@ Generators **may emit** retry/timeout/circuit-breaker **code** when the IR carri
 |------|-----------|---------|
 | **CLI** | Quick local scaffolding, CI, “no Node project” usage | `archrad export --ir graph.json --target python --out ./out` |
 | **YAML → IR** | Author graphs in YAML, emit JSON for validate/export | `archrad yaml-to-ir -y graph.yaml -o graph.json` |
+| **OpenAPI → IR** | Derive HTTP nodes from OpenAPI 3.x (same IR shape as YAML path); **ArchRad Cloud** merge uses the same library | `archrad ingest openapi --spec openapi.yaml -o graph.json` |
 | **CLI validate** | CI / pre-commit: IR structural + architecture lint, no codegen | `archrad validate --ir graph.json` |
-| **Library** (`@archrad/deterministic`) | IDPs / pipelines | `runDeterministicExport` → files + `irStructuralFindings` + `irLintFindings` |
+| **CLI validate-drift** | After export or merges: on-disk tree vs fresh deterministic export from same IR | `archrad validate-drift -i graph.json -t python -o ./out` |
+| **Library** (`@archrad/deterministic`) | IDPs / pipelines | `runDeterministicExport` → files + findings; **`runValidateDrift`** / **`runDriftCheckAgainstFiles`** for drift |
 
 ### CLI
 
-**Input is structured IR (JSON), not natural language.** There is no `archrad export --prompt "..."`. You pass a **graph file** (nodes/edges) like **`fixtures/minimal-graph.json`**. For a graph that is structurally valid but hits every **architecture lint** rule at once, use **`fixtures/ecommerce-with-warnings.json`** (`archrad validate --ir fixtures/ecommerce-with-warnings.json`). To go from **plain English → IR**, use **ArchRad Cloud** or your own LLM step; this package only does **IR → files**.
+**Input is structured IR (JSON), not natural language.** There is no `archrad export --prompt "..."`. You pass a **graph file** (nodes/edges) like **`fixtures/minimal-graph.json`**. The **npm README GIF** uses **`fixtures/demo-direct-db-violation.json`** → **`fixtures/demo-direct-db-layered.json`**: **failure-first** **`IR-LINT-DIRECT-DB-ACCESS-002`**, fix on the graph, then a **clean** validate (no codegen in the clip). For a graph that hits **many** lint rules at once (stress test), use **`fixtures/ecommerce-with-warnings.json`**. For a **golden payment + retry** graph (edge `config.retry.maxAttempts` + payment node `config.retryPolicy`, both `3`), use **`fixtures/payment-retry-demo.json`** — export shows **`retry_policy`** / retry helpers in **`app/main.py`**. Record that path with **`scripts/record-demo-payment-retry.tape`** (→ **`demo-payment-retry.gif`**). **Drift clip:** **`scripts/record-demo-drift.tape`** / **`npm run record:demo:drift`** (→ **`demo-drift.gif`**) — export, **`tail`** before/after a one-line tamper on **`out/app/main.py`**, then **`validate-drift`**; if **VHS** fails on your machine, run **`scripts/run-demo-drift-sequence.ps1`** or **`.sh`** while screen-capturing (see **`scripts/README_DEMO_RECORDING.md`**). See **`scripts/DEMO_GIF_STORYBOARD.md`** for all tapes. **CLI:** `--target python` is the FastAPI bundle; there is no separate `fastapi` target name. To go from **plain English → IR**, use **ArchRad Cloud** or your own LLM step; this package only does **IR → files**.
+
+**OpenAPI → JSON (spec as source of truth):** each operation under `paths` becomes an `http` node (`config.url` + `config.method`). Then validate and export like any other IR:
+
+```bash
+archrad ingest openapi --spec ./openapi.yaml --out ./graph.json
+archrad validate --ir ./graph.json
+archrad export --ir ./graph.json --target python --out ./out
+```
 
 **YAML → JSON (lighter authoring):** edit **`fixtures/minimal-graph.yaml`** (or your own file) and compile to IR JSON, then validate or export:
 
@@ -120,6 +132,20 @@ archrad validate --ir ./graph.json --max-warnings 0
 # Structural only (skip IR-LINT-*):
 archrad validate --ir ./graph.json --skip-lint
 ```
+
+**Deterministic drift (thin, OSS):** compare an existing export tree on disk to a **fresh** export from the same IR. Detects **missing** / **changed** generated files (line endings normalized). Optional **`--strict-extra`** flags files present on disk but not in the reference export. Not semantic “does code match intent” — **ArchRad Cloud** adds builder/UI drift checks and broader governance.
+
+```bash
+archrad export -i ./graph.json -t python -o ./out
+# …edit files under ./out…
+archrad validate-drift -i ./graph.json -t python -o ./out --skip-host-port-check
+# CI-friendly:
+archrad validate-drift -i ./graph.json -t python -o ./out --skip-host-port-check --json
+# Fail if the tree has extra files not in the reference export:
+archrad validate-drift -i ./graph.json -t python -o ./out --strict-extra
+```
+
+Regenerate the matching clip: **`npm run record:demo:drift`** (VHS) → **`demo-drift.gif`**, or **`scripts/run-demo-drift-sequence.ps1`** / **`.sh`** + ShareX/OBS if VHS is unavailable (see **`scripts/DEMO_GIF_STORYBOARD.md`**).
 
 #### Example: validate architecture
 
@@ -165,6 +191,7 @@ By default, if **8080** (or your `--host-port`) looks **busy** on localhost, the
 ```typescript
 import {
   runDeterministicExport,
+  runValidateDrift,
   validateIrStructural,
   validateIrLint,
   sortFindings,
@@ -177,6 +204,11 @@ const { files, openApiStructuralWarnings, irStructuralFindings, irLintFindings }
     skipIrLint: false, // default
   });
 // Structural errors → empty files (unless skipIrStructuralValidation). Lint is non-blocking for export unless you check policy in your pipeline.
+
+const drift = await runValidateDrift(ir, 'python', '/path/to/existing-export', {
+  skipIrLint: false, // set true to match CLI --skip-ir-lint on reference export
+});
+// drift.ok, drift.driftFindings, drift.exportResult — same core semantics as CLI validate-drift (CLI also probes host port before calling the library)
 
 const all = sortFindings([...validateIrStructural(ir), ...validateIrLint(ir)]);
 if (shouldFailFromFindings(all, { failOnWarning: true })) {
@@ -208,7 +240,7 @@ You should see **422 Unprocessable Entity** (FastAPI/Pydantic) or **400** with a
 bash scripts/golden-path-demo.sh
 ```
 
-See **`scripts/README_DEMO_RECORDING.md`** for **VHS / asciinema / ttyrec** tips to capture a GIF for the top of this README.
+See **`scripts/README_DEMO_RECORDING.md`** for **VHS / asciinema / ttyrec** tips, **When VHS fails**, **drift** replay scripts, and the **trust loop** (IDE edit + terminal **`validate-drift`**). The hero GIF at the top is **`demo-validate.gif`**; **`demo-drift.gif`** and the **trust-loop** storyboard live in **`scripts/DEMO_GIF_STORYBOARD.md`**.
 
 ---
 
@@ -218,7 +250,7 @@ See **`scripts/README_DEMO_RECORDING.md`** for **VHS / asciinema / ttyrec** tips
 
 | Here (OSS) | ArchRad Cloud (commercial product) |
 |------------|-------------------------------------|
-| IR **structural** + **architecture lint** (`validate`, `IR-STRUCT-*`, `IR-LINT-*`), compiler (`export`), OpenAPI **document-shape** warnings, golden Docker/Makefile | **Policy engine**, deeper **architecture intelligence**, **AI remediation** |
+| IR **structural** + **architecture lint** (`validate`, `IR-STRUCT-*`, `IR-LINT-*`), compiler (`export`), **`validate-drift`** (on-disk vs fresh export), OpenAPI **document-shape** warnings, golden Docker/Makefile | **Policy engine**, deeper **architecture intelligence**, **AI remediation**, richer **drift / sync** UX in the builder |
 | `archrad` CLI forever, no account required for this package | Auth, orgs, **quotas**, billing |
 | No proprietary **LLM** orchestration or “repair” loops | LLM generation, repair, multi-model routing |
 | No Git sync, no enterprise policy injection in this repo | Git push, governance, compliance dashboards |

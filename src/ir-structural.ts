@@ -152,7 +152,8 @@ export function validateIrStructural(ir: unknown): IrStructuralFinding[] {
 
     if (isHttpLikeType(nn.type)) {
       const cfg = nn.config;
-      const url = String(cfg.url ?? '').trim();
+      /** Generators accept `route` or `url`; structural checks align so OpenAPI merge + ingest both validate. */
+      const url = String(cfg.url ?? cfg.route ?? '').trim();
       // Align default with generators (pythonFastAPI / nodeExpress use post when omitted)
       const method = String(cfg.method ?? 'post').trim();
       if (!url.startsWith('/')) {
@@ -161,7 +162,7 @@ export function validateIrStructural(ir: unknown): IrStructuralFinding[] {
           severity: 'error',
           message: `HTTP-like node "${id}" has invalid path: config.url must be a non-empty string starting with /`,
           nodeId: id,
-          fixHint: 'Set config.url to e.g. "/signup".',
+          fixHint: 'Set config.url (or config.route) to e.g. "/signup".',
         });
       }
       const m = method.toUpperCase();

@@ -4,6 +4,10 @@
   "description": "A deterministic compiler and linter for system architecture. Validate your architecture before you write code. OSS: structural validation + basic architecture lint (rule-based); FastAPI/Express export; OpenAPI document-shape; golden Docker/Makefile — no LLM.",
   "keywords": [
     "archrad",
+    "architecture-as-code",
+    "blueprint",
+    "ir",
+    "validate-drift",
     "openapi",
     "fastapi",
     "express",
@@ -40,6 +44,7 @@
   "files": [
     "dist",
     "demo-validate.gif",
+    "demo-drift.gif",
     "demo.gif",
     "fixtures",
     "schemas",
@@ -58,7 +63,9 @@
     "prepublishOnly": "npm run build",
     "test": "tsc -p tsconfig.build.json --noEmit && vitest run",
     "lint": "biome check ./src",
-    "typecheck": "tsc -p tsconfig.build.json --noEmit"
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "record:demo:payment-retry": "vhs scripts/record-demo-payment-retry.tape",
+    "record:demo:drift": "vhs scripts/record-demo-drift.tape"
   },
   "dependencies": {
     "commander": "^12.1.0",

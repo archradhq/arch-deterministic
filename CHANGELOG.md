@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **[docs/CUSTOM_RULES.md](docs/CUSTOM_RULES.md)** — custom **`IR-LINT`-style** visitors (`ParsedLintGraph` → **`IrStructuralFinding[]`**): worked **service / `config.timeout`** example, **compose** (`runArchitectureLinting` + org rules) vs **fork** (`LINT_RULE_REGISTRY`); no runtime registry mutation.
+- **`archrad validate-drift`** — compare an on-disk export directory to a **fresh** deterministic export from the same IR (`DRIFT-MISSING` / `DRIFT-MODIFIED` / optional `DRIFT-EXTRA` with **`--strict-extra`**); **`--json`** for CI. Library: **`runValidateDrift`**, **`diffExpectedExportAgainstFiles`**, **`runDriftCheckAgainstFiles`**, etc. (`src/validate-drift.ts`).
+- **VHS tape** **`scripts/record-demo-drift.tape`** → **`demo-drift.gif`**; **`npm run record:demo:drift`**. Storyboard and recording docs updated (**`scripts/DEMO_GIF_STORYBOARD.md`**). **Replay without VHS:** **`scripts/run-demo-drift-sequence.sh`** / **`.ps1`** for ShareX/OBS/asciinema capture; **`README_DEMO_RECORDING.md`** (**When VHS fails**).
 - **`graphPredicates.ts`**: shared **`isHttpLikeType`** / **`isDbLikeType`** / **`isQueueLikeNodeType`** (exported from the package root) so structural HTTP checks and IR-LINT stay aligned.
 - **`IR-STRUCT-EDGE_AMBIGUOUS_FROM` / `IR-STRUCT-EDGE_AMBIGUOUS_TO`** when an edge references a **duplicate** node id.
 - **`ParsedLintGraph.inDegree`**, **`BuildParsedLintGraphResult`**, **`isParsedLintGraph()`** — `buildParsedLintGraph` returns **`{ findings }`** on parse failure instead of **`null`**.

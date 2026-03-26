@@ -1,5 +1,10 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 import { runDeterministicExport } from './exportPipeline.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 describe('runDeterministicExport', () => {
   const ir = {
@@ -94,5 +99,16 @@ describe('runDeterministicExport', () => {
     const { files } = await runDeterministicExport(ir, 'python', { hostPort: 18080 });
     expect(files['docker-compose.yml']).toContain('"18080:8080"');
     expect(files['README.md']).toContain('localhost:18080');
+  });
+
+  it('golden payment-retry fixture emits maxAttempts 3 for payment handler path', async () => {
+    const raw = readFileSync(join(__dirname, '../fixtures/payment-retry-demo.json'), 'utf8');
+    const ir = JSON.parse(raw);
+    const { files, irStructuralFindings } = await runDeterministicExport(ir, 'python', {});
+    expect(irStructuralFindings.length).toBe(0);
+    const main = files['app/main.py'];
+    expect(main).toBeDefined();
+    expect(main).toMatch(/retry_policy = \{"maxAttempts":3,"backoffMs":500,"strategy":"exponential"\}/);
+    expect(main).toMatch(/def retry_with_exponential_backoff\(func, max_attempts=3/);
   });
 });

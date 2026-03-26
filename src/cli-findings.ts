@@ -10,10 +10,21 @@ const ICON: Record<string, string> = {
   info: 'ℹ️',
 };
 
+function ttyColor(): { red: string; reset: string } {
+  const noColor = process.env.NO_COLOR != null && process.env.NO_COLOR !== '';
+  if (noColor || !process.stderr.isTTY) return { red: '', reset: '' };
+  return { red: '\u001b[31m', reset: '\u001b[0m' };
+}
+
 /** Pretty multi-line output for terminal / CI logs */
 export function formatFindingLines(f: IrStructuralFinding): string[] {
   const icon = ICON[f.severity] ?? '•';
-  const lines: string[] = [`${icon} ${f.code}: ${f.message}`];
+  const { red, reset } = ttyColor();
+  const head =
+    f.code.startsWith('IR-LINT-') && red
+      ? `${red}${icon} ${f.code}: ${f.message}${reset}`
+      : `${icon} ${f.code}: ${f.message}`;
+  const lines: string[] = [head];
   if (f.fixHint) lines.push(`   Fix: ${f.fixHint}`);
   if (f.suggestion) lines.push(`   Suggestion: ${f.suggestion}`);
   if (f.impact) lines.push(`   Impact: ${f.impact}`);

@@ -1,0 +1,37 @@
+{
+  "graph": {
+    "metadata": {
+      "name": "demo-direct-db-layered",
+      "description": "GIF/demo: same intent as violation fixture — API → service → Postgres; health route chained from API entry. Passes architecture lint (no IR-LINT-*)."
+    },
+    "nodes": [
+      {
+        "id": "orders-api",
+        "type": "http",
+        "name": "Orders API",
+        "config": { "url": "/orders", "method": "GET" }
+      },
+      {
+        "id": "health",
+        "type": "http",
+        "name": "Health",
+        "config": { "url": "/health", "method": "GET" }
+      },
+      {
+        "id": "orders-svc",
+        "type": "service",
+        "name": "Orders service"
+      },
+      {
+        "id": "orders-db",
+        "type": "postgres",
+        "name": "Orders DB"
+      }
+    ],
+    "edges": [
+      { "from": "orders-api", "to": "health", "id": "e-api-health" },
+      { "from": "orders-api", "to": "orders-svc", "id": "e-api-svc" },
+      { "from": "orders-svc", "to": "orders-db", "id": "e-svc-db" }
+    ]
+  }
+}

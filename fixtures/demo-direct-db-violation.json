@@ -1,0 +1,22 @@
+{
+  "graph": {
+    "metadata": {
+      "name": "demo-direct-db-violation",
+      "description": "GIF/demo: Orders API → Postgres in one hop — triggers IR-LINT-DIRECT-DB-ACCESS-002 (and IR-LINT-NO-HEALTHCHECK-003). Pair with demo-direct-db-layered.json."
+    },
+    "nodes": [
+      {
+        "id": "orders-api",
+        "type": "http",
+        "name": "Orders API",
+        "config": { "url": "/orders", "method": "GET" }
+      },
+      {
+        "id": "orders-db",
+        "type": "postgres",
+        "name": "Orders DB"
+      }
+    ],
+    "edges": [{ "from": "orders-api", "to": "orders-db", "id": "e-api-db" }]
+  }
+}

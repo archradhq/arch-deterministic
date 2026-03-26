@@ -35,6 +35,19 @@ export { default as generateNodeExpressFiles } from './nodeExpress.js';
 export { runDeterministicExport, type DeterministicExportResult } from './exportPipeline.js';
 
 export {
+  diffExpectedExportAgainstFiles,
+  diffExpectedExportAgainstDirectory,
+  readDirectoryAsExportMap,
+  runValidateDrift,
+  runDriftCheckAgainstFiles,
+  normalizeExportFileContent,
+  type DriftFinding,
+  type DriftCode,
+  type ValidateDriftResult,
+  type DriftCheckFilesResult,
+} from './validate-drift.js';
+
+export {
   normalizeIrGraph,
   validateIrStructural,
   hasIrStructuralErrors,
@@ -71,3 +84,12 @@ export {
   canonicalIrToJsonString,
   YamlGraphParseError,
 } from './yamlToIr.js';
+
+export {
+  openApiDocumentToHttpNodes,
+  openApiDocumentToCanonicalIr,
+  openApiStringToCanonicalIr,
+  openApiUnknownToCanonicalIr,
+  OpenApiIngestError,
+  type OpenApiHttpNode,
+} from './openapi-to-ir.js';

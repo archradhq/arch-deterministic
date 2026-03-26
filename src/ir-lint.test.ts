@@ -196,4 +196,19 @@ describe('validateIrLint', () => {
     const f = validateIrLint(ir);
     expect(f.some((x) => x.code === 'IR-LINT-MULTIPLE-HTTP-ENTRIES-009')).toBe(true);
   });
+
+  it('demo-direct-db-violation.json flags IR-LINT-DIRECT-DB-ACCESS-002 (README GIF)', () => {
+    const ir = readFixture('demo-direct-db-violation.json');
+    const structural = validateIrStructural(ir);
+    expect(structural.filter((x) => x.severity === 'error')).toHaveLength(0);
+    const f = validateIrLint(ir);
+    expect(f.some((x) => x.code === 'IR-LINT-DIRECT-DB-ACCESS-002')).toBe(true);
+  });
+
+  it('demo-direct-db-layered.json passes architecture lint (README GIF)', () => {
+    const ir = readFixture('demo-direct-db-layered.json');
+    const structural = validateIrStructural(ir);
+    expect(structural.filter((x) => x.severity === 'error')).toHaveLength(0);
+    expect(validateIrLint(ir)).toHaveLength(0);
+  });
 });

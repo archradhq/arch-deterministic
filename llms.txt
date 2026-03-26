@@ -32,6 +32,8 @@ Omit `--out` on `yaml-to-ir` to print JSON to stdout. Library: `parseYamlToCanon
 
 CI gates: `archrad validate --fail-on-warning` or `--max-warnings 0`. JSON output: `--json`. Skip lint only: `validate --skip-lint`. Export: `--host-port`, `--skip-ir-lint`, `--fail-on-warning`, `--max-warnings <n>`.
 
+**Drift (deterministic, thin):** after `archrad export`, `archrad validate-drift -i ./graph.json -t python -o ./out` compares `./out` to a fresh export (missing/changed files → exit 1). Use `--json` in CI. Not semantic code analysis — Cloud product owns richer drift UX.
+
 ## IR (input) shape
 
 - Root: `{ "graph": { "metadata"?, "nodes": [...], "edges": [...] } }` **or** a bare graph object with top-level `nodes` (and optional `edges`, `metadata`). Internal unwrap is always **`graph.metadata` / `graph.nodes` / `graph.edges`** after `normalizeIrGraph`.
@@ -62,7 +64,7 @@ import {
 
 `runDeterministicExport(ir, 'python' | 'node' | 'nodejs', opts)` returns `{ files, openApiStructuralWarnings, irStructuralFindings, irLintFindings }`. Structural **errors** return empty `files` unless `skipIrStructuralValidation`. Optional opts: `hostPort`, `skipIrLint`, `skipIrStructuralValidation`.
 
-Extending lint: append a visitor to **`LINT_RULE_REGISTRY`** in `src/lint-rules.ts` ([source on GitHub](https://github.com/archradhq/arch-deterministic/blob/main/src/lint-rules.ts)). The published **npm** tarball ships **`dist/`** only; clone the public repo or use the monorepo package path for edits.
+Extending lint: **compose** `runArchitectureLinting` with your own `(g) => findings` in CI — worked example **[docs/CUSTOM_RULES.md](docs/CUSTOM_RULES.md)**. To change the stock **`archrad validate`** binary, **fork** and append to **`LINT_RULE_REGISTRY`** in `src/lint-rules.ts` ([source on GitHub](https://github.com/archradhq/arch-deterministic/blob/main/src/lint-rules.ts)). Do not mutate the registry at runtime from app code. The published **npm** tarball ships **`dist/`** only; clone the public repo or use the monorepo package path for fork edits.
 
 ## Validation layers (OSS vs Cloud)
 
@@ -76,6 +78,7 @@ Details: [docs/STRUCTURAL_VS_SEMANTIC_VALIDATION.md](docs/STRUCTURAL_VS_SEMANTIC
 - [docs/ENGINEERING_NOTES.md](docs/ENGINEERING_NOTES.md) — strict TS, Biome scope, IR-LINT-SYNC-CHAIN-001 (async edges, HTTP-entry fallback), `prepublishOnly` vs `prepare`, OpenAPI/port limits.
 - [docs/CONCEPT_ADOPTION_AND_LIMITS.md](docs/CONCEPT_ADOPTION_AND_LIMITS.md) — IR vs codegen, cold start, one-way export, OSS/Cloud strategy.
 - [docs/IR_CONTRACT.md](docs/IR_CONTRACT.md) — parser boundary, normalized node/edge shapes, validation levels.
+- [docs/CUSTOM_RULES.md](docs/CUSTOM_RULES.md) — org **`ORG-*`** lint visitors; compose vs fork; minimal timeout example.
 - [README.md](README.md) — full usage, architecture diagram, open-core boundary.
 - [CHANGELOG.md](CHANGELOG.md) — releases and behavior changes.
 - [CONTRIBUTING.md](CONTRIBUTING.md) — develop in monorepo vs OSS-only repo.

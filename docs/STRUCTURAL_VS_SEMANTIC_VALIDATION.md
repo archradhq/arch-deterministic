@@ -50,7 +50,7 @@ Findings use **`severity`**: `error` (blocks export) or `warning` / `info` when 
 | `IR-LINT-DATASTORE-NO-INCOMING-008` | Datastore-like node has no incoming edges |
 | `IR-LINT-MULTIPLE-HTTP-ENTRIES-009` | More than one HTTP node with no incoming edges |
 
-**CI:** `archrad validate --fail-on-warning` or `--max-warnings N`. Not org-specific policy — that stays in Cloud.
+**CI:** `archrad validate --fail-on-warning` or `--max-warnings N`. Not org-specific policy — that stays in Cloud. **Custom deterministic visitors** on the same graph (e.g. **`ORG-*`** codes): see **[CUSTOM_RULES.md](./CUSTOM_RULES.md)**.
 
 ## Semantic (ArchRad Cloud)
 

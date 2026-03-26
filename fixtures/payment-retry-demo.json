@@ -1,0 +1,43 @@
+{
+  "graph": {
+    "metadata": {
+      "name": "payment-retry-demo",
+      "description": "Golden IR for demos: signup → payment with edge retry (maxAttempts 3) — matches pythonFastAPI edge.config.retry + node retryPolicy fallback shape"
+    },
+    "nodes": [
+      {
+        "id": "signup",
+        "type": "http",
+        "name": "Signup",
+        "config": {
+          "url": "/signup",
+          "method": "POST",
+          "operation": "create",
+          "businessLogic": "Create account then trigger payment flow"
+        }
+      },
+      {
+        "id": "payment",
+        "type": "http",
+        "name": "Process payment",
+        "config": {
+          "url": "/payment",
+          "method": "POST",
+          "operation": "create",
+          "businessLogic": "Charge payment provider with retries on transient failures",
+          "retryPolicy": { "maxAttempts": 3, "backoffMs": 500, "strategy": "exponential" }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from": "signup",
+        "to": "payment",
+        "id": "e-signup-payment",
+        "config": {
+          "retry": { "maxAttempts": 3, "backoffMs": 500, "strategy": "exponential" }
+        }
+      }
+    ]
+  }
+}
