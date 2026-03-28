@@ -8,9 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+## [0.1.1] - 2026-03-28
+
+### Added
 - **[docs/CUSTOM_RULES.md](docs/CUSTOM_RULES.md)** — custom **`IR-LINT`-style** visitors (`ParsedLintGraph` → **`IrStructuralFinding[]`**): worked **service / `config.timeout`** example, **compose** (`runArchitectureLinting` + org rules) vs **fork** (`LINT_RULE_REGISTRY`); no runtime registry mutation.
 - **`archrad validate-drift`** — compare an on-disk export directory to a **fresh** deterministic export from the same IR (`DRIFT-MISSING` / `DRIFT-MODIFIED` / optional `DRIFT-EXTRA` with **`--strict-extra`**); **`--json`** for CI. Library: **`runValidateDrift`**, **`diffExpectedExportAgainstFiles`**, **`runDriftCheckAgainstFiles`**, etc. (`src/validate-drift.ts`).
-- **VHS tape** **`scripts/record-demo-drift.tape`** → **`demo-drift.gif`**; **`npm run record:demo:drift`**. Storyboard and recording docs updated (**`scripts/DEMO_GIF_STORYBOARD.md`**). **Replay without VHS:** **`scripts/run-demo-drift-sequence.sh`** / **`.ps1`** for ShareX/OBS/asciinema capture; **`README_DEMO_RECORDING.md`** (**When VHS fails**).
+- **VHS tape** **`scripts/record-demo-drift.tape`** → **`demo-drift.gif`**; **`npm run record:demo:drift`**. Storyboard and recording docs updated (**`scripts/DEMO_GIF_STORYBOARD.md`**). **Replay without VHS:** **`scripts/run-demo-drift-sequence.sh`** / **`.ps1`** for ShareX/OBS/asciinema capture; **`README_DEMO_RECORDING.md`** (**When VHS fails**). **`scripts/invoke-drift-check.ps1`** for repeatable drift checks on Windows.
 - **`graphPredicates.ts`**: shared **`isHttpLikeType`** / **`isDbLikeType`** / **`isQueueLikeNodeType`** (exported from the package root) so structural HTTP checks and IR-LINT stay aligned.
 - **`IR-STRUCT-EDGE_AMBIGUOUS_FROM` / `IR-STRUCT-EDGE_AMBIGUOUS_TO`** when an edge references a **duplicate** node id.
 - **`ParsedLintGraph.inDegree`**, **`BuildParsedLintGraphResult`**, **`isParsedLintGraph()`** — `buildParsedLintGraph` returns **`{ findings }`** on parse failure instead of **`null`**.
@@ -28,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI **`export`**: **`--skip-ir-structural-validation`**, **`--skip-ir-lint`**, **`--fail-on-warning`**, **`--max-warnings <n>`** (blocks writes when IR policy fails).
 - Library: **`validateIrLint`**, **`sortFindings`**, **`shouldFailFromFindings`**, **`IrFindingLayer`**.
 - Fixtures **`invalid-edge-unknown-node.json`**, **`invalid-cycle.json`** for negative tests; **`ecommerce-with-warnings.json`** triggers all four **`IR-LINT-*`** rules for demos and tests.
+- **`package.json` `keywords`**: **`architecture-as-code`**, **`blueprint`**, **`ir`**, **`validate-drift`** for npm discoverability.
 
 ### Changed
 - **`validateIrLint`** returns **structural findings** when the IR cannot be built (same codes as **`normalizeIrGraph`** / empty graph), instead of **`[]`**.
@@ -50,17 +57,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Canonical **OSS positioning** line in README, `llms.txt`, monorepo/OSS docs: *Includes structural validation + basic architecture linting (rule-based, deterministic).*
 - Clarified OpenAPI pass as **document shape** (parse + required top-level fields), explicitly **not** Spectral-style lint; README + `docs/STRUCTURAL_VS_SEMANTIC_VALIDATION.md` + code comments.
 - Documented **codegen vs validation** for retry/timeout IR fields and **InkByte vs OSS** scope in README and structural/semantic doc.
-- README positioning: **deterministic compiler and linter for system architecture**; validation layers table (OSS vs Cloud).
+- README positioning: **deterministic compiler and linter for system architecture**; validation layers table (OSS vs Cloud); **`validate-drift`**, drift GIF / trust-loop recording docs, library **`runValidateDrift`** example.
 
-## [0.1.0] - 2026-02-26
-
-### Added
-- Deterministic **FastAPI** and **Express** generators from blueprint **IR** (JSON graph).
-- **`archrad export`** CLI (`--ir`, `--target`, `--out`).
-- **Structural OpenAPI** validation pass on generated bundles (warnings, no LLM repair).
-- **Golden path**: `docker-compose.yml`, `Dockerfile`, `Makefile`, README section; container port **8080**; configurable **host** publish port (`--host-port` / `ARCHRAD_HOST_PORT`).
-- Optional **localhost preflight** for host port (warn or `--strict-host-port`).
-- Library API: `runDeterministicExport`, OpenAPI helpers, golden-layer helpers.
-
-[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/archradhq/arch-deterministic/releases/tag/v0.1.1
 [0.1.0]: https://github.com/archradhq/arch-deterministic/releases/tag/v0.1.0
