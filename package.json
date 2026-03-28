@@ -68,7 +68,7 @@
     "record:demo:drift": "vhs scripts/record-demo-drift.tape"
   },
   "dependencies": {
-    "commander": "^12.1.0",
+    "commander": "^14.0.3",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
