@@ -220,6 +220,28 @@ describe('isHttpEndpointType vs isHttpLikeType', () => {
   }
 });
 
+describe('IR-STRUCT-HTTP_* service-type coverage', () => {
+  it('graphql uses the same structural path/method rules as http (single REST-style endpoint in IR)', () => {
+    const f = validateIrStructural({
+      graph: {
+        nodes: [{ id: 'g', type: 'graphql', config: { url: '/query', method: 'NOTVERB' } }],
+        edges: [],
+      },
+    });
+    expect(f.some((x) => x.code === 'IR-STRUCT-HTTP_METHOD')).toBe(true);
+  });
+
+  it('gateway is not subject to IR-STRUCT-HTTP_PATH / IR-STRUCT-HTTP_METHOD (different config contract)', () => {
+    const f = validateIrStructural({
+      graph: {
+        nodes: [{ id: 'gw', type: 'gateway', config: {} }],
+        edges: [],
+      },
+    });
+    expect(f.some((x) => x.code === 'IR-STRUCT-HTTP_PATH' || x.code === 'IR-STRUCT-HTTP_METHOD')).toBe(false);
+  });
+});
+
 describe('detectCycles', () => {
   it('returns null for acyclic graph', () => {
     const adj = new Map([['a', ['b']], ['b', ['c']], ['c', []]]);

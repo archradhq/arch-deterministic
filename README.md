@@ -105,6 +105,8 @@ archrad validate --ir ./graph.json
 archrad export --ir ./graph.json --target python --out ./out
 ```
 
+**OpenAPI security → IR → lint:** ingestion copies **global** and **per-operation** `security` requirement names onto each HTTP node as `config.security` (sorted, deterministic). An operation with explicit `security: []` becomes `config.authRequired: false` (intentionally public). If the spec declares **no** security at any level, nodes are left without those fields — then **`archrad validate`** can surface **`IR-LINT-MISSING-AUTH-010`** on HTTP-like entry nodes (compliance gap from the spec artifact alone).
+
 **YAML → JSON (lighter authoring):** edit **`fixtures/minimal-graph.yaml`** (or your own file) and compile to IR JSON, then validate or export:
 
 ```bash

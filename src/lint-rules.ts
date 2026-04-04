@@ -293,22 +293,15 @@ export function ruleMultipleHttpEntries(g: ParsedLintGraph): IrStructuralFinding
  * for intentionally public endpoints (health, public assets, etc.).
  */
 export function ruleHttpMissingAuth(g: ParsedLintGraph): IrStructuralFinding[] {
-  const { edges, nodeById, adj } = g;
+  const { edges, nodeById, adj, inDegree } = g;
 
-  // Build set of nodes that have an incoming sync edge (not entry nodes)
-  const hasIncomingEdge = new Set<string>();
-  for (const e of edges) {
-    if (!e || typeof e !== 'object') continue;
-    const { to } = edgeEndpoints(e as Record<string, unknown>);
-    if (to) hasIncomingEdge.add(to);
-  }
-
-  // Build reverse adjacency: to → [from] for auth-coverage check #2
+  // Entry = no valid incoming edge (same counts as buildParsedLintGraph.inDegree)
+  // Build reverse adjacency: to → [from] for auth-coverage check #2 (valid endpoints only, same as adj)
   const reverseAdj = new Map<string, string[]>();
   for (const e of edges) {
     if (!e || typeof e !== 'object') continue;
     const { from, to } = edgeEndpoints(e as Record<string, unknown>);
-    if (!from || !to) continue;
+    if (!from || !to || !nodeById.has(from) || !nodeById.has(to)) continue;
     if (!reverseAdj.has(to)) reverseAdj.set(to, []);
     reverseAdj.get(to)!.push(from);
   }
@@ -317,7 +310,7 @@ export function ruleHttpMissingAuth(g: ParsedLintGraph): IrStructuralFinding[] {
 
   for (const [id, n] of nodeById) {
     if (!isHttpLikeType(nodeType(n))) continue;
-    if (hasIncomingEdge.has(id)) continue; // not an entry node
+    if ((inDegree.get(id) ?? 0) > 0) continue; // not an entry node
 
     const cfg = (n.config ?? {}) as Record<string, unknown>;
 

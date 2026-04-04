@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-04-04
+
+### Fixed
+
+- **CLI** (`validate`, `export`, `validate-drift`): a missing **`--ir`** file now reports **`archrad: --ir file not found: <path>`** instead of **`invalid JSON`**.
+
+### Changed
+
+- **`IR-LINT-MISSING-AUTH-010`** — HTTP entry detection uses **`ParsedLintGraph.inDegree`** (same counts as `buildParsedLintGraph`) instead of a separate scan; reverse adjacency for auth-as-gateway only includes edges whose endpoints exist in **`nodeById`**.
+- **Docs:** README documents **OpenAPI security → IR → `IR-LINT-MISSING-AUTH-010`** for the spec-to-compliance workflow.
+- **`graphPredicates.ts`:** clarified comments for **`isHttpEndpointType`** vs **`isHttpLikeType`** (`graphql` vs `gateway` / `bff` / `grpc`).
+
+### Added
+
+- **Tests:** structural **`IR-STRUCT-HTTP_*`** coverage for **`graphql`** (validated) vs **`gateway`** (excluded); regression tests locking lint message substrings for **`IR-LINT-DEAD-NODE-011`**, **`IR-LINT-DIRECT-DB-ACCESS-002`**, **`IR-LINT-SYNC-CHAIN-001`** (terminal copy / Show HN).
+
 ## [0.1.2] - 2026-03-28
 
 ### Fixed
@@ -71,7 +87,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documented **codegen vs validation** for retry/timeout IR fields and **InkByte vs OSS** scope in README and structural/semantic doc.
 - README positioning: **deterministic compiler and linter for system architecture**; validation layers table (OSS vs Cloud); **`validate-drift`**, drift GIF / trust-loop recording docs, library **`runValidateDrift`** example.
 
-[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/archradhq/arch-deterministic/releases/tag/v0.1.3
 [0.1.2]: https://github.com/archradhq/arch-deterministic/releases/tag/v0.1.2
 [0.1.1]: https://github.com/archradhq/arch-deterministic/releases/tag/v0.1.1
 [0.1.0]: https://github.com/archradhq/arch-deterministic/releases/tag/v0.1.0

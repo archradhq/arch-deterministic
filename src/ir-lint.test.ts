@@ -346,4 +346,51 @@ describe('validateIrLint', () => {
     expect(structural.filter((x) => x.severity === 'error')).toHaveLength(0);
     expect(validateIrLint(ir)).toHaveLength(0);
   });
+
+  describe('lint message spelling (CLI / Show HN)', () => {
+    it('IR-LINT-DEAD-NODE-011 message: "but" not "buut"', () => {
+      const ir = {
+        graph: {
+          nodes: [
+            { id: 'api', type: 'http', name: 'API', config: { url: '/x', method: 'GET', auth: 'bearer' } },
+            { id: 'svc', type: 'service', name: 'Dead service' },
+          ],
+          edges: [{ from: 'api', to: 'svc' }],
+        },
+      };
+      const m = validateIrLint(ir).find((x) => x.code === 'IR-LINT-DEAD-NODE-011' && x.nodeId === 'svc')!.message;
+      expect(m).toMatch(/receives edges but has no outgoing edges/);
+      expect(m).not.toMatch(/buut/);
+    });
+
+    it('IR-LINT-DIRECT-DB-ACCESS-002 message: "datastore" not "ddatastore"', () => {
+      const ir = readFixture('demo-direct-db-violation.json');
+      const m = validateIrLint(ir).find((x) => x.code === 'IR-LINT-DIRECT-DB-ACCESS-002')!.message;
+      expect(m).toMatch(/connects directly to datastore node/);
+      expect(m).not.toMatch(/ddatastore/);
+    });
+
+    it('IR-LINT-SYNC-CHAIN-001 message: "depth" not "ddepth"', () => {
+      const ir = {
+        graph: {
+          nodes: [
+            { id: 'entry', type: 'http', name: 'API', config: { url: '/x', method: 'GET', auth: 'bearer' } },
+            { id: 'a', type: 'service', name: 'A' },
+            { id: 'b', type: 'service', name: 'B' },
+            { id: 'c', type: 'service', name: 'C' },
+            { id: 'd', type: 'service', name: 'D' },
+          ],
+          edges: [
+            { from: 'entry', to: 'a' },
+            { from: 'a', to: 'b' },
+            { from: 'b', to: 'c' },
+            { from: 'c', to: 'd' },
+          ],
+        },
+      };
+      const m = validateIrLint(ir).find((x) => x.code === 'IR-LINT-SYNC-CHAIN-001')!.message;
+      expect(m).toMatch(/\(depth ≈ \d+ hops/);
+      expect(m).not.toMatch(/ddepth/);
+    });
+  });
 });

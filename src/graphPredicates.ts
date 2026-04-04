@@ -5,9 +5,10 @@
 /**
  * Narrow predicate: node types that carry a single HTTP endpoint (`config.url` + HTTP method).
  * Used by **structural validation** for `IR-STRUCT-HTTP_PATH` / `IR-STRUCT-HTTP_METHOD` checks.
- * `gateway`, `grpc`, and `bff` are intentionally excluded — they use different config shapes
+ * **`http` / `https` / `rest` / `api` / `graphql`** share this contract in the IR (GraphQL is one route + method in the IR model).
+ * **`gateway`**, **`grpc`**, and **`bff`** are intentionally **excluded** — they use different config shapes
  * (upstream routing, proto service/method, multi-route aggregation) and must not be required
- * to supply a REST-style url + HTTP method.
+ * to supply a REST-style `url` + HTTP method; they remain **`isHttpLikeType`** for lint (entries, health, sync chain, etc.).
  */
 export function isHttpEndpointType(t: string): boolean {
   const s = String(t ?? '')
