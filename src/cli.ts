@@ -33,6 +33,28 @@ async function writeTree(baseDir: string, files: Record<string, string>): Promis
   }
 }
 
+/** Read and parse IR JSON; distinguish missing file from invalid JSON. */
+async function readIrJsonFromPath(irPath: string): Promise<unknown | null> {
+  let raw: string;
+  try {
+    raw = await readFile(irPath, 'utf8');
+  } catch (e) {
+    const err = e as NodeJS.ErrnoException;
+    if (err?.code === 'ENOENT') {
+      console.error(`archrad: --ir file not found: ${irPath}`);
+    } else {
+      console.error(`archrad: could not read --ir file: ${irPath} (${err?.message ?? String(e)})`);
+    }
+    return null;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    console.error('archrad: invalid JSON in --ir file');
+    return null;
+  }
+}
+
 function parseMaxWarnings(v: string | undefined): number | undefined {
   if (v == null || v === '') return undefined;
   const n = parseInt(v, 10);
@@ -77,11 +99,8 @@ program
       maxWarnings?: string;
     }) => {
       const irPath = resolve(cmdOpts.ir);
-      let ir: unknown;
-      try {
-        ir = JSON.parse(await readFile(irPath, 'utf8'));
-      } catch {
-        console.error('archrad: invalid JSON in --ir file');
+      const ir = await readIrJsonFromPath(irPath);
+      if (ir == null) {
         process.exitCode = 1;
         return;
       }
@@ -239,15 +258,12 @@ program
     }) => {
     const irPath = resolve(cmdOpts.ir);
     const outDir = resolve(cmdOpts.out);
-    const raw = await readFile(irPath, 'utf8');
-    let ir: any;
-    try {
-      ir = JSON.parse(raw);
-    } catch {
-      console.error('archrad: invalid JSON in --ir file');
+    const parsed = await readIrJsonFromPath(irPath);
+    if (parsed == null) {
       process.exitCode = 1;
       return;
     }
+    const ir = parsed as Record<string, unknown>;
     const actualIR = ir.graph ? ir : { graph: ir };
 
     const hostPort = normalizeGoldenHostPort(
@@ -359,14 +375,12 @@ program
     }) => {
       const irPath = resolve(cmdOpts.ir);
       const outDir = resolve(cmdOpts.out);
-      let ir: any;
-      try {
-        ir = JSON.parse(await readFile(irPath, 'utf8'));
-      } catch {
-        console.error('archrad: invalid JSON in --ir file');
+      const parsed = await readIrJsonFromPath(irPath);
+      if (parsed == null) {
         process.exitCode = 1;
         return;
       }
+      const ir = parsed as Record<string, unknown>;
       const actualIR = ir.graph ? ir : { graph: ir };
 
       const hostPort = normalizeGoldenHostPort(
