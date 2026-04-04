@@ -75,7 +75,7 @@
     "@biomejs/biome": "^1.9.4",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.19.0",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.2",
     "vitest": "^4.0.15"
   },
   "engines": {
