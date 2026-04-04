@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 import {
   openApiDocumentToCanonicalIr,
@@ -6,6 +9,8 @@ import {
   OpenApiIngestError,
 } from './openapi-to-ir.js';
 import { validateIrStructural, hasIrStructuralErrors } from './ir-structural.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 describe('openapi-to-ir', () => {
   const minimalDoc = {
@@ -169,6 +174,14 @@ paths:
       paths: { '/data': { get: { summary: 'Data' } } },
     };
     const ir = openApiDocumentToCanonicalIr(doc as Record<string, unknown>);
+    const findings = validateIrLint(ir);
+    expect(findings.some((f) => f.code === 'IR-LINT-MISSING-AUTH-010')).toBe(true);
+  });
+
+  it('e2e: fixtures/e2e-no-security-openapi.yaml (no security defs) → IR-LINT-MISSING-AUTH-010', async () => {
+    const { validateIrLint } = await import('./ir-lint.js');
+    const yaml = readFileSync(join(__dirname, '../fixtures/e2e-no-security-openapi.yaml'), 'utf8');
+    const ir = openApiStringToCanonicalIr(yaml);
     const findings = validateIrLint(ir);
     expect(findings.some((f) => f.code === 'IR-LINT-MISSING-AUTH-010')).toBe(true);
   });

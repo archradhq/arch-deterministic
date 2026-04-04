@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Tests:** structural **`IR-STRUCT-HTTP_*`** coverage for **`graphql`** (validated) vs **`gateway`** (excluded); regression tests locking lint message substrings for **`IR-LINT-DEAD-NODE-011`**, **`IR-LINT-DIRECT-DB-ACCESS-002`**, **`IR-LINT-SYNC-CHAIN-001`** (terminal copy / Show HN).
+- **Fixture** **`fixtures/e2e-no-security-openapi.yaml`** (OpenAPI with **no** `security` / `securitySchemes`) + test asserting **`openApiStringToCanonicalIr` → `validateIrLint` → `IR-LINT-MISSING-AUTH-010`** — same pipeline as **`archrad ingest openapi`** + **`archrad validate`**.
 
 ## [0.1.2] - 2026-03-28
 
