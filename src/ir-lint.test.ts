@@ -197,6 +197,141 @@ describe('validateIrLint', () => {
     expect(f.some((x) => x.code === 'IR-LINT-MULTIPLE-HTTP-ENTRIES-009')).toBe(true);
   });
 
+  // IR-LINT-MISSING-AUTH-010
+  it('IR-LINT-MISSING-AUTH-010 fires on HTTP entry with no auth coverage', () => {
+    const ir = {
+      graph: {
+        nodes: [{ id: 'api', type: 'http', name: 'API', config: { url: '/orders', method: 'GET' } }],
+        edges: [],
+      },
+    };
+    const f = validateIrLint(ir);
+    expect(f.some((x) => x.code === 'IR-LINT-MISSING-AUTH-010' && x.nodeId === 'api')).toBe(true);
+  });
+
+  it('IR-LINT-MISSING-AUTH-010 clears when outgoing neighbour is auth-like', () => {
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'api', type: 'http', name: 'API', config: { url: '/orders', method: 'GET' } },
+          { id: 'mw', type: 'auth', name: 'Auth middleware' },
+          { id: 'svc', type: 'service', name: 'Orders service' },
+        ],
+        edges: [
+          { from: 'api', to: 'mw' },
+          { from: 'mw', to: 'svc' },
+        ],
+      },
+    };
+    expect(validateIrLint(ir).some((x) => x.code === 'IR-LINT-MISSING-AUTH-010')).toBe(false);
+  });
+
+  it('IR-LINT-MISSING-AUTH-010 clears when auth-like node points to the HTTP entry', () => {
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'gw', type: 'oauth', name: 'OAuth gateway' },
+          { id: 'api', type: 'http', name: 'API', config: { url: '/orders', method: 'GET' } },
+        ],
+        edges: [{ from: 'gw', to: 'api' }],
+      },
+    };
+    expect(validateIrLint(ir).some((x) => x.code === 'IR-LINT-MISSING-AUTH-010')).toBe(false);
+  });
+
+  it('IR-LINT-MISSING-AUTH-010 clears when config carries an auth key', () => {
+    const ir = {
+      graph: {
+        nodes: [{ id: 'api', type: 'http', name: 'API', config: { url: '/orders', method: 'GET', auth: 'bearer' } }],
+        edges: [],
+      },
+    };
+    expect(validateIrLint(ir).some((x) => x.code === 'IR-LINT-MISSING-AUTH-010')).toBe(false);
+  });
+
+  it('IR-LINT-MISSING-AUTH-010 clears when config.authRequired is false (explicit public opt-out)', () => {
+    const ir = {
+      graph: {
+        nodes: [{ id: 'api', type: 'http', name: 'Health', config: { url: '/health', method: 'GET', authRequired: false } }],
+        edges: [],
+      },
+    };
+    expect(validateIrLint(ir).some((x) => x.code === 'IR-LINT-MISSING-AUTH-010')).toBe(false);
+  });
+
+  it('IR-LINT-MISSING-AUTH-010 does not fire on non-entry HTTP nodes', () => {
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'gw', type: 'gateway', name: 'Gateway', config: { auth: 'bearer' } },
+          { id: 'api', type: 'http', name: 'API', config: { url: '/orders', method: 'GET' } },
+        ],
+        edges: [{ from: 'gw', to: 'api' }],
+      },
+    };
+    // api has an incoming edge so it is not an entry node — rule must not fire for it
+    expect(validateIrLint(ir).some((x) => x.code === 'IR-LINT-MISSING-AUTH-010' && x.nodeId === 'api')).toBe(false);
+  });
+
+  // IR-LINT-DEAD-NODE-011
+  it('IR-LINT-DEAD-NODE-011 fires on non-sink node with incoming edges but no outgoing', () => {
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'api', type: 'http', name: 'API', config: { url: '/x', method: 'GET', auth: 'bearer' } },
+          { id: 'svc', type: 'service', name: 'Dead service' },
+        ],
+        edges: [{ from: 'api', to: 'svc' }],
+      },
+    };
+    const f = validateIrLint(ir);
+    expect(f.some((x) => x.code === 'IR-LINT-DEAD-NODE-011' && x.nodeId === 'svc')).toBe(true);
+  });
+
+  it('IR-LINT-DEAD-NODE-011 does not fire on datastore sink nodes', () => {
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'api', type: 'http', name: 'API', config: { url: '/x', method: 'GET', auth: 'bearer' } },
+          { id: 'svc', type: 'service', name: 'Service' },
+          { id: 'db', type: 'postgres', name: 'DB' },
+        ],
+        edges: [
+          { from: 'api', to: 'svc' },
+          { from: 'svc', to: 'db' },
+        ],
+      },
+    };
+    expect(validateIrLint(ir).some((x) => x.code === 'IR-LINT-DEAD-NODE-011')).toBe(false);
+  });
+
+  it('IR-LINT-DEAD-NODE-011 does not fire on queue sink nodes', () => {
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'api', type: 'http', name: 'API', config: { url: '/x', method: 'GET', auth: 'bearer' } },
+          { id: 'q', type: 'sqs', name: 'Queue' },
+        ],
+        edges: [{ from: 'api', to: 'q' }],
+      },
+    };
+    expect(validateIrLint(ir).some((x) => x.code === 'IR-LINT-DEAD-NODE-011')).toBe(false);
+  });
+
+  it('IR-LINT-DEAD-NODE-011 does not fire on truly isolated nodes (caught by ISOLATED-NODE-005)', () => {
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'api', type: 'http', name: 'API', config: { url: '/x', method: 'GET', auth: 'bearer' } },
+          { id: 'svc', type: 'service', name: 'Svc' },
+          { id: 'orphan', type: 'service', name: 'Orphan' },
+        ],
+        edges: [{ from: 'api', to: 'svc' }],
+      },
+    };
+    expect(validateIrLint(ir).some((x) => x.code === 'IR-LINT-DEAD-NODE-011' && x.nodeId === 'orphan')).toBe(false);
+  });
+
   it('demo-direct-db-violation.json flags IR-LINT-DIRECT-DB-ACCESS-002 (README GIF)', () => {
     const ir = readFixture('demo-direct-db-violation.json');
     const structural = validateIrStructural(ir);

@@ -51,6 +51,7 @@ export {
   normalizeIrGraph,
   validateIrStructural,
   hasIrStructuralErrors,
+  detectCycles,
   type IrStructuralFinding,
   type IrStructuralSeverity,
   type IrFindingLayer,
@@ -75,7 +76,7 @@ export {
   type BuildParsedLintGraphResult,
 } from './lint-graph.js';
 
-export { isHttpLikeType, isDbLikeType, isQueueLikeNodeType } from './graphPredicates.js';
+export { isHttpLikeType, isHttpEndpointType, isDbLikeType, isQueueLikeNodeType, isAuthLikeNodeType } from './graphPredicates.js';
 
 export { sortFindings, shouldFailFromFindings, type ValidationExitPolicy } from './cli-findings.js';
 

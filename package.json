@@ -1,6 +1,6 @@
 {
   "name": "@archrad/deterministic",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A deterministic compiler and linter for system architecture. Validate your architecture before you write code. OSS: structural validation + basic architecture lint (rule-based); FastAPI/Express export; OpenAPI document-shape; golden Docker/Makefile — no LLM.",
   "keywords": [
     "archrad",

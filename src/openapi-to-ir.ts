@@ -51,6 +51,7 @@ export function openApiDocumentToHttpNodes(doc: Record<string, unknown>): OpenAp
     return [];
   }
 
+  const globalSecurity = doc.security;
   const nodes: OpenApiHttpNode[] = [];
   const usedIds = new Set<string>();
 
@@ -62,11 +63,12 @@ export function openApiDocumentToHttpNodes(doc: Record<string, unknown>): OpenAp
       const op = (pathItem as Record<string, unknown>)[m];
       if (!op || typeof op !== 'object' || Array.isArray(op)) continue;
 
+      const opRec = op as Record<string, unknown>;
       const summary =
-        typeof (op as Record<string, unknown>).summary === 'string'
-          ? String((op as Record<string, unknown>).summary)
-          : typeof (op as Record<string, unknown>).operationId === 'string'
-            ? String((op as Record<string, unknown>).operationId)
+        typeof opRec.summary === 'string'
+          ? String(opRec.summary)
+          : typeof opRec.operationId === 'string'
+            ? String(opRec.operationId)
             : '';
 
       let id = safeNodeId(url, m);
@@ -75,7 +77,9 @@ export function openApiDocumentToHttpNodes(doc: Record<string, unknown>): OpenAp
       }
       usedIds.add(id);
 
-      const operationId = (op as Record<string, unknown>).operationId;
+      const operationId = opRec.operationId;
+      const securityConfig = resolveOperationSecurity(opRec, globalSecurity);
+
       nodes.push({
         id,
         type: 'http',
@@ -87,12 +91,57 @@ export function openApiDocumentToHttpNodes(doc: Record<string, unknown>): OpenAp
           method: m.toUpperCase(),
           openApiIngest: true,
           ...(typeof operationId === 'string' && operationId.trim() ? { operationId } : {}),
+          ...securityConfig,
         },
       });
     }
   }
 
   return nodes;
+}
+
+/**
+ * Extract unique scheme names from a security requirement array.
+ * Each entry is an object whose keys are scheme names, e.g. `[{ "BearerAuth": [] }]`.
+ * Returns sorted names for determinism.
+ */
+function extractSecuritySchemeNames(securityArray: unknown): string[] {
+  if (!Array.isArray(securityArray)) return [];
+  const names = new Set<string>();
+  for (const req of securityArray) {
+    if (req && typeof req === 'object' && !Array.isArray(req)) {
+      for (const name of Object.keys(req as Record<string, unknown>)) {
+        if (name.trim()) names.add(name.trim());
+      }
+    }
+  }
+  return [...names].sort();
+}
+
+/**
+ * Resolve effective security for a single operation, respecting OpenAPI 3.x precedence:
+ * operation-level `security` overrides the global spec-level `security`.
+ * An explicit empty array `[]` means intentionally no auth (public endpoint).
+ *
+ * Returns:
+ *   - `{ authRequired: false }` when the effective security is explicitly empty `[]`
+ *   - `{ security: string[] }` when scheme names are present
+ *   - `{}` when no security is declared at either level
+ */
+function resolveOperationSecurity(
+  op: Record<string, unknown>,
+  globalSecurity: unknown,
+): Record<string, unknown> {
+  const hasOperationSecurity = 'security' in op;
+  const effective = hasOperationSecurity ? op.security : globalSecurity;
+
+  if (!Array.isArray(effective)) return {};
+
+  // Explicit empty array → intentionally public
+  if (effective.length === 0) return { authRequired: false };
+
+  const names = extractSecuritySchemeNames(effective);
+  return names.length > 0 ? { security: names } : {};
 }
 
 function provenanceBlock(doc: Record<string, unknown>) {

@@ -3,7 +3,7 @@
  * OSS boundary: shape, references, cycles — not security/compliance semantics (ArchRad Cloud).
  */
 
-import { isHttpLikeType } from './graphPredicates.js';
+import { isHttpEndpointType } from './graphPredicates.js';
 import { materializeNormalizedGraph } from './ir-normalize.js';
 
 export type IrStructuralSeverity = 'error' | 'warning' | 'info';
@@ -65,6 +65,39 @@ export function normalizeIrGraph(ir: unknown): { graph: Record<string, unknown> 
       },
     ],
   };
+}
+
+/**
+ * DFS cycle detector. Returns the cycle as an ordered node-id array (the repeated node is first)
+ * or `null` if the graph is acyclic. Extracted for testability and to avoid closure over mutable state.
+ */
+export function detectCycles(adj: Map<string, string[]>): string[] | null {
+  const visiting = new Map<string, number>(); // node → index in path when first entered
+  const path: string[] = [];
+  const done = new Set<string>();
+
+  function dfs(u: string): string[] | null {
+    if (visiting.has(u)) return path.slice(visiting.get(u)!);
+    if (done.has(u)) return null;
+    visiting.set(u, path.length);
+    path.push(u);
+    for (const v of adj.get(u) ?? []) {
+      const cycle = dfs(v);
+      if (cycle) return cycle;
+    }
+    path.pop();
+    visiting.delete(u);
+    done.add(u);
+    return null;
+  }
+
+  for (const id of adj.keys()) {
+    if (!done.has(id)) {
+      const cycle = dfs(id);
+      if (cycle) return cycle;
+    }
+  }
+  return null;
 }
 
 /**
@@ -150,7 +183,22 @@ export function validateIrStructural(ir: unknown): IrStructuralFinding[] {
       seenIds.add(id);
     }
 
-    if (isHttpLikeType(nn.type)) {
+    const rawCfg = (n as Record<string, unknown>).config;
+    if (rawCfg !== undefined) {
+      const cfgInvalid = rawCfg === null || Array.isArray(rawCfg) || typeof rawCfg !== 'object';
+      if (cfgInvalid) {
+        const got = rawCfg === null ? 'null' : Array.isArray(rawCfg) ? 'array' : typeof rawCfg;
+        findings.push({
+          code: 'IR-STRUCT-NODE_INVALID_CONFIG',
+          severity: 'warning',
+          message: `Node "${id}" has a non-object \`config\` (got ${got}); treated as {}`,
+          nodeId: id,
+          fixHint: 'Set `config` to a plain object, e.g. { "url": "/foo", "method": "GET" }.',
+        });
+      }
+    }
+
+    if (isHttpEndpointType(nn.type)) {
       const cfg = nn.config;
       /** Generators accept `route` or `url`; structural checks align so OpenAPI merge + ingest both validate. */
       const url = String(cfg.url ?? cfg.route ?? '').trim();
@@ -160,7 +208,7 @@ export function validateIrStructural(ir: unknown): IrStructuralFinding[] {
         findings.push({
           code: 'IR-STRUCT-HTTP_PATH',
           severity: 'error',
-          message: `HTTP-like node "${id}" has invalid path: config.url must be a non-empty string starting with /`,
+          message: `HTTP endpoint node "${id}" has invalid path: config.url must be a non-empty string starting with /`,
           nodeId: id,
           fixHint: 'Set config.url (or config.route) to e.g. "/signup".',
         });
@@ -170,7 +218,7 @@ export function validateIrStructural(ir: unknown): IrStructuralFinding[] {
         findings.push({
           code: 'IR-STRUCT-HTTP_METHOD',
           severity: 'error',
-          message: `HTTP-like node "${id}" has unsupported method "${method}"`,
+          message: `HTTP endpoint node "${id}" has unsupported method "${method}"`,
           nodeId: id,
           fixHint: 'Use GET, POST, PUT, PATCH, DELETE, HEAD, or OPTIONS.',
         });
@@ -252,44 +300,15 @@ export function validateIrStructural(ir: unknown): IrStructuralFinding[] {
     adj.get(from)!.push(to);
   }
 
-  const visiting = new Set<string>();
-  const done = new Set<string>();
-  let cycleExampleNode: string | undefined;
-
-  function dfs(u: string): boolean {
-    if (visiting.has(u)) {
-      cycleExampleNode = u;
-      return true;
-    }
-    if (done.has(u)) return false;
-    visiting.add(u);
-    for (const v of adj.get(u) || []) {
-      if (dfs(v)) return true;
-    }
-    visiting.delete(u);
-    done.add(u);
-    return false;
-  }
-
-  let hasCycle = false;
-  for (const id of seenIds) {
-    if (duplicateIds.has(id)) continue;
-    if (!done.has(id) && dfs(id)) {
-      hasCycle = true;
-      break;
-    }
-  }
-
-  if (hasCycle) {
-    const hint =
-      cycleExampleNode != null
-        ? `Directed cycle detected (node "${cycleExampleNode}" was reached again while traversing dependencies).`
-        : 'Dependency graph contains a directed cycle';
+  const cyclePath = detectCycles(adj);
+  if (cyclePath !== null) {
+    const nodeId = cyclePath[0];
+    const pathStr = [...cyclePath, cyclePath[0]].join(' → ');
     findings.push({
       code: 'IR-STRUCT-CYCLE',
       severity: 'error',
-      message: hint,
-      nodeId: cycleExampleNode,
+      message: `Directed cycle detected: ${pathStr}`,
+      nodeId,
       fixHint: 'Remove or break cyclic edges unless your tooling explicitly allows execution loops.',
     });
   }

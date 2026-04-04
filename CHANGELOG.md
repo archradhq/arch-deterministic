@@ -7,9 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-03-28
+
+### Fixed
+
+- **`IR-STRUCT-HTTP_PATH` / `IR-STRUCT-HTTP_METHOD` false positives on `gateway`, `grpc`, `bff`** — structural validation previously used `isHttpLikeType` (correct for lint) for the url/method check. A `gateway` node with no `config.url` produced a spurious error; a `grpc` node with `config.method: "GetUser"` produced two. Introduced `isHttpEndpointType` (narrow: `http`, `https`, `rest`, `api`, `graphql`) for the structural check only. `isHttpLikeType` is unchanged for lint.
+- **`IR-STRUCT-CYCLE` path lost** — extracted `detectCycles(adj: Map<string, string[]>): string[] | null` from the inline `dfs` closure in `validateIrStructural`. Returns the full ordered cycle path; findings now read `Directed cycle detected: a → b → c → a`. Exported from package root.
+- **`IR-STRUCT-NODE_INVALID_CONFIG` (warning)** — `emptyRecord()` previously coerced `"config": ["wrong"]` or `"config": null` silently to `{}`. Structural validation now emits a warning when `config` is present but is not a plain object, including the actual type in the message.
+
 ### Added
 
-### Changed
+- **`IR-LINT-MISSING-AUTH-010` (warning)** — fires on HTTP-like entry nodes (no incoming edges, including `gateway`, `bff`, `grpc`) with no auth coverage. A node is covered when: (1) an immediate outgoing neighbour is auth-like (`auth`, `middleware`, `oauth`, `jwt`, `saml`, `keycloak`, `okta`, `cognito`, `auth0`, `ldap`, `iam`, `sso`, etc.), (2) an auth-like node has a direct edge to the entry (auth-as-gateway pattern), or (3) `config` carries any of `auth`, `authRequired`, `authentication`, `authorization`, `security`. Explicit opt-out: `config.authRequired: false` for intentionally public endpoints (health, signup, public assets). Maps directly to PCI-DSS and HIPAA requirements.
+- **`IR-LINT-DEAD-NODE-011` (warning)** — fires on nodes with incoming edges but no outgoing edges that are not a recognised sink type (datastore-like, queue-like, or HTTP-like). HTTP nodes are excluded because they return responses to callers. Complements `IR-LINT-ISOLATED-NODE-005` which catches fully disconnected nodes.
+- **OpenAPI ingestion — security definitions** — `archrad ingest openapi` now extracts security scheme names into node config following OpenAPI 3.x precedence: global `doc.security` propagates to all operations as `config.security: ["SchemeName"]` (sorted); operation-level `security` overrides global; explicit `security: []` sets `config.authRequired: false`. Nodes with no security at either level produce no security config and are flagged by `IR-LINT-MISSING-AUTH-010` in CI.
+- **New predicate exports** — `isHttpEndpointType`, `isAuthLikeNodeType` added to `graphPredicates.ts` and exported from the package root alongside the existing predicates, for consumers building custom lint rules.
+- **`detectCycles` exported from package root** — useful for consumers building custom structural validators or tooling on top of the IR adjacency graph.
 
 ## [0.1.1] - 2026-03-28
 
@@ -59,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documented **codegen vs validation** for retry/timeout IR fields and **InkByte vs OSS** scope in README and structural/semantic doc.
 - README positioning: **deterministic compiler and linter for system architecture**; validation layers table (OSS vs Cloud); **`validate-drift`**, drift GIF / trust-loop recording docs, library **`runValidateDrift`** example.
 
-[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/archradhq/arch-deterministic/releases/tag/v0.1.2
 [0.1.1]: https://github.com/archradhq/arch-deterministic/releases/tag/v0.1.1
 [0.1.0]: https://github.com/archradhq/arch-deterministic/releases/tag/v0.1.0

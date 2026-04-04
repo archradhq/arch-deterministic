@@ -11,7 +11,7 @@ describe('runDeterministicExport', () => {
     graph: {
       metadata: { name: 't' },
       nodes: [
-        { id: 'signup', type: 'http', name: 'Signup', config: { url: '/signup', method: 'POST' } },
+        { id: 'signup', type: 'http', name: 'Signup', config: { url: '/signup', method: 'POST', authRequired: false } },
         { id: 'health', type: 'http', name: 'Health', config: { url: '/health', method: 'GET' } },
       ],
       // Chain avoids IR-LINT-MULTIPLE-HTTP-ENTRIES-009 (two HTTP roots); not a semantic recommendation.

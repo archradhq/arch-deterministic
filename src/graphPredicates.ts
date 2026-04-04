@@ -2,14 +2,33 @@
  * Shared graph predicates for structural validation and architecture lint (no imports from lint-graph / ir-structural).
  */
 
-/** Node types treated as HTTP-like for path/method checks and lint (aligned structural + IR-LINT). */
+/**
+ * Narrow predicate: node types that carry a single HTTP endpoint (`config.url` + HTTP method).
+ * Used by **structural validation** for `IR-STRUCT-HTTP_PATH` / `IR-STRUCT-HTTP_METHOD` checks.
+ * `gateway`, `grpc`, and `bff` are intentionally excluded — they use different config shapes
+ * (upstream routing, proto service/method, multi-route aggregation) and must not be required
+ * to supply a REST-style url + HTTP method.
+ */
+export function isHttpEndpointType(t: string): boolean {
+  const s = String(t ?? '')
+    .trim()
+    .toLowerCase();
+  if (!s) return false;
+  return s === 'http' || s === 'https' || s === 'rest' || s === 'api' || s === 'graphql';
+}
+
+/**
+ * Broad predicate: all HTTP-like node types for lint purposes (healthcheck detection,
+ * sync-chain analysis, missing-name checks, multiple-entry detection).
+ * Superset of `isHttpEndpointType`.
+ */
 export function isHttpLikeType(t: string): boolean {
   const s = String(t ?? '')
     .trim()
     .toLowerCase();
   if (!s) return false;
-  if (s === 'http' || s === 'https' || s === 'rest' || s === 'api') return true;
-  if (s === 'gateway' || s === 'bff' || s === 'graphql' || s === 'grpc') return true;
+  if (isHttpEndpointType(s)) return true;
+  if (s === 'gateway' || s === 'bff' || s === 'grpc') return true;
   return /\b(api|gateway|bff|graphql|grpc)\b/.test(s);
 }
 
@@ -19,6 +38,21 @@ export function isDbLikeType(t: string): boolean {
   return (
     /\b(db|database|datastore)\b/.test(t) ||
     /postgres|mongodb|mysql|sqlite|redis|cassandra|dynamo|sql|nosql|warehouse|s3/.test(t)
+  );
+}
+
+/**
+ * Auth-like node types: dedicated identity/auth/middleware nodes.
+ * Used by IR-LINT-MISSING-AUTH-010 to detect HTTP entry nodes with no auth coverage.
+ */
+export function isAuthLikeNodeType(t: string): boolean {
+  const s = String(t ?? '')
+    .trim()
+    .toLowerCase();
+  if (!s) return false;
+  return (
+    /\b(auth|authentication|authorization|middleware|security|iam|idp|identity)\b/.test(s) ||
+    /oauth|jwt|saml|keycloak|okta|cognito|auth0|ldap|sso/.test(s)
   );
 }
 

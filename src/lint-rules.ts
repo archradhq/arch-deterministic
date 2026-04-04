@@ -14,6 +14,7 @@ import {
   buildSyncAdjacencyForLint,
   edgeRepresentsAsyncBoundary,
 } from './lint-graph.js';
+import { isAuthLikeNodeType, isQueueLikeNodeType } from './graphPredicates.js';
 
 const LAYER: IrStructuralFinding['layer'] = 'lint';
 
@@ -280,6 +281,111 @@ export function ruleMultipleHttpEntries(g: ParsedLintGraph): IrStructuralFinding
 }
 
 /**
+ * IR-LINT-MISSING-AUTH-010 — HTTP entry node (no incoming sync edges) with no auth coverage.
+ *
+ * A node is considered auth-covered when ANY of:
+ *   1. One of its immediate outgoing neighbours is an auth-like node type.
+ *   2. An auth-like node has a direct edge TO it (auth-as-gateway pattern).
+ *   3. Its own `config` carries an auth-signal key: `auth`, `authRequired`,
+ *      `authentication`, `authorization`, or `security`.
+ *
+ * Escape hatch: set `config.authRequired: false` (explicit opt-out) to silence the rule
+ * for intentionally public endpoints (health, public assets, etc.).
+ */
+export function ruleHttpMissingAuth(g: ParsedLintGraph): IrStructuralFinding[] {
+  const { edges, nodeById, adj } = g;
+
+  // Build set of nodes that have an incoming sync edge (not entry nodes)
+  const hasIncomingEdge = new Set<string>();
+  for (const e of edges) {
+    if (!e || typeof e !== 'object') continue;
+    const { to } = edgeEndpoints(e as Record<string, unknown>);
+    if (to) hasIncomingEdge.add(to);
+  }
+
+  // Build reverse adjacency: to → [from] for auth-coverage check #2
+  const reverseAdj = new Map<string, string[]>();
+  for (const e of edges) {
+    if (!e || typeof e !== 'object') continue;
+    const { from, to } = edgeEndpoints(e as Record<string, unknown>);
+    if (!from || !to) continue;
+    if (!reverseAdj.has(to)) reverseAdj.set(to, []);
+    reverseAdj.get(to)!.push(from);
+  }
+
+  const findings: IrStructuralFinding[] = [];
+
+  for (const [id, n] of nodeById) {
+    if (!isHttpLikeType(nodeType(n))) continue;
+    if (hasIncomingEdge.has(id)) continue; // not an entry node
+
+    const cfg = (n.config ?? {}) as Record<string, unknown>;
+
+    // Explicit opt-out: config.authRequired === false marks an intentionally public endpoint
+    if (cfg.authRequired === false) continue;
+
+    // Coverage check 1: outgoing neighbour is auth-like
+    const outNeighbours = adj.get(id) ?? [];
+    if (outNeighbours.some((v) => isAuthLikeNodeType(nodeType(nodeById.get(v) ?? {})))) continue;
+
+    // Coverage check 2: an auth-like node points directly to this entry node
+    const inNeighbours = reverseAdj.get(id) ?? [];
+    if (inNeighbours.some((v) => isAuthLikeNodeType(nodeType(nodeById.get(v) ?? {})))) continue;
+
+    // Coverage check 3: node config carries an auth signal
+    const authConfigKeys = ['auth', 'authrequired', 'authentication', 'authorization', 'security'];
+    const cfgKeys = Object.keys(cfg).map((k) => k.toLowerCase());
+    if (authConfigKeys.some((k) => cfgKeys.includes(k))) continue;
+
+    findings.push({
+      code: 'IR-LINT-MISSING-AUTH-010',
+      severity: 'warning',
+      layer: LAYER,
+      message: `HTTP entry node "${id}" has no auth node or auth config in its immediate graph neighbourhood`,
+      nodeId: id,
+      fixHint: 'Add an auth/middleware node with an edge to or from this entry, or set config.authRequired: false for intentionally public endpoints.',
+      suggestion:
+        'Connect an auth, oauth, jwt, or middleware node. For PCI-DSS / HIPAA systems, every HTTP entry must have a documented auth boundary.',
+      impact: 'Unauthenticated HTTP entry points are a compliance gap in regulated environments and a common attack surface.',
+    });
+  }
+
+  return findings;
+}
+
+/**
+ * IR-LINT-DEAD-NODE-011 — non-sink node with incoming edges but no outgoing edges.
+ *
+ * Datastore-like and queue-like nodes are valid sinks and are excluded.
+ * Nodes with no incident edges at all are already caught by IR-LINT-ISOLATED-NODE-005.
+ * This rule targets nodes that receive data but forward it nowhere — likely a missing
+ * edge, an incomplete integration step, or a stale component.
+ */
+export function ruleDeadNode(g: ParsedLintGraph): IrStructuralFinding[] {
+  const findings: IrStructuralFinding[] = [];
+
+  for (const [id, n] of g.nodeById) {
+    const out = g.outDegree.get(id) ?? 0;
+    const inn = g.inDegree.get(id) ?? 0;
+    if (out > 0 || inn === 0) continue; // has outgoing, or truly isolated (caught elsewhere)
+    const t = nodeType(n);
+    if (isDbLikeType(t) || isQueueLikeNodeType(t) || isHttpLikeType(t)) continue; // valid sinks
+    findings.push({
+      code: 'IR-LINT-DEAD-NODE-011',
+      severity: 'warning',
+      layer: LAYER,
+      message: `Node "${id}" (type: ${t || 'unknown'}) receives edges but has no outgoing edges — possible missing integration or dead component`,
+      nodeId: id,
+      fixHint: 'Add an outgoing edge to a downstream node, or remove this node if it is no longer active.',
+      suggestion: 'Dead-end non-sink nodes often represent incomplete migrations, dropped integrations, or copy-paste errors in the IR.',
+      impact: 'Data entering this node has no documented path forward, which misrepresents runtime behaviour.',
+    });
+  }
+
+  return findings;
+}
+
+/**
  * Ordered registry: add a new rule by implementing `(g) => findings` and appending here.
  */
 export const LINT_RULE_REGISTRY: ReadonlyArray<(g: ParsedLintGraph) => IrStructuralFinding[]> = [
@@ -292,6 +398,8 @@ export const LINT_RULE_REGISTRY: ReadonlyArray<(g: ParsedLintGraph) => IrStructu
   ruleHttpMissingName,
   ruleDatastoreNoIncoming,
   ruleMultipleHttpEntries,
+  ruleHttpMissingAuth,
+  ruleDeadNode,
 ];
 
 /** Run all registered architecture lint visitors (same as legacy `validateIrLint` behavior). */

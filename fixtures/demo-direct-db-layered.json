@@ -9,7 +9,7 @@
         "id": "orders-api",
         "type": "http",
         "name": "Orders API",
-        "config": { "url": "/orders", "method": "GET" }
+        "config": { "url": "/orders", "method": "GET", "auth": "bearer" }
       },
       {
         "id": "health",
