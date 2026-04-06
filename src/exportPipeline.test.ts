@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
+import type { ParsedLintGraph } from './lint-graph.js';
+import type { IrStructuralFinding } from './ir-structural.js';
 import { runDeterministicExport } from './exportPipeline.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -41,6 +43,14 @@ describe('runDeterministicExport', () => {
     };
     const { irLintFindings } = await runDeterministicExport(linty, 'python', {});
     expect(irLintFindings.some((f) => f.code === 'IR-LINT-NO-HEALTHCHECK-003')).toBe(true);
+  });
+
+  it('merges policyRuleVisitors into irLintFindings', async () => {
+    const visitor = (_g: ParsedLintGraph): IrStructuralFinding[] => [
+      { code: 'ORG-TEST-001', severity: 'info', message: 'policy probe', layer: 'lint' },
+    ];
+    const { irLintFindings } = await runDeterministicExport(ir, 'python', { policyRuleVisitors: [visitor] });
+    expect(irLintFindings.some((f) => f.code === 'ORG-TEST-001')).toBe(true);
   });
 
   it('skips ir lint when skipIrLint', async () => {

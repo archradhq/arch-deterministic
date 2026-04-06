@@ -1,0 +1,10 @@
+apiVersion: archrad/v1
+kind: PolicyPack
+rules:
+  - id: DUP-RULE-001
+    severity: warning
+    message: second duplicate
+    match:
+      node:
+        type: database
+        tags: [b]

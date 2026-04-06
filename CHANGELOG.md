@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-04-06
+
+### Added
+
+- **`loadPolicyPacksFromFiles(sources)`** — compile PolicyPack YAML/JSON from in-memory **`{ name, content }[]`** (same semantics as **`loadPolicyPacksFromDirectory`**; no filesystem).
+- **Declarative policy packs** — YAML/JSON documents (`apiVersion: archrad/v1`, `kind: PolicyPack`) with `rules` that match **nodes** or **edges** on the parsed lint graph. Loader: **`loadPolicyPacksFromDirectory(dir)`** (supports `*.yaml`, `*.yml`, `*.json`; duplicate `rule.id` across the directory is rejected).
+- **CLI** — **`archrad validate`**, **`archrad export`**, and **`archrad validate-drift`** accept **`--policies <dir>`** to merge compiled rules after built-in **`IR-LINT-*`** (skipped when **`--skip-lint`** / **`--skip-ir-lint`** is set).
+- **ArchRad Cloud (InkByte server)** — org **`settings.archPolicyPacks`** (array of **`{ name, content }`**) is merged into deterministic export when **`organizationId`** is on the export request; **`POST /api/drift-check`** accepts **`organizationId`**, **`policyPackFiles`**, and **`skipArchPolicyPacks`** (membership required when **`organizationId`** is set).
+- **Library** — **`validateIrLint(ir, { policyRuleVisitors })`**; **`runDeterministicExport`** / drift helpers accept **`policyRuleVisitors`** the same way.
+- **Normalization** — **`NormalizedNode`** now includes **`metadata`** (from each node’s `metadata` object) so **`buildParsedLintGraph`** / policy **`match.node.tags`** see **`metadata.tags`** on the graph.
+- **`--policies`** applies to all three lint commands consistently — 
+  `validate-drift` uses the same policy layer when building the 
+  reference export, so org rules are enforced end-to-end across 
+  validate → export → drift.
+
 ## [0.1.3] - 2026-04-04
 
 ### Fixed

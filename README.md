@@ -133,6 +133,8 @@ archrad validate --ir ./graph.json --fail-on-warning
 archrad validate --ir ./graph.json --max-warnings 0
 # Structural only (skip IR-LINT-*):
 archrad validate --ir ./graph.json --skip-lint
+# Declarative PolicyPack YAML/JSON in a directory (after IR-LINT-*; skipped with --skip-lint):
+archrad validate --ir ./graph.json --policies ./policy-packs
 ```
 
 **Deterministic drift (thin, OSS):** compare an existing export tree on disk to a **fresh** export from the same IR. Detects **missing** / **changed** generated files (line endings normalized). Optional **`--strict-extra`** flags files present on disk but not in the reference export. Not semantic “does code match intent” — **ArchRad Cloud** adds builder/UI drift checks and broader governance.

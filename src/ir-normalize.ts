@@ -10,6 +10,8 @@ export type NormalizedNode = {
   name: string;
   config: Record<string, unknown>;
   schema: Record<string, unknown>;
+  /** Node-level metadata (e.g. `tags` for policy packs / lint). */
+  metadata: Record<string, unknown>;
 };
 
 export type NormalizedEdge = {
@@ -37,7 +39,7 @@ function emptyRecord(obj: unknown): Record<string, unknown> {
  */
 export function normalizeNodeSlot(raw: unknown): NormalizedNode {
   if (raw == null || typeof raw !== 'object') {
-    return { id: '', type: '', name: '', config: {}, schema: {} };
+    return { id: '', type: '', name: '', config: {}, schema: {}, metadata: {} };
   }
   const r = raw as Record<string, unknown>;
   const id = String(r.id ?? '').trim();
@@ -51,6 +53,7 @@ export function normalizeNodeSlot(raw: unknown): NormalizedNode {
     name,
     config: emptyRecord(r.config),
     schema: emptyRecord(r.schema),
+    metadata: emptyRecord(r.metadata),
   };
 }
 

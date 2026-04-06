@@ -1,0 +1,15 @@
+# Demo pack for validate + --policies: matches checkout-api → orders-db in ecommerce-with-warnings.json
+apiVersion: archrad/v1
+kind: PolicyPack
+metadata:
+  name: ecommerce-demo
+rules:
+  - id: ORG-DIRECT-HTTP-DATASTORE-001
+    severity: warning
+    message: Policy pack demo — direct HTTP to datastore edge (for Show HN / CI smoke)
+    match:
+      edge:
+        from:
+          type: http
+        to:
+          type: postgres

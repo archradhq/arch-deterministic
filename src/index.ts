@@ -67,7 +67,20 @@ export {
   type MaterializeResult,
 } from './ir-normalize.js';
 
-export { validateIrLint } from './ir-lint.js';
+export { validateIrLint, type ValidateIrLintOptions } from './ir-lint.js';
+
+export {
+  loadPolicyPacksFromDirectory,
+  loadPolicyPacksFromFiles,
+  type LoadPolicyPacksResult,
+  type PolicyPackFileSource,
+  type PolicyPackDocumentV1,
+  type PolicyRuleV1,
+  type PolicyPackMetadataV1,
+  type PolicyNodeSelectorV1,
+  type PolicyEdgeMatchV1,
+  type PolicySeverity,
+} from './policy-pack.js';
 export { runArchitectureLinting, LINT_RULE_REGISTRY } from './lint-rules.js';
 export {
   buildParsedLintGraph,

@@ -13,7 +13,7 @@ import {
   hasIrStructuralErrors,
   type IrStructuralFinding,
 } from './ir-structural.js';
-import { validateIrLint } from './ir-lint.js';
+import { validateIrLint, type ValidateIrLintOptions } from './ir-lint.js';
 
 export type DeterministicExportResult = {
   files: Record<string, string>;
@@ -25,7 +25,7 @@ export type DeterministicExportResult = {
    * Errors block codegen; this field stays the single source for “graph does not compile.”
    */
   irStructuralFindings: IrStructuralFinding[];
-  /** IR-LINT-* heuristics only; does not include IR-STRUCT-* (those live in `irStructuralFindings`). */
+  /** IR-LINT-* plus optional declarative policy-pack findings; does not include IR-STRUCT-* (those live in `irStructuralFindings`). */
   irLintFindings: IrStructuralFinding[];
 };
 
@@ -35,7 +35,7 @@ export type DeterministicExportResult = {
 export async function runDeterministicExport(
   actualIR: any,
   target: string,
-  opts: Record<string, any> = {}
+  opts: Record<string, any> & ValidateIrLintOptions = {}
 ): Promise<DeterministicExportResult> {
   const skipIr = Boolean(opts.skipIrStructuralValidation);
   const skipLint = Boolean(opts.skipIrLint);
@@ -47,7 +47,7 @@ export async function runDeterministicExport(
 
   let irLintFindings: IrStructuralFinding[] = [];
   if (!skipLint) {
-    const lintPass = validateIrLint(actualIR);
+    const lintPass = validateIrLint(actualIR, { policyRuleVisitors: opts.policyRuleVisitors });
     if (skipIr) {
       // Dangerous mode: full structural pass is off, but parse/normalize failures still return IR-STRUCT-* from
       // validateIrLint — fold those into irStructuralFindings so InkByte / CLI consumers block and log like normal.

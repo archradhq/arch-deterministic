@@ -6,6 +6,7 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { runDeterministicExport, type DeterministicExportResult } from './exportPipeline.js';
+import type { ValidateIrLintOptions } from './ir-lint.js';
 import { normalizeGoldenHostPort } from './hostPort.js';
 
 export type DriftCode = 'DRIFT-MISSING' | 'DRIFT-MODIFIED' | 'DRIFT-EXTRA' | 'DRIFT-NO-EXPORT';
@@ -150,6 +151,7 @@ export async function runValidateDrift(
     skipIrStructuralValidation?: boolean;
     skipIrLint?: boolean;
     strictExtra?: boolean;
+    policyRuleVisitors?: ValidateIrLintOptions['policyRuleVisitors'];
   } = {}
 ): Promise<ValidateDriftResult> {
   const hostPort = normalizeGoldenHostPort(opts.hostPort ?? process.env.ARCHRAD_HOST_PORT);
@@ -157,6 +159,7 @@ export async function runValidateDrift(
     hostPort,
     skipIrStructuralValidation: Boolean(opts.skipIrStructuralValidation),
     skipIrLint: Boolean(opts.skipIrLint),
+    policyRuleVisitors: opts.policyRuleVisitors,
   });
 
   const { files } = exportResult;
@@ -213,6 +216,7 @@ export async function runDriftCheckAgainstFiles(
     skipIrStructuralValidation?: boolean;
     skipIrLint?: boolean;
     strictExtra?: boolean;
+    policyRuleVisitors?: ValidateIrLintOptions['policyRuleVisitors'];
   } = {}
 ): Promise<DriftCheckFilesResult> {
   const hostPort = normalizeGoldenHostPort(opts.hostPort ?? process.env.ARCHRAD_HOST_PORT);
@@ -220,6 +224,7 @@ export async function runDriftCheckAgainstFiles(
     hostPort,
     skipIrStructuralValidation: Boolean(opts.skipIrStructuralValidation),
     skipIrLint: Boolean(opts.skipIrLint),
+    policyRuleVisitors: opts.policyRuleVisitors,
   });
   const { files } = exportResult;
   if (Object.keys(files).length === 0) {

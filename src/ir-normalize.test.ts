@@ -13,6 +13,7 @@ describe('ir-normalize', () => {
       name: '',
       config: { x: 1 },
       schema: {},
+      metadata: {},
     });
     expect(normalizeNodeSlot({ id: 'b', kind: 'Db', name: 'Main' })).toMatchObject({
       id: 'b',
@@ -28,6 +29,15 @@ describe('ir-normalize', () => {
       name: '',
       config: {},
       schema: {},
+      metadata: {},
+    });
+  });
+
+  it('normalizeNodeSlot preserves node metadata', () => {
+    expect(
+      normalizeNodeSlot({ id: 'x', type: 'database', metadata: { tags: ['required'] } }),
+    ).toMatchObject({
+      metadata: { tags: ['required'] },
     });
   });
 

@@ -122,6 +122,7 @@ export function buildParsedLintGraph(ir: unknown): BuildParsedLintGraphResult {
       name: n.name,
       config: n.config,
       schema: n.schema,
+      metadata: n.metadata,
     });
   }
 

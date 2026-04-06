@@ -10,7 +10,8 @@ import { Command, Option } from 'commander';
 import { runDeterministicExport } from './exportPipeline.js';
 import { isLocalHostPortFree, normalizeGoldenHostPort } from './hostPort.js';
 import { validateIrStructural, hasIrStructuralErrors } from './ir-structural.js';
-import { validateIrLint } from './ir-lint.js';
+import { validateIrLint, type ValidateIrLintOptions } from './ir-lint.js';
+import { loadPolicyPacksFromDirectory } from './policy-pack.js';
 import {
   printFindingsPretty,
   shouldFailFromFindings,
@@ -61,6 +62,22 @@ function parseMaxWarnings(v: string | undefined): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+/** Load `--policies` directory; on failure prints to stderr and returns null (caller should exit 1). */
+async function loadPoliciesOption(
+  policiesDir: string | undefined
+): Promise<ValidateIrLintOptions | null> {
+  if (policiesDir == null || policiesDir === '') return {};
+  const dir = resolve(policiesDir);
+  const loaded = await loadPolicyPacksFromDirectory(dir);
+  if (!loaded.ok) {
+    for (const e of loaded.errors) {
+      console.error(`archrad: ${e}`);
+    }
+    return null;
+  }
+  return { policyRuleVisitors: loaded.visitors };
+}
+
 function exitPolicyFromOpts(opts: { failOnWarning?: boolean; maxWarnings?: string }): ValidationExitPolicy {
   return {
     failOnWarning: Boolean(opts.failOnWarning),
@@ -75,7 +92,7 @@ program
   .description(
     'Validate your architecture before you write code. Deterministic compiler + linter — FastAPI / Express (no LLM, no server).'
   )
-  .version('0.1.0');
+  .version('0.1.4');
 
 program
   .command('validate')
@@ -85,6 +102,10 @@ program
   .requiredOption('-i, --ir <path>', 'Path to IR JSON (graph with nodes/edges or full wrapper)')
   .option('--json', 'Print findings as JSON array to stdout')
   .option('--skip-lint', 'Skip architecture lint (IR-LINT-*); structural only')
+  .option(
+    '--policies <dir>',
+    'Directory of PolicyPack YAML/JSON (*.yaml, *.yml, *.json); merged after IR-LINT-*'
+  )
   .option('--fail-on-warning', 'Exit with error if any warning (CI gate)')
   .option(
     '--max-warnings <n>',
@@ -95,6 +116,7 @@ program
       ir: string;
       json?: boolean;
       skipLint?: boolean;
+      policies?: string;
       failOnWarning?: boolean;
       maxWarnings?: string;
     }) => {
@@ -106,9 +128,20 @@ program
       }
 
       const noLint = Boolean(cmdOpts.skipLint);
+      let lintOpts: ValidateIrLintOptions = {};
+      if (!noLint && cmdOpts.policies) {
+        const loaded = await loadPoliciesOption(cmdOpts.policies);
+        if (loaded == null) {
+          process.exitCode = 1;
+          return;
+        }
+        lintOpts = loaded;
+      }
       const structural = validateIrStructural(ir);
       const lint =
-        noLint || hasIrStructuralErrors(structural) ? [] : validateIrLint(ir);
+        noLint || hasIrStructuralErrors(structural)
+          ? []
+          : validateIrLint(ir, lintOpts);
       const combined = sortFindings([...structural, ...lint]);
 
       if (cmdOpts.json) {
@@ -253,6 +286,7 @@ program
       strictHostPort?: boolean;
       skipIrStructuralValidation?: boolean;
       skipIrLint?: boolean;
+      policies?: string;
       failOnWarning?: boolean;
       maxWarnings?: string;
     }) => {
@@ -289,12 +323,22 @@ program
     const skipStruct = Boolean(
       exportOpts.dangerSkipIrStructuralValidation || exportOpts.skipIrStructuralValidation
     );
+    let exportLintOpts: ValidateIrLintOptions = {};
+    if (!cmdOpts.skipIrLint && cmdOpts.policies) {
+      const loaded = await loadPoliciesOption(cmdOpts.policies);
+      if (loaded == null) {
+        process.exitCode = 1;
+        return;
+      }
+      exportLintOpts = loaded;
+    }
     try {
       const { files, openApiStructuralWarnings, irStructuralFindings, irLintFindings } =
         await runDeterministicExport(actualIR, cmdOpts.target, {
           hostPort,
           skipIrStructuralValidation: skipStruct,
           skipIrLint: cmdOpts.skipIrLint,
+          ...exportLintOpts,
         });
 
       const combined = sortFindings([...irStructuralFindings, ...irLintFindings]);
@@ -358,6 +402,10 @@ program
   )
   .addOption(new Option('--skip-ir-structural-validation', 'Deprecated alias').hideHelp())
   .option('--skip-ir-lint', 'Skip architecture lint when building reference export')
+  .option(
+    '--policies <dir>',
+    'Directory of PolicyPack YAML/JSON; merged after IR-LINT-* for the reference export'
+  )
   .option('--strict-extra', 'Fail if output directory contains files not in the reference export')
   .option('--json', 'Print drift findings and export metadata as JSON')
   .action(
@@ -370,6 +418,7 @@ program
       skipIrStructuralValidation?: boolean;
       dangerSkipIrStructuralValidation?: boolean;
       skipIrLint?: boolean;
+      policies?: string;
       strictExtra?: boolean;
       json?: boolean;
     }) => {
@@ -400,12 +449,23 @@ program
         cmdOpts.dangerSkipIrStructuralValidation || cmdOpts.skipIrStructuralValidation
       );
 
+      let driftLintOpts: { policyRuleVisitors?: ValidateIrLintOptions['policyRuleVisitors'] } = {};
+      if (!cmdOpts.skipIrLint && cmdOpts.policies) {
+        const loaded = await loadPoliciesOption(cmdOpts.policies);
+        if (loaded == null) {
+          process.exitCode = 1;
+          return;
+        }
+        driftLintOpts = loaded;
+      }
+
       try {
         const result = await runValidateDrift(actualIR, cmdOpts.target, outDir, {
           hostPort,
           skipIrStructuralValidation: skipStruct,
           skipIrLint: cmdOpts.skipIrLint,
           strictExtra: cmdOpts.strictExtra,
+          ...driftLintOpts,
         });
 
         const combined = sortFindings([

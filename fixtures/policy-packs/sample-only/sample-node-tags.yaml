@@ -1,0 +1,14 @@
+# Flags HTTP nodes tagged deprecated (forbidden pattern — selector matches the violation)
+apiVersion: archrad/v1
+kind: PolicyPack
+metadata:
+  name: sample-node-tags
+rules:
+  - id: ORG-HTTP-DEPRECATED-001
+    severity: warning
+    message: Deprecated HTTP routes must not remain in the graph
+    fixHint: Remove the deprecated tag or replace the node
+    match:
+      node:
+        type: http
+        tags: [deprecated]
