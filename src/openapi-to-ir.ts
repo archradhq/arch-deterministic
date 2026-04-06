@@ -5,6 +5,7 @@
  */
 
 import { parseOpenApiString, validateOpenApiStructural } from './openapi-structural.js';
+import { MAX_UNTRUSTED_STRING_LEN, stripLeadingTrailingHyphens, stripLeadingTrailingUnderscores } from './stringEdgeStrip.js';
 
 export class OpenApiIngestError extends Error {
   constructor(message: string) {
@@ -21,16 +22,19 @@ function normalizeOpenApiPath(pathKey: string): string {
 }
 
 function safeServiceName(title: string): string {
-  const t = String(title || 'openapi-service')
-    .trim()
-    .replace(/[^a-zA-Z0-9_-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+  const t = stripLeadingTrailingHyphens(
+    String(title || 'openapi-service')
+      .trim()
+      .slice(0, 256)
+      .replace(/[^a-zA-Z0-9_-]+/g, '-'),
+  )
     .toLowerCase();
   return t.slice(0, 63) || 'openapi-service';
 }
 
 function safeNodeId(path: string, method: string): string {
-  const slug = `${method}_${path}`.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '').toLowerCase();
+  const combined = `${method}_${path}`.slice(0, MAX_UNTRUSTED_STRING_LEN);
+  const slug = stripLeadingTrailingUnderscores(combined.replace(/[^a-zA-Z0-9]+/g, '_')).toLowerCase();
   return `openapi_${slug || 'route'}`.slice(0, 80);
 }
 

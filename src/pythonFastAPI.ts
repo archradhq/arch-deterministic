@@ -1,9 +1,11 @@
 // Deterministic Python FastAPI exporter
 // Produces a map of filename -> content given an IR (plan graph) and options.
 import { getEdgeConfig, generateRetryCode, generateCircuitBreakerCode, type EdgeConfig } from './edgeConfigCodeGenerator.js';
+import { MAX_UNTRUSTED_STRING_LEN, stripLeadingTrailingHyphens } from './stringEdgeStrip.js';
 
 function safeId(id: any) {
-  return String(id || '').replace(/[^A-Za-z0-9_\-]/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'node';
+  const raw = String(id || '').slice(0, MAX_UNTRUSTED_STRING_LEN);
+  return stripLeadingTrailingHyphens(raw.replace(/[^A-Za-z0-9_\-]/g, '-')).toLowerCase() || 'node';
 }
 
 function handlerNameFor(n: any) {

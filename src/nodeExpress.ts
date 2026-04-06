@@ -1,6 +1,7 @@
 // Deterministic Node Express exporter (skeleton)
 // Exports a map of filename -> content for a generated Express app.
 import { getEdgeConfig, generateRetryCode, generateCircuitBreakerCode, type EdgeConfig } from './edgeConfigCodeGenerator.js';
+import { MAX_UNTRUSTED_STRING_LEN, stripLeadingTrailingHyphens } from './stringEdgeStrip.js';
 
 export default async function generateNodeExpressFiles(actualIR: any, opts: any = {}): Promise<Record<string,string>> {
   const files: Record<string,string> = {};
@@ -16,7 +17,10 @@ export default async function generateNodeExpressFiles(actualIR: any, opts: any 
   // Track edge config utilities (retry, circuit breaker) to include once
   const edgeUtilityCode = new Set<string>();
 
-  function safeId(id: any) { return String(id || '').replace(/[^A-Za-z0-9_\-]/g,'-').replace(/^-+|-+$/g,'').toLowerCase() || 'node'; }
+  function safeId(id: any) {
+    const raw = String(id || '').slice(0, MAX_UNTRUSTED_STRING_LEN);
+    return stripLeadingTrailingHyphens(raw.replace(/[^A-Za-z0-9_\-]/g, '-')).toLowerCase() || 'node';
+  }
   function handlerName(n: any) { return `handler_${safeId(n && (n.id || n.name))}`.replace(/-/g,'_'); }
 
   /**
