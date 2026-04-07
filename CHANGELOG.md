@@ -7,11 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Target **0.1.5** (broader scope — not released yet).
+## [0.1.5] - 2026-04-07
 
 ### Added
 
-- **`postinstall`** (optional; wire `scripts/npm-postinstall.mjs` in **`package.json`** when cutting **0.1.5**) — one-line docs link with `ref=npm-<version>`, skipped in **CI** / silent installs; no package telemetry.
+- **`archrad-mcp`** — [Model Context Protocol](https://modelcontextprotocol.io/) server over **stdio** (same deterministic engine as the CLI). Tools: **`archrad_validate_ir`**, **`archrad_lint_summary`**, **`archrad_validate_drift`**, **`archrad_policy_packs_load`**, **`archrad_suggest_fix`** (static remediation per built-in code — **not** generated patches), **`archrad_list_rule_codes`**. IR input: inline **`ir`** or **`irPath`** (JSON file; max **25 MiB**). **`archrad_suggest_fix`** **`docsUrl`** → GitHub **`docs/RULE_CODES.md`**. Scope: **`docs/MCP.md`** (OSS: IR + local paths; no tracking params in tool responses).
+- **Docs:** **`docs/DRIFT.md`** (deterministic drift semantics), **`docs/RULE_CODES.md`** (built-in codes + anchors for MCP **`docsUrl`**), **`docs/MCP.md`** (local testing).
 
 ### Fixed
 

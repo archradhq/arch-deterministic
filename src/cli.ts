@@ -92,7 +92,7 @@ program
   .description(
     'Validate your architecture before you write code. Deterministic compiler + linter — FastAPI / Express (no LLM, no server).'
   )
-  .version('0.1.4');
+  .version('0.1.5');
 
 program
   .command('validate')

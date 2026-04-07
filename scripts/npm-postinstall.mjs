@@ -1,9 +1,6 @@
 /**
- * Optional install notice: one line + docs URL with version ref (inbound attribution only).
- * No runtime telemetry, no network calls. Skipped in CI and silent installs.
- *
- * Not enabled in package.json until 0.1.5 — add:
- *   "postinstall": "node scripts/npm-postinstall.mjs"
+ * Optional install notice (not wired from package.json by default).
+ * Skipped in CI and silent installs. Enable only if you want a local console line on `npm install`.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
