@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Target **0.1.5** (broader scope — not released yet).
+
+### Added
+
+- **`postinstall`** (optional; wire `scripts/npm-postinstall.mjs` in **`package.json`** when cutting **0.1.5**) — one-line docs link with `ref=npm-<version>`, skipped in **CI** / silent installs; no package telemetry.
+
+### Fixed
+
+- **CodeQL** `js/polynomial-redos` — linear-time hyphen/underscore edge stripping for **`safeId`** / OpenAPI-derived ids (replaces ambiguous alternation regexes).
+
 ## [0.1.4] - 2026-04-06
 
 ### Added
