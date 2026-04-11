@@ -91,7 +91,7 @@ Open the URL Inspector prints (often **http://localhost:6274**). Under **Tools**
 - **`archrad_list_rule_codes`:** JSON with a **`codes`** array.
 - **`archrad_validate_ir`:** JSON with **`irStructuralFindings`**, **`irLintFindings`**, **`combined`**, **`ok`** — not a connection or file error.
 
-## 6. Tools (0.1.5)
+## 6. Tools (0.1.6)
 
 Tools are **idempotent** and **deterministic** where stated.
 
@@ -101,7 +101,7 @@ Tools are **idempotent** and **deterministic** where stated.
 |------|--------|--------|-------|
 | **`archrad_validate_ir`** | `ir` **or** `irPath`; optional `policiesDirectory` | `{ ok, irStructuralFindings, irLintFindings, combined }` | Same as CLI validate. |
 | **`archrad_lint_summary`** | `ir` **or** `irPath`; optional `policiesDirectory` | Short summary + counts | Agent-friendly. |
-| **`archrad_validate_drift`** | `ir` **or** `irPath`; `target`; `exportDir`; optional policies, `skipIrLint` | Drift + export findings | Same as CLI `validate-drift`. |
+| **`archrad_validate_drift`** | `ir` **or** `irPath`; `target`; `exportDir`; optional policies, `skipIrLint` | Drift + export findings | Same engine as CLI `validate-drift`. **MCP `target` values:** `python` or `nodejs` only (not `node`). The CLI `validate-drift` / `export` may still accept `node` as an alias for Node exports. |
 | **`archrad_policy_packs_load`** | `directory` or `files[]` | `{ ok, ruleCount }` or errors | Compiles packs; does not return visitor functions over MCP. |
 
 ### 6.2 Static guidance (no generated architecture)

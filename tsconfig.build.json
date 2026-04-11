@@ -8,5 +8,9 @@
     "noEmit": false
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts", "vitest.config.ts"]
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/missing-auth-010-corpus-augment.ts",
+    "vitest.config.ts"
+  ]
 }

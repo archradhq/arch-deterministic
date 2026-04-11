@@ -1,0 +1,226 @@
+[
+  {
+    "id": "health-001",
+    "variant": "positive — gateway with no health URL in config",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-NO-HEALTHCHECK-003",
+          "severity": "warning",
+          "message": "No HTTP node exposes a typical health/readiness path (/health, /healthz, /healthcheck, /ping, /status, /live, /ready)",
+          "fix": "Add a GET route such as /health to an HTTP node for orchestrators and load balancers."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "health-002",
+    "variant": "negative — gateway with config.url containing /health",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true, "url": "/health" } },
+          { "id": "user-service", "type": "service", "name": "User Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "health-003",
+    "variant": "negative — http node with /healthz path",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "rest-api", "type": "http", "name": "REST API", "config": { "url": "/healthz", "method": "GET", "authRequired": true } },
+          { "id": "order-service", "type": "service", "name": "Order Service" }
+        ],
+        "edges": [
+          { "from": "rest-api", "to": "order-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "health-004",
+    "variant": "negative — api node with /ping path",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "public-api", "type": "api", "name": "Public API", "config": { "url": "/ping", "authRequired": true } },
+          { "id": "catalog-service", "type": "service", "name": "Catalog Service" }
+        ],
+        "edges": [
+          { "from": "public-api", "to": "catalog-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "health-005",
+    "variant": "negative — bff with /ready path",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "web-bff", "type": "bff", "name": "Web BFF", "config": { "url": "/ready", "authRequired": true } },
+          { "id": "profile-service", "type": "service", "name": "Profile Service" }
+        ],
+        "edges": [
+          { "from": "web-bff", "to": "profile-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "health-006",
+    "variant": "positive — graph with no HTTP nodes at all does not trigger rule",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "worker-a", "type": "worker", "name": "Worker A" },
+          { "id": "job-queue", "type": "queue", "name": "Job Queue" }
+        ],
+        "edges": [
+          { "from": "worker-a", "to": "job-queue", "metadata": { "protocol": "amqp" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [],
+      "note": "IR-LINT-NO-HEALTHCHECK-003 only fires when there is at least one HTTP-like node. A graph with only workers and queues does not trigger this rule."
+    }
+  },
+
+  {
+    "id": "health-007",
+    "variant": "negative — /status path satisfies healthcheck rule",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "url": "/status", "authRequired": true } },
+          { "id": "payment-service", "type": "service", "name": "Payment Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "payment-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "health-008",
+    "variant": "positive — api node with non-health url /users does not satisfy rule",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "rest-api", "type": "api", "name": "REST API", "config": { "url": "/users", "method": "GET", "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" }
+        ],
+        "edges": [
+          { "from": "rest-api", "to": "user-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-NO-HEALTHCHECK-003",
+          "severity": "warning",
+          "message": "No HTTP node exposes a typical health/readiness path (/health, /healthz, /healthcheck, /ping, /status, /live, /ready)",
+          "fix": "Add a GET route such as /health to an HTTP node for orchestrators and load balancers."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "health-009",
+    "variant": "negative — /live path satisfies healthcheck rule",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "url": "/live", "authRequired": true } },
+          { "id": "inventory-service", "type": "service", "name": "Inventory Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "inventory-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "health-010",
+    "variant": "positive — multiple http nodes, none has health url",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "web-gateway", "type": "gateway", "name": "Web Gateway", "config": { "authRequired": true } },
+          { "id": "mobile-gateway", "type": "gateway", "name": "Mobile Gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" }
+        ],
+        "edges": [
+          { "from": "web-gateway", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "mobile-gateway", "to": "user-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-NO-HEALTHCHECK-003",
+          "severity": "warning",
+          "message": "No HTTP node exposes a typical health/readiness path (/health, /healthz, /healthcheck, /ping, /status, /live, /ready)",
+          "fix": "Add a GET route such as /health to an HTTP node for orchestrators and load balancers."
+        }
+      ],
+      "note": "The rule fires once per graph, not once per HTTP node. One health URL on any HTTP node satisfies the rule for the entire graph."
+    }
+  }
+]

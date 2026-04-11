@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-04-10
+
+### Added
+
+- **`docs/CI.md`** — exit code semantics (`--fail-on-warning`, `--max-warnings`) and copy-paste snippets for GitHub Actions, GitLab CI, Bitbucket Pipelines, Jenkins, and Azure DevOps.
+- **`scripts/generate-corpus.mjs`** — validates hand-written `corpus/*.json` pairs; `--count` mode generates weighted synthetic JSONL training pairs via the deterministic engine. Run `npm run build` first.
+- **Integration tests** — `archrad validate` exit code assertions (`src/cli-exit.integration.test.ts`).
+
+### Changed
+
+- **MCP** — Rewrote all six `registerTool` title/description blocks for agent discoverability (`src/mcp-server-tools-patch.ts`).
+- **npm package** — `corpus/` excluded from published tarball (`.npmignore` + removed from `package.json` `files`).
+
+### Fixed
+
+- **`archrad_validate_drift`** MCP schema: `target` enum is `python` | `nodejs` only, aligned with `docs/MCP.md`.
+
+### Security
+
+- `npm audit fix` applied to dev/test transitive dependencies.
+
 ## [0.1.5] - 2026-04-07
 
 ### Added
@@ -114,8 +135,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documented **codegen vs validation** for retry/timeout IR fields and **InkByte vs OSS** scope in README and structural/semantic doc.
 - README positioning: **deterministic compiler and linter for system architecture**; validation layers table (OSS vs Cloud); **`validate-drift`**, drift GIF / trust-loop recording docs, library **`runValidateDrift`** example.
 
-[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.1.3...HEAD
-[0.1.3]: https://github.com/archradhq/arch-deterministic/releases/tag/v0.1.3
-[0.1.2]: https://github.com/archradhq/arch-deterministic/releases/tag/v0.1.2
-[0.1.1]: https://github.com/archradhq/arch-deterministic/releases/tag/v0.1.1
+[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/archradhq/arch-deterministic/compare/v0.1.5...v0.1.6
+[0.1.5]: https://github.com/archradhq/arch-deterministic/compare/v0.1.4...v0.1.5
+[0.1.4]: https://github.com/archradhq/arch-deterministic/compare/v0.1.3...v0.1.4
+[0.1.3]: https://github.com/archradhq/arch-deterministic/compare/v0.1.2...v0.1.3
+[0.1.2]: https://github.com/archradhq/arch-deterministic/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/archradhq/arch-deterministic/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/archradhq/arch-deterministic/releases/tag/v0.1.0

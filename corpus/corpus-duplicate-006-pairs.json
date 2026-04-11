@@ -1,0 +1,296 @@
+[
+  {
+    "id": "dup-001",
+    "variant": "positive — same from/to pair appears twice",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-DUPLICATE-EDGE-006",
+          "severity": "warning",
+          "nodeId": "api-gateway",
+          "message": "Duplicate edge from 'api-gateway' to 'user-service' (also at index 0)",
+          "fix": "Collapse duplicate edges or distinguish them with metadata if your IR allows parallel edges."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "dup-002",
+    "variant": "positive — multiple duplicate pairs in same graph",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" },
+          { "id": "order-service", "type": "service", "name": "Order Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "order-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "order-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-DUPLICATE-EDGE-006",
+          "severity": "warning",
+          "nodeId": "api-gateway",
+          "message": "Duplicate edge from 'api-gateway' to 'user-service' (also at index 0)",
+          "fix": "Collapse duplicate edges or distinguish them with metadata if your IR allows parallel edges."
+        },
+        {
+          "code": "IR-LINT-DUPLICATE-EDGE-006",
+          "severity": "warning",
+          "nodeId": "api-gateway",
+          "message": "Duplicate edge from 'api-gateway' to 'order-service' (also at index 2)",
+          "fix": "Collapse duplicate edges or distinguish them with metadata if your IR allows parallel edges."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "dup-003",
+    "variant": "negative — same nodes but different directions are not duplicates",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "service-a", "type": "service", "name": "Service A" },
+          { "id": "service-b", "type": "service", "name": "Service B" }
+        ],
+        "edges": [
+          { "from": "service-a", "to": "service-b", "metadata": { "protocol": "https" } },
+          { "from": "service-b", "to": "service-a", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [],
+      "note": "A→B and B→A are distinct edges. IR-LINT-DUPLICATE-EDGE-006 only fires when the exact same from/to pair appears more than once."
+    }
+  },
+
+  {
+    "id": "dup-004",
+    "variant": "negative — each from/to pair appears exactly once",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" },
+          { "id": "order-service", "type": "service", "name": "Order Service" },
+          { "id": "user-db", "type": "database", "name": "User DB" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "order-service", "metadata": { "protocol": "https" } },
+          { "from": "user-service", "to": "user-db", "metadata": { "protocol": "tcp" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "dup-005",
+    "variant": "positive — duplicate DB edge from service",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "user-service", "type": "service", "name": "User Service" },
+          { "id": "user-db", "type": "database", "name": "User DB" }
+        ],
+        "edges": [
+          { "from": "user-service", "to": "user-db", "metadata": { "protocol": "tcp" } },
+          { "from": "user-service", "to": "user-db", "metadata": { "protocol": "tcp" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-DUPLICATE-EDGE-006",
+          "severity": "warning",
+          "nodeId": "user-service",
+          "message": "Duplicate edge from 'user-service' to 'user-db' (also at index 0)",
+          "fix": "Collapse duplicate edges or distinguish them with metadata if your IR allows parallel edges."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "dup-006",
+    "variant": "positive — triplicate edge, two duplicates reported",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-DUPLICATE-EDGE-006",
+          "severity": "warning",
+          "nodeId": "api-gateway",
+          "message": "Duplicate edge from 'api-gateway' to 'user-service' (also at index 0)",
+          "fix": "Collapse duplicate edges or distinguish them with metadata if your IR allows parallel edges."
+        },
+        {
+          "code": "IR-LINT-DUPLICATE-EDGE-006",
+          "severity": "warning",
+          "nodeId": "api-gateway",
+          "message": "Duplicate edge from 'api-gateway' to 'user-service' (also at index 0)",
+          "fix": "Collapse duplicate edges or distinguish them with metadata if your IR allows parallel edges."
+        }
+      ],
+      "note": "Each duplicate occurrence after the first is reported separately. Three edges on the same pair produces two duplicate findings."
+    }
+  },
+
+  {
+    "id": "dup-007",
+    "variant": "negative — single edge in entire graph",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "dup-008",
+    "variant": "positive — copy-paste error creates duplicate queue edge",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "order-service", "type": "service", "name": "Order Service" },
+          { "id": "notification-queue", "type": "queue", "name": "Notification Queue" }
+        ],
+        "edges": [
+          { "from": "order-service", "to": "notification-queue", "metadata": { "protocol": "amqp" } },
+          { "from": "order-service", "to": "notification-queue", "metadata": { "protocol": "amqp" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-DUPLICATE-EDGE-006",
+          "severity": "warning",
+          "nodeId": "order-service",
+          "message": "Duplicate edge from 'order-service' to 'notification-queue' (also at index 0)",
+          "fix": "Collapse duplicate edges or distinguish them with metadata if your IR allows parallel edges."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "dup-009",
+    "variant": "negative — different protocols on same pair are still duplicates (keyed on from/to only)",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "grpc" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-DUPLICATE-EDGE-006",
+          "severity": "warning",
+          "nodeId": "api-gateway",
+          "message": "Duplicate edge from 'api-gateway' to 'user-service' (also at index 0)",
+          "fix": "Collapse duplicate edges or distinguish them with metadata if your IR allows parallel edges."
+        }
+      ],
+      "note": "Duplicate detection is keyed on from/to pair only — different protocols do not make edges distinct. If parallel edges are intentional, document the distinction clearly or merge into one edge."
+    }
+  },
+
+  {
+    "id": "dup-010",
+    "variant": "negative — star topology with unique edges",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "svc-a", "type": "service", "name": "Service A" },
+          { "id": "svc-b", "type": "service", "name": "Service B" },
+          { "id": "svc-c", "type": "service", "name": "Service C" },
+          { "id": "svc-d", "type": "service", "name": "Service D" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "svc-a", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "svc-b", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "svc-c", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "svc-d", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-HIGH-FANOUT-004",
+          "severity": "warning",
+          "nodeId": "api-gateway",
+          "message": "Node 'api-gateway' has 4 outgoing dependencies (threshold 5)",
+          "fix": "Split responsibilities or group related downstream calls."
+        }
+      ],
+      "note": "All from/to pairs are unique — no duplicates. IR-LINT-DUPLICATE-EDGE-006 does not fire. IR-LINT-HIGH-FANOUT-004 also does not fire here as 4 is under threshold of 5."
+    }
+  }
+]

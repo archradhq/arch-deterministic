@@ -20,16 +20,19 @@ import {
 } from './index.js';
 import type { ValidateIrLintOptions } from './ir-lint.js';
 import { getStaticRuleGuidance, listStaticRuleCodes } from './static-rule-guidance.js';
+import {
+  MCP_TOOL_ARCHRAD_LIST_RULE_CODES,
+  MCP_TOOL_ARCHRAD_LINT_SUMMARY,
+  MCP_TOOL_ARCHRAD_POLICY_PACKS_LOAD,
+  MCP_TOOL_ARCHRAD_SUGGEST_FIX,
+  MCP_TOOL_ARCHRAD_VALIDATE_DRIFT,
+  MCP_TOOL_ARCHRAD_VALIDATE_IR,
+} from './mcp-server-tools-patch.js';
 
-const VERSION = '0.1.5';
+const VERSION = '0.1.6';
 
 /** Hard cap for `irPath` reads (see docs/MCP.md). */
 const MAX_IR_FILE_BYTES = 25 * 1024 * 1024;
-
-const irSourceSchema = {
-  ir: z.unknown().optional(),
-  irPath: z.string().optional(),
-};
 
 function jsonResult(payload: unknown) {
   return {
@@ -83,49 +86,17 @@ async function main() {
   });
 
   server.registerTool(
-    'archrad_suggest_fix',
-    {
-      title: 'Static remediation for a finding code',
-      description:
-        'Deterministic title, remediation text, and canonical docs URL for a built-in IR-STRUCT / IR-LINT / DRIFT code. Does not generate patches or IR edits.',
-      inputSchema: {
-        findingCode: z.string().min(1),
-      },
-    },
-    async (args) => {
-      const g = getStaticRuleGuidance(args.findingCode);
-      if (!g) {
-        return jsonResult({
-          ok: false,
-          findingCode: args.findingCode,
-          error:
-            'Unknown built-in code. PolicyPack and org rules use custom rule ids in YAML — see your pack. Use archrad_list_rule_codes for built-in codes.',
-        });
-      }
-      return jsonResult({ ok: true, ...g });
-    },
-  );
-
-  server.registerTool(
-    'archrad_list_rule_codes',
-    {
-      title: 'List built-in rule codes',
-      description:
-        'Sorted list of IR-STRUCT-*, IR-LINT-*, and DRIFT-* codes that have static guidance via archrad_suggest_fix.',
-      inputSchema: {},
-    },
-    async () => jsonResult({ codes: listStaticRuleCodes() }),
-  );
-
-  server.registerTool(
     'archrad_validate_ir',
     {
-      title: 'Validate IR (structural + IR-LINT)',
-      description:
-        'Run deterministic structural validation (IR-STRUCT-*) and architecture lint (IR-LINT-*). Pass `ir` inline or `irPath` to a JSON file (recommended for large graphs). Optional local PolicyPack directory.',
+      title: MCP_TOOL_ARCHRAD_VALIDATE_IR.title,
+      description: MCP_TOOL_ARCHRAD_VALIDATE_IR.description,
       inputSchema: {
-        ...irSourceSchema,
-        policiesDirectory: z.string().optional(),
+        ir: z.unknown().optional().describe('Inline IR graph as a JSON object. Use for small graphs only.'),
+        irPath: z.string().optional().describe('Absolute or relative path to an IR JSON file. Preferred for large graphs.'),
+        policiesDirectory: z
+          .string()
+          .optional()
+          .describe('Path to a directory of PolicyPack YAML/JSON files. Optional — omit if you have no custom rules.'),
       },
     },
     async (args) => {
@@ -160,12 +131,15 @@ async function main() {
   server.registerTool(
     'archrad_lint_summary',
     {
-      title: 'Lint summary',
-      description:
-        'Short text summary of IR structural + lint findings. Use `ir` or `irPath` (see archrad_validate_ir).',
+      title: MCP_TOOL_ARCHRAD_LINT_SUMMARY.title,
+      description: MCP_TOOL_ARCHRAD_LINT_SUMMARY.description,
       inputSchema: {
-        ...irSourceSchema,
-        policiesDirectory: z.string().optional(),
+        ir: z.unknown().optional().describe('Inline IR graph as a JSON object.'),
+        irPath: z.string().optional().describe('Absolute or relative path to an IR JSON file.'),
+        policiesDirectory: z
+          .string()
+          .optional()
+          .describe('Path to a directory of PolicyPack YAML/JSON files. Optional.'),
       },
     },
     async (args) => {
@@ -194,22 +168,62 @@ async function main() {
         ...combined.slice(0, 20).map((f) => `- [${f.code}] ${f.message}`),
       ];
       if (combined.length > 20) lines.push(`… and ${combined.length - 20} more.`);
-      return jsonResult({ summary: lines.join('\n'), counts: { total: combined.length, errors: errors.length, warnings: warnings.length } });
+      return jsonResult({
+        summary: lines.join('\n'),
+        counts: { total: combined.length, errors: errors.length, warnings: warnings.length },
+      });
     },
+  );
+
+  server.registerTool(
+    'archrad_suggest_fix',
+    {
+      title: MCP_TOOL_ARCHRAD_SUGGEST_FIX.title,
+      description: MCP_TOOL_ARCHRAD_SUGGEST_FIX.description,
+      inputSchema: {
+        findingCode: z.string().min(1).describe('The finding code to look up, e.g. "IR-LINT-MISSING-AUTH-010".'),
+      },
+    },
+    async (args) => {
+      const g = getStaticRuleGuidance(args.findingCode);
+      if (!g) {
+        return jsonResult({
+          ok: false,
+          findingCode: args.findingCode,
+          error:
+            'Unknown built-in code. PolicyPack and org rules use custom rule ids in YAML — see your pack. Call archrad_list_rule_codes to see all built-in codes with static guidance.',
+        });
+      }
+      return jsonResult({ ok: true, ...g });
+    },
+  );
+
+  server.registerTool(
+    'archrad_list_rule_codes',
+    {
+      title: MCP_TOOL_ARCHRAD_LIST_RULE_CODES.title,
+      description: MCP_TOOL_ARCHRAD_LIST_RULE_CODES.description,
+      inputSchema: {},
+    },
+    async () => jsonResult({ codes: listStaticRuleCodes() }),
   );
 
   server.registerTool(
     'archrad_validate_drift',
     {
-      title: 'Validate drift',
-      description:
-        'Compare on-disk export to a fresh deterministic export. Pass `ir` or `irPath` (JSON file).',
+      title: MCP_TOOL_ARCHRAD_VALIDATE_DRIFT.title,
+      description: MCP_TOOL_ARCHRAD_VALIDATE_DRIFT.description,
       inputSchema: {
-        ...irSourceSchema,
-        target: z.enum(['python', 'node', 'nodejs']),
-        exportDir: z.string(),
-        policiesDirectory: z.string().optional(),
-        skipIrLint: z.boolean().optional(),
+        ir: z.unknown().optional().describe('Inline IR graph as a JSON object.'),
+        irPath: z.string().optional().describe('Absolute or relative path to an IR JSON file.'),
+        target: z
+          .enum(['python', 'nodejs'])
+          .describe('Export target language. Use "nodejs" for Node.js/TypeScript, "python" for Python.'),
+        exportDir: z
+          .string()
+          .describe('Absolute path to the on-disk export directory to compare against the IR.'),
+        policiesDirectory: z.string().optional().describe('Path to a PolicyPack directory. Optional.'),
+        skipIrLint: z.boolean().optional().describe('Set to true to skip IR-LINT checks and only check for drift. Default: false.'),
       },
     },
     async (args) => {
@@ -250,13 +264,19 @@ async function main() {
   server.registerTool(
     'archrad_policy_packs_load',
     {
-      title: 'Load policy packs',
-      description: 'Compile PolicyPack YAML/JSON from a directory or from in-memory file list.',
+      title: MCP_TOOL_ARCHRAD_POLICY_PACKS_LOAD.title,
+      description: MCP_TOOL_ARCHRAD_POLICY_PACKS_LOAD.description,
       inputSchema: {
-        directory: z.string().optional(),
+        directory: z.string().optional().describe('Path to a directory of PolicyPack YAML/JSON files.'),
         files: z
-          .array(z.object({ name: z.string(), content: z.string() }))
-          .optional(),
+          .array(
+            z.object({
+              name: z.string().describe('Filename, e.g. "auth-rules.yaml".'),
+              content: z.string().describe('Raw file content as a string.'),
+            }),
+          )
+          .optional()
+          .describe('In-memory file list. Use when you have policy content as strings rather than on-disk files.'),
       },
     },
     async (args) => {
@@ -276,7 +296,10 @@ async function main() {
         }
         return jsonResult({ ok: true, ruleCount: loaded.ruleCount });
       }
-      return jsonResult({ ok: false, error: 'Provide `directory` or `files`.' });
+      return jsonResult({
+        ok: false,
+        error: 'Provide either directory (path string) or files (array of {name, content}).',
+      });
     },
   );
 

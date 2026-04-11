@@ -1,0 +1,2 @@
+# Training / evaluation corpus — keep in git, omit from npm tarball (smaller publish).
+corpus/
