@@ -1,0 +1,287 @@
+[
+  {
+    "id": "sync-001",
+    "variant": "positive — sync chain depth 3 from gateway (hits threshold exactly)",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "order-service", "type": "service", "name": "Order Service" },
+          { "id": "inventory-service", "type": "service", "name": "Inventory Service" },
+          { "id": "warehouse-service", "type": "service", "name": "Warehouse Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "order-service", "metadata": { "protocol": "https" } },
+          { "from": "order-service", "to": "inventory-service", "metadata": { "protocol": "https" } },
+          { "from": "inventory-service", "to": "warehouse-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-SYNC-CHAIN-001",
+          "severity": "warning",
+          "message": "Long synchronous dependency chain from HTTP entry (depth ≈ 3 hops; async-marked edges excluded)",
+          "fix": "Shorten the call graph or mark message/queue edges as async in edge metadata."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "sync-002",
+    "variant": "positive — deep sync chain depth 5",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "svc-a", "type": "service", "name": "Service A" },
+          { "id": "svc-b", "type": "service", "name": "Service B" },
+          { "id": "svc-c", "type": "service", "name": "Service C" },
+          { "id": "svc-d", "type": "service", "name": "Service D" },
+          { "id": "svc-e", "type": "service", "name": "Service E" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "svc-a", "metadata": { "protocol": "https" } },
+          { "from": "svc-a", "to": "svc-b", "metadata": { "protocol": "https" } },
+          { "from": "svc-b", "to": "svc-c", "metadata": { "protocol": "https" } },
+          { "from": "svc-c", "to": "svc-d", "metadata": { "protocol": "https" } },
+          { "from": "svc-d", "to": "svc-e", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-SYNC-CHAIN-001",
+          "severity": "warning",
+          "message": "Long synchronous dependency chain from HTTP entry (depth ≈ 5 hops; async-marked edges excluded)",
+          "fix": "Shorten the call graph or mark message/queue edges as async in edge metadata."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "sync-003",
+    "variant": "negative — chain broken by async queue edge",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "order-service", "type": "service", "name": "Order Service" },
+          { "id": "email-queue", "type": "queue", "name": "Email Queue" },
+          { "id": "notification-service", "type": "service", "name": "Notification Service" },
+          { "id": "delivery-service", "type": "service", "name": "Delivery Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "order-service", "metadata": { "protocol": "https" } },
+          { "from": "order-service", "to": "email-queue", "metadata": { "protocol": "amqp" } },
+          { "from": "email-queue", "to": "notification-service", "metadata": { "protocol": "amqp" } },
+          { "from": "notification-service", "to": "delivery-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [],
+      "note": "The queue edge breaks the synchronous chain. Depth from HTTP entry in sync hops is only 1 (api-gateway → order-service). The remaining hops are async and excluded from the depth calculation."
+    }
+  },
+
+  {
+    "id": "sync-004",
+    "variant": "negative — chain depth 2, under threshold",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" },
+          { "id": "user-db", "type": "database", "name": "User DB" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "user-service", "to": "user-db", "metadata": { "protocol": "tcp" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "sync-005",
+    "variant": "negative — edge with metadata.async: true breaks sync chain",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "order-service", "type": "service", "name": "Order Service" },
+          { "id": "fulfillment-service", "type": "service", "name": "Fulfillment Service" },
+          { "id": "shipping-service", "type": "service", "name": "Shipping Service" },
+          { "id": "tracking-service", "type": "service", "name": "Tracking Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "order-service", "metadata": { "protocol": "https" } },
+          { "from": "order-service", "to": "fulfillment-service", "metadata": { "async": true, "protocol": "https" } },
+          { "from": "fulfillment-service", "to": "shipping-service", "metadata": { "protocol": "https" } },
+          { "from": "shipping-service", "to": "tracking-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [],
+      "note": "The edge from order-service to fulfillment-service has metadata.async: true, breaking the synchronous chain. Sync depth from HTTP entry is 1 hop only."
+    }
+  },
+
+  {
+    "id": "sync-006",
+    "variant": "positive — payment flow with 4-hop sync chain",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "payment-gateway", "type": "gateway", "name": "Payment Gateway", "config": { "authRequired": true } },
+          { "id": "fraud-service", "type": "service", "name": "Fraud Detection" },
+          { "id": "risk-service", "type": "service", "name": "Risk Assessment" },
+          { "id": "compliance-service", "type": "service", "name": "Compliance Check" },
+          { "id": "ledger-service", "type": "service", "name": "Ledger Service" }
+        ],
+        "edges": [
+          { "from": "payment-gateway", "to": "fraud-service", "metadata": { "protocol": "https" } },
+          { "from": "fraud-service", "to": "risk-service", "metadata": { "protocol": "https" } },
+          { "from": "risk-service", "to": "compliance-service", "metadata": { "protocol": "https" } },
+          { "from": "compliance-service", "to": "ledger-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-SYNC-CHAIN-001",
+          "severity": "warning",
+          "message": "Long synchronous dependency chain from HTTP entry (depth ≈ 4 hops; async-marked edges excluded)",
+          "fix": "Shorten the call graph or mark message/queue edges as async in edge metadata."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "sync-007",
+    "variant": "negative — parallel branches, each under threshold",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" },
+          { "id": "order-service", "type": "service", "name": "Order Service" },
+          { "id": "user-db", "type": "database", "name": "User DB" },
+          { "id": "order-db", "type": "database", "name": "Order DB" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "order-service", "metadata": { "protocol": "https" } },
+          { "from": "user-service", "to": "user-db", "metadata": { "protocol": "tcp" } },
+          { "from": "order-service", "to": "order-db", "metadata": { "protocol": "tcp" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "sync-008",
+    "variant": "negative — edge with config.async: true breaks chain",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "ingest-service", "type": "service", "name": "Ingest Service" },
+          { "id": "transform-service", "type": "service", "name": "Transform Service" },
+          { "id": "load-service", "type": "service", "name": "Load Service" },
+          { "id": "warehouse", "type": "warehouse", "name": "Data Warehouse" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "ingest-service", "metadata": { "protocol": "https" } },
+          { "from": "ingest-service", "to": "transform-service", "config": { "async": true } },
+          { "from": "transform-service", "to": "load-service", "metadata": { "protocol": "https" } },
+          { "from": "load-service", "to": "warehouse", "metadata": { "protocol": "tcp" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [],
+      "note": "config.async: true on the ingest → transform edge marks it as async, breaking the sync chain. Depth is 1 hop from the HTTP entry."
+    }
+  },
+
+  {
+    "id": "sync-009",
+    "variant": "positive — microservice chain with 3 hops, no async breaks",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "auth-service", "type": "auth", "name": "Auth Service" },
+          { "id": "user-service", "type": "service", "name": "User Service" },
+          { "id": "profile-service", "type": "service", "name": "Profile Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "auth-service", "metadata": { "protocol": "https" } },
+          { "from": "auth-service", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "user-service", "to": "profile-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-SYNC-CHAIN-001",
+          "severity": "warning",
+          "message": "Long synchronous dependency chain from HTTP entry (depth ≈ 3 hops; async-marked edges excluded)",
+          "fix": "Shorten the call graph or mark message/queue edges as async in edge metadata."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "sync-010",
+    "variant": "negative — kafka topic edge breaks sync chain automatically",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "order-service", "type": "service", "name": "Order Service" },
+          { "id": "order-events", "type": "kafka", "name": "Order Events Topic" },
+          { "id": "fulfillment-service", "type": "service", "name": "Fulfillment Service" },
+          { "id": "shipping-service", "type": "service", "name": "Shipping Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "order-service", "metadata": { "protocol": "https" } },
+          { "from": "order-service", "to": "order-events", "metadata": { "protocol": "kafka" } },
+          { "from": "order-events", "to": "fulfillment-service", "metadata": { "protocol": "kafka" } },
+          { "from": "fulfillment-service", "to": "shipping-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [],
+      "note": "Edges to/from kafka nodes are treated as async boundaries. The sync chain from HTTP entry is 1 hop. The remaining hops cross async boundaries and are excluded from depth calculation."
+    }
+  }
+]

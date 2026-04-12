@@ -1,0 +1,339 @@
+[
+  {
+    "id": "fanout-001",
+    "variant": "positive — gateway with 5 outgoing edges hits threshold exactly",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" },
+          { "id": "order-service", "type": "service", "name": "Order Service" },
+          { "id": "payment-service", "type": "service", "name": "Payment Service" },
+          { "id": "inventory-service", "type": "service", "name": "Inventory Service" },
+          { "id": "notification-service", "type": "service", "name": "Notification Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "order-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "payment-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "inventory-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "notification-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-HIGH-FANOUT-004",
+          "severity": "warning",
+          "nodeId": "api-gateway",
+          "message": "Node 'api-gateway' has 5 outgoing dependencies (threshold 5)",
+          "fix": "Split responsibilities or group related downstream calls. Consider a facade, batching, or async handoff."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "fanout-002",
+    "variant": "positive — orchestrator service with 7 downstream calls",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "checkout-orchestrator", "type": "service", "name": "Checkout Orchestrator" },
+          { "id": "cart-service", "type": "service", "name": "Cart Service" },
+          { "id": "payment-service", "type": "service", "name": "Payment Service" },
+          { "id": "inventory-service", "type": "service", "name": "Inventory Service" },
+          { "id": "tax-service", "type": "service", "name": "Tax Service" },
+          { "id": "shipping-service", "type": "service", "name": "Shipping Service" },
+          { "id": "fraud-service", "type": "service", "name": "Fraud Detection" },
+          { "id": "notification-service", "type": "service", "name": "Notification Service" }
+        ],
+        "edges": [
+          { "from": "checkout-orchestrator", "to": "cart-service", "metadata": { "protocol": "https" } },
+          { "from": "checkout-orchestrator", "to": "payment-service", "metadata": { "protocol": "https" } },
+          { "from": "checkout-orchestrator", "to": "inventory-service", "metadata": { "protocol": "https" } },
+          { "from": "checkout-orchestrator", "to": "tax-service", "metadata": { "protocol": "https" } },
+          { "from": "checkout-orchestrator", "to": "shipping-service", "metadata": { "protocol": "https" } },
+          { "from": "checkout-orchestrator", "to": "fraud-service", "metadata": { "protocol": "https" } },
+          { "from": "checkout-orchestrator", "to": "notification-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-HIGH-FANOUT-004",
+          "severity": "warning",
+          "nodeId": "checkout-orchestrator",
+          "message": "Node 'checkout-orchestrator' has 7 outgoing dependencies (threshold 5)",
+          "fix": "Split responsibilities or group related downstream calls. Consider a facade, batching, or async handoff."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "fanout-003",
+    "variant": "negative — node with 4 outgoing edges is under threshold",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" },
+          { "id": "order-service", "type": "service", "name": "Order Service" },
+          { "id": "payment-service", "type": "service", "name": "Payment Service" },
+          { "id": "inventory-service", "type": "service", "name": "Inventory Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "order-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "payment-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "inventory-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "fanout-004",
+    "variant": "negative — fanout spread across multiple services, none exceeds threshold",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" },
+          { "id": "order-service", "type": "service", "name": "Order Service" },
+          { "id": "user-db", "type": "database", "name": "User DB" },
+          { "id": "order-db", "type": "database", "name": "Order DB" },
+          { "id": "cache", "type": "redis", "name": "Cache" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "order-service", "metadata": { "protocol": "https" } },
+          { "from": "user-service", "to": "user-db", "metadata": { "protocol": "tcp" } },
+          { "from": "user-service", "to": "cache", "metadata": { "protocol": "tcp" } },
+          { "from": "order-service", "to": "order-db", "metadata": { "protocol": "tcp" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "fanout-005",
+    "variant": "positive — event publisher fires to 6 downstream queues",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "event-publisher", "type": "service", "name": "Event Publisher" },
+          { "id": "queue-a", "type": "queue", "name": "Queue A" },
+          { "id": "queue-b", "type": "queue", "name": "Queue B" },
+          { "id": "queue-c", "type": "queue", "name": "Queue C" },
+          { "id": "queue-d", "type": "queue", "name": "Queue D" },
+          { "id": "queue-e", "type": "queue", "name": "Queue E" },
+          { "id": "queue-f", "type": "queue", "name": "Queue F" }
+        ],
+        "edges": [
+          { "from": "event-publisher", "to": "queue-a", "metadata": { "protocol": "amqp" } },
+          { "from": "event-publisher", "to": "queue-b", "metadata": { "protocol": "amqp" } },
+          { "from": "event-publisher", "to": "queue-c", "metadata": { "protocol": "amqp" } },
+          { "from": "event-publisher", "to": "queue-d", "metadata": { "protocol": "amqp" } },
+          { "from": "event-publisher", "to": "queue-e", "metadata": { "protocol": "amqp" } },
+          { "from": "event-publisher", "to": "queue-f", "metadata": { "protocol": "amqp" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-HIGH-FANOUT-004",
+          "severity": "warning",
+          "nodeId": "event-publisher",
+          "message": "Node 'event-publisher' has 6 outgoing dependencies (threshold 5)",
+          "fix": "Split responsibilities or group related downstream calls. Consider a facade, batching, or async handoff."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "fanout-006",
+    "variant": "positive — two nodes both exceed fanout threshold",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "gateway-a", "type": "gateway", "name": "Gateway A", "config": { "authRequired": true } },
+          { "id": "gateway-b", "type": "gateway", "name": "Gateway B", "config": { "authRequired": true } },
+          { "id": "svc-1", "type": "service", "name": "Service 1" },
+          { "id": "svc-2", "type": "service", "name": "Service 2" },
+          { "id": "svc-3", "type": "service", "name": "Service 3" },
+          { "id": "svc-4", "type": "service", "name": "Service 4" },
+          { "id": "svc-5", "type": "service", "name": "Service 5" },
+          { "id": "svc-6", "type": "service", "name": "Service 6" },
+          { "id": "svc-7", "type": "service", "name": "Service 7" },
+          { "id": "svc-8", "type": "service", "name": "Service 8" },
+          { "id": "svc-9", "type": "service", "name": "Service 9" },
+          { "id": "svc-10", "type": "service", "name": "Service 10" }
+        ],
+        "edges": [
+          { "from": "gateway-a", "to": "svc-1", "metadata": { "protocol": "https" } },
+          { "from": "gateway-a", "to": "svc-2", "metadata": { "protocol": "https" } },
+          { "from": "gateway-a", "to": "svc-3", "metadata": { "protocol": "https" } },
+          { "from": "gateway-a", "to": "svc-4", "metadata": { "protocol": "https" } },
+          { "from": "gateway-a", "to": "svc-5", "metadata": { "protocol": "https" } },
+          { "from": "gateway-b", "to": "svc-6", "metadata": { "protocol": "https" } },
+          { "from": "gateway-b", "to": "svc-7", "metadata": { "protocol": "https" } },
+          { "from": "gateway-b", "to": "svc-8", "metadata": { "protocol": "https" } },
+          { "from": "gateway-b", "to": "svc-9", "metadata": { "protocol": "https" } },
+          { "from": "gateway-b", "to": "svc-10", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-HIGH-FANOUT-004",
+          "severity": "warning",
+          "nodeId": "gateway-a",
+          "message": "Node 'gateway-a' has 5 outgoing dependencies (threshold 5)",
+          "fix": "Split responsibilities or group related downstream calls. Consider a facade, batching, or async handoff."
+        },
+        {
+          "code": "IR-LINT-HIGH-FANOUT-004",
+          "severity": "warning",
+          "nodeId": "gateway-b",
+          "message": "Node 'gateway-b' has 5 outgoing dependencies (threshold 5)",
+          "fix": "Split responsibilities or group related downstream calls. Consider a facade, batching, or async handoff."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "fanout-007",
+    "variant": "negative — high incoming degree does not trigger fanout rule",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "svc-a", "type": "service", "name": "Service A" },
+          { "id": "svc-b", "type": "service", "name": "Service B" },
+          { "id": "svc-c", "type": "service", "name": "Service C" },
+          { "id": "svc-d", "type": "service", "name": "Service D" },
+          { "id": "svc-e", "type": "service", "name": "Service E" },
+          { "id": "shared-db", "type": "database", "name": "Shared DB" }
+        ],
+        "edges": [
+          { "from": "svc-a", "to": "shared-db", "metadata": { "protocol": "tcp" } },
+          { "from": "svc-b", "to": "shared-db", "metadata": { "protocol": "tcp" } },
+          { "from": "svc-c", "to": "shared-db", "metadata": { "protocol": "tcp" } },
+          { "from": "svc-d", "to": "shared-db", "metadata": { "protocol": "tcp" } },
+          { "from": "svc-e", "to": "shared-db", "metadata": { "protocol": "tcp" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [],
+      "note": "IR-LINT-HIGH-FANOUT-004 measures outgoing degree only. shared-db has 5 incoming edges (high fan-in) but zero outgoing — this does not trigger the fanout rule. Each source service has exactly 1 outgoing edge."
+    }
+  },
+
+  {
+    "id": "fanout-008",
+    "variant": "negative — 3 outgoing edges, well under threshold",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "auth-service", "type": "auth", "name": "Auth Service" },
+          { "id": "user-service", "type": "service", "name": "User Service" },
+          { "id": "order-service", "type": "service", "name": "Order Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "auth-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "order-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "fanout-009",
+    "variant": "positive — data pipeline fan-out hub exceeds threshold",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "pipeline-hub", "type": "service", "name": "Pipeline Hub" },
+          { "id": "analytics-db", "type": "database", "name": "Analytics DB" },
+          { "id": "warehouse", "type": "warehouse", "name": "Data Warehouse" },
+          { "id": "ml-store", "type": "datastore", "name": "ML Feature Store" },
+          { "id": "audit-log", "type": "database", "name": "Audit Log" },
+          { "id": "archive-s3", "type": "s3", "name": "Archive S3" }
+        ],
+        "edges": [
+          { "from": "pipeline-hub", "to": "analytics-db", "metadata": { "protocol": "tcp" } },
+          { "from": "pipeline-hub", "to": "warehouse", "metadata": { "protocol": "tcp" } },
+          { "from": "pipeline-hub", "to": "ml-store", "metadata": { "protocol": "tcp" } },
+          { "from": "pipeline-hub", "to": "audit-log", "metadata": { "protocol": "tcp" } },
+          { "from": "pipeline-hub", "to": "archive-s3", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-HIGH-FANOUT-004",
+          "severity": "warning",
+          "nodeId": "pipeline-hub",
+          "message": "Node 'pipeline-hub' has 5 outgoing dependencies (threshold 5)",
+          "fix": "Split responsibilities or group related downstream calls. Consider a facade, batching, or async handoff."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "fanout-010",
+    "variant": "negative — fanout threshold is 5, node with exactly 4 is safe",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "bff", "type": "bff", "name": "BFF", "config": { "authRequired": true } },
+          { "id": "profile-service", "type": "service", "name": "Profile Service" },
+          { "id": "feed-service", "type": "service", "name": "Feed Service" },
+          { "id": "media-service", "type": "service", "name": "Media Service" },
+          { "id": "search-service", "type": "service", "name": "Search Service" }
+        ],
+        "edges": [
+          { "from": "bff", "to": "profile-service", "metadata": { "protocol": "https" } },
+          { "from": "bff", "to": "feed-service", "metadata": { "protocol": "https" } },
+          { "from": "bff", "to": "media-service", "metadata": { "protocol": "https" } },
+          { "from": "bff", "to": "search-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [],
+      "note": "Threshold is 5. A node needs 5 or more outgoing edges to trigger IR-LINT-HIGH-FANOUT-004. This BFF has exactly 4 outgoing edges — no violation."
+    }
+  }
+]

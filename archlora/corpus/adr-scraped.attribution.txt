@@ -1,0 +1,1740 @@
+# Third-party ADR sources — archlora/scrape_adrs.py v4
+# ADR text is not stored in training pairs; GPT-4o converts to IR graphs.
+# Retain with distributed corpus for license attribution obligations.
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk_content_block_tools
+File: 0001-handle-styling-within-the-tools-gem-whereever-possible.md
+Source: https://api.github.com/repositories/888550931/contents/docs/architecture/decisions/0001-handle-styling-within-the-tools-gem-whereever-possible.md?ref=971545180d3da999fae856310e3bc293332bfa8e
+License-file-SHA256: 318c3914cdcae28f0db63021a6e90bb9efcd866d1348f8e8d57e2337db883511
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0018-use-concourse-ci.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0018-use-concourse-ci.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/content-block-manager
+File: 0002-use-publishing-api.md
+Source: https://api.github.com/repositories/1041481925/contents/docs/architecture/decisions/0002-use-publishing-api.md?ref=9f7d790e127f2cbba5856e54413233bde96d43f2
+License-file-SHA256: 3e48f8fbf2f22ee38faa38f4cdf6422904089a9b184a1c2ce371cfb381618266
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0019-restructure-cicd.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0019-restructure-cicd.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/content-block-manager
+File: 0001-document-use-of-services.md
+Source: https://api.github.com/repositories/1041481925/contents/docs/architecture/decisions/0001-document-use-of-services.md?ref=9f7d790e127f2cbba5856e54413233bde96d43f2
+License-file-SHA256: 3e48f8fbf2f22ee38faa38f4cdf6422904089a9b184a1c2ce371cfb381618266
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0012-non-govuk-domain-policy.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0012-non-govuk-domain-policy.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0015-maintain-a-readonly-role.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0015-maintain-a-readonly-role.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/content-block-manager
+File: 0009-use-domain-events-to-record-edition-history.md
+Source: https://api.github.com/repositories/1041481925/contents/docs/architecture/decisions/0009-use-domain-events-to-record-edition-history.md?ref=9f7d790e127f2cbba5856e54413233bde96d43f2
+License-file-SHA256: 3e48f8fbf2f22ee38faa38f4cdf6422904089a9b184a1c2ce371cfb381618266
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0016-use-iam-roles-for-services.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0016-use-iam-roles-for-services.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/content-block-manager
+File: 0008-allow-non-signon-users-to-access-fact-check-view-via-a-jwt.md
+Source: https://api.github.com/repositories/1041481925/contents/docs/architecture/decisions/0008-allow-non-signon-users-to-access-fact-check-view-via-a-jwt.md?ref=9f7d790e127f2cbba5856e54413233bde96d43f2
+License-file-SHA256: 3e48f8fbf2f22ee38faa38f4cdf6422904089a9b184a1c2ce371cfb381618266
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0013-expose-external-metrics-for-hpa.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0013-expose-external-metrics-for-hpa.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/content-block-manager
+File: 0003-move-out-to-new-application.md
+Source: https://api.github.com/repositories/1041481925/contents/docs/architecture/decisions/0003-move-out-to-new-application.md?ref=9f7d790e127f2cbba5856e54413233bde96d43f2
+License-file-SHA256: 3e48f8fbf2f22ee38faa38f4cdf6422904089a9b184a1c2ce371cfb381618266
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/content-block-manager
+File: 0005-hide-e2e-related-content-from-users.md
+Source: https://api.github.com/repositories/1041481925/contents/docs/architecture/decisions/0005-hide-e2e-related-content-from-users.md?ref=9f7d790e127f2cbba5856e54413233bde96d43f2
+License-file-SHA256: 3e48f8fbf2f22ee38faa38f4cdf6422904089a9b184a1c2ce371cfb381618266
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0010-use-dex-idp-for-user-web-authentication.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0010-use-dex-idp-for-user-web-authentication.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/content-block-manager
+File: 0007-add-fact-check-view-as-a-rails-engine.md
+Source: https://api.github.com/repositories/1041481925/contents/docs/architecture/decisions/0007-add-fact-check-view-as-a-rails-engine.md?ref=9f7d790e127f2cbba5856e54413233bde96d43f2
+License-file-SHA256: 3e48f8fbf2f22ee38faa38f4cdf6422904089a9b184a1c2ce371cfb381618266
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0004-use-aws-load-balancer-controller-for-edge-traffic-services.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0004-use-aws-load-balancer-controller-for-edge-traffic-services.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0003-split-terraform-state-into-separate-aws-cluster-and-kubernetes-resource-phases.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0003-split-terraform-state-into-separate-aws-cluster-and-kubernetes-resource-phases.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0005-use-eks-managed-node-groups.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0005-use-eks-managed-node-groups.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0022-use-pkl-for-configuration.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0022-use-pkl-for-configuration.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0020-use-crossplane-for-abstraction.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0020-use-crossplane-for-abstraction.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0021-give-fastly-cname-records-a-TTL-of-300.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0021-give-fastly-cname-records-a-TTL-of-300.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0008-use-external-secrets-for-secrets-storage.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0008-use-external-secrets-for-secrets-storage.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0009-use-external-dns-for-dns-record-management.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0009-use-external-dns-for-dns-record-management.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0006-use-helm-for-application-package-management.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0006-use-helm-for-application-package-management.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0017-retire-use-of-github-topics-for-config-management.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0017-retire-use-of-github-topics-for-config-management.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0002-use-aws-eks-terraform-module.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0002-use-aws-eks-terraform-module.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/govuk-infrastructure
+File: 0007-use-fluentbit-elasticsearch-and-kibana-for-application-logs.md
+Source: https://api.github.com/repositories/278376996/contents/docs/architecture/decisions/0007-use-fluentbit-elasticsearch-and-kibana-for-application-logs.md?ref=a192838ce431e422301d5be17ae7760112a500e0
+License-file-SHA256: 7a5dc229de700656095d39906a493f9189bfb79a6e002cc251d8331de00fd416
+
+---
+SPDX-License-Identifier: MIT
+Repository: alphagov/content-block-manager
+File: 0010-make-content-block-manager-the-source-of-truth-for-schemas.md
+Source: https://api.github.com/repositories/1041481925/contents/docs/architecture/decisions/0010-make-content-block-manager-the-source-of-truth-for-schemas.md?ref=9f7d790e127f2cbba5856e54413233bde96d43f2
+License-file-SHA256: 3e48f8fbf2f22ee38faa38f4cdf6422904089a9b184a1c2ce371cfb381618266
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-digideps
+File: 0006-jwts.md
+Source: https://api.github.com/repositories/200621714/contents/docs/architecture/decisions/0006-jwts.md?ref=834ab50c907fa10d37b07553ff04e5431d670c96
+License-file-SHA256: 81c022b4702dc1a2e60a7b7f4ec1c852027e1565bee29021f2703dc642c3e517
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-use-an-lpa
+File: 0023-lpa-data-format.md
+Source: https://api.github.com/repositories/172097026/contents/docs/architecture/decisions/0023-lpa-data-format.md?ref=27963156d143930f59fa304f90a102813cd10ede
+License-file-SHA256: 35c43bc7397cebae9c339868e4c4e786385dcc0833f67669136c8894b330a1c0
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-metrics
+File: 0005-aws-api-keys.md
+Source: https://api.github.com/repositories/289024842/contents/docs/architecture/decisions/0005-aws-api-keys.md?ref=b5f0aed771fbb70faf0f055f26f33d7352f16e15
+License-file-SHA256: 0d369a659e14bc0e5c234aa2825aa4af40f0f574f127c0bcb1e7f8c3fdecd120
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-data
+File: 0008-hateoas.md
+Source: https://api.github.com/repositories/233028106/contents/docs/architecture/decisions/0008-hateoas.md?ref=ef7fca692ebd9f08cfe1adf288a151b2e30d004a
+License-file-SHA256: e3906c03689e8e884ce36a7f9586bb70e25a120c9dee3a56903f7c0b1342f547
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-data-lpa-store
+File: 0002-actor-unique-ids.md
+Source: https://api.github.com/repositories/682163412/contents/docs/architecture/decisions/0002-actor-unique-ids.md?ref=d6ada163948b42f3bef7fbe156368873a26d2575
+License-file-SHA256: e3906c03689e8e884ce36a7f9586bb70e25a120c9dee3a56903f7c0b1342f547
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-data-lpa-uid
+File: 0005-use-dynamodb-for-data-storage.md
+Source: https://api.github.com/repositories/610810142/contents/docs/architecture/decisions/0005-use-dynamodb-for-data-storage.md?ref=d72abf9518b4cb763715de131bad7ad4edab07c4
+License-file-SHA256: e3906c03689e8e884ce36a7f9586bb70e25a120c9dee3a56903f7c0b1342f547
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-data-lpa-codes
+File: 0003-addition-of-paper-verification-codes-to-the-codes-service.md
+Source: https://api.github.com/repositories/258489503/contents/docs/architecture/decisions/0003-addition-of-paper-verification-codes-to-the-codes-service.md?ref=ca1c761be41301be5d6dfb5b7b6847c4916f1bb7
+License-file-SHA256: e3906c03689e8e884ce36a7f9586bb70e25a120c9dee3a56903f7c0b1342f547
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-digideps
+File: 0005-audit-logs.md
+Source: https://api.github.com/repositories/200621714/contents/docs/architecture/decisions/0005-audit-logs.md?ref=834ab50c907fa10d37b07553ff04e5431d670c96
+License-file-SHA256: 81c022b4702dc1a2e60a7b7f4ec1c852027e1565bee29021f2703dc642c3e517
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-data
+File: 0014-shared-services.md
+Source: https://api.github.com/repositories/233028106/contents/docs/architecture/decisions/0014-shared-services.md?ref=ef7fca692ebd9f08cfe1adf288a151b2e30d004a
+License-file-SHA256: e3906c03689e8e884ce36a7f9586bb70e25a120c9dee3a56903f7c0b1342f547
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-metrics
+File: 0006-timestream-retention-policy.md
+Source: https://api.github.com/repositories/289024842/contents/docs/architecture/decisions/0006-timestream-retention-policy.md?ref=b5f0aed771fbb70faf0f055f26f33d7352f16e15
+License-file-SHA256: 0d369a659e14bc0e5c234aa2825aa4af40f0f574f127c0bcb1e7f8c3fdecd120
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-data-deputy-reporting
+File: 0002-reports-unique-reference.md
+Source: https://api.github.com/repositories/234066033/contents/docs/architecture/decisions/0002-reports-unique-reference.md?ref=c0b19c053efba55241a05dc806158be20172a799
+License-file-SHA256: e3906c03689e8e884ce36a7f9586bb70e25a120c9dee3a56903f7c0b1342f547
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-data-lpa-uid
+File: 0003-authenticate-access-with-api-gateway-policy.md
+Source: https://api.github.com/repositories/610810142/contents/docs/architecture/decisions/0003-authenticate-access-with-api-gateway-policy.md?ref=d72abf9518b4cb763715de131bad7ad4edab07c4
+License-file-SHA256: e3906c03689e8e884ce36a7f9586bb70e25a120c9dee3a56903f7c0b1342f547
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-data-lpa-uid
+File: 0002-build-api-gateway-consistently-from-api-specification.md
+Source: https://api.github.com/repositories/610810142/contents/docs/architecture/decisions/0002-build-api-gateway-consistently-from-api-specification.md?ref=d72abf9518b4cb763715de131bad7ad4edab07c4
+License-file-SHA256: e3906c03689e8e884ce36a7f9586bb70e25a120c9dee3a56903f7c0b1342f547
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/hmpps-single-accommodation-service-api
+File: 0004-query-nd-mutations.md
+Source: https://api.github.com/repositories/1089615314/contents/docs/architecture/decisions/0004-query-nd-mutations.md?ref=dbc9fa23df2f65f825ebaa0ebb5f62c1a4dd03d9
+License-file-SHA256: 05c3b9e7d347396dd791c336ec6daed6f95315fe03acf33e85c6d6a0e105b28c
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/hmpps-single-accommodation-service-api
+File: 0003-api-aggregation-pattern-for-reads.md
+Source: https://api.github.com/repositories/1089615314/contents/docs/architecture/decisions/0003-api-aggregation-pattern-for-reads.md?ref=dbc9fa23df2f65f825ebaa0ebb5f62c1a4dd03d9
+License-file-SHA256: 05c3b9e7d347396dd791c336ec6daed6f95315fe03acf33e85c6d6a0e105b28c
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/hmpps-single-accommodation-service-api
+File: 0002-ddd-with-outbox-pattern-for-domain-events.md
+Source: https://api.github.com/repositories/1089615314/contents/docs/architecture/decisions/0002-ddd-with-outbox-pattern-for-domain-events.md?ref=dbc9fa23df2f65f825ebaa0ebb5f62c1a4dd03d9
+License-file-SHA256: 05c3b9e7d347396dd791c336ec6daed6f95315fe03acf33e85c6d6a0e105b28c
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/hmpps-single-accommodation-service-api
+File: 0005-store-payload-as-jsonb-with-string-mapping.md
+Source: https://api.github.com/repositories/1089615314/contents/docs/architecture/decisions/0005-store-payload-as-jsonb-with-string-mapping.md?ref=dbc9fa23df2f65f825ebaa0ebb5f62c1a4dd03d9
+License-file-SHA256: 05c3b9e7d347396dd791c336ec6daed6f95315fe03acf33e85c6d6a0e105b28c
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-use-an-lpa
+File: 0016-logging-and-tracing.md
+Source: https://api.github.com/repositories/172097026/contents/docs/architecture/decisions/0016-logging-and-tracing.md?ref=27963156d143930f59fa304f90a102813cd10ede
+License-file-SHA256: 35c43bc7397cebae9c339868e4c4e786385dcc0833f67669136c8894b330a1c0
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-use-an-lpa
+File: 0014-library-for-application-views.md
+Source: https://api.github.com/repositories/172097026/contents/docs/architecture/decisions/0014-library-for-application-views.md?ref=27963156d143930f59fa304f90a102813cd10ede
+License-file-SHA256: 35c43bc7397cebae9c339868e4c4e786385dcc0833f67669136c8894b330a1c0
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-data-lpa-codes
+File: 0002-serverless-frameworks.md
+Source: https://api.github.com/repositories/258489503/contents/docs/architecture/decisions/0002-serverless-frameworks.md?ref=ca1c761be41301be5d6dfb5b7b6847c4916f1bb7
+License-file-SHA256: e3906c03689e8e884ce36a7f9586bb70e25a120c9dee3a56903f7c0b1342f547
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-data-lpa-codes
+File: 0001-flask-in-aws-lambda-function.md
+Source: https://api.github.com/repositories/258489503/contents/docs/architecture/decisions/0001-flask-in-aws-lambda-function.md?ref=ca1c761be41301be5d6dfb5b7b6847c4916f1bb7
+License-file-SHA256: e3906c03689e8e884ce36a7f9586bb70e25a120c9dee3a56903f7c0b1342f547
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-use-an-lpa
+File: 0008-session-storage-using-an-encrypted-cookie.md
+Source: https://api.github.com/repositories/172097026/contents/docs/architecture/decisions/0008-session-storage-using-an-encrypted-cookie.md?ref=27963156d143930f59fa304f90a102813cd10ede
+License-file-SHA256: 35c43bc7397cebae9c339868e4c4e786385dcc0833f67669136c8894b330a1c0
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-data
+File: 0009-api-domain-structure.md
+Source: https://api.github.com/repositories/233028106/contents/docs/architecture/decisions/0009-api-domain-structure.md?ref=ef7fca692ebd9f08cfe1adf288a151b2e30d004a
+License-file-SHA256: e3906c03689e8e884ce36a7f9586bb70e25a120c9dee3a56903f7c0b1342f547
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-use-an-lpa
+File: 0017-brute-force-protection-of-application-endpoints.md
+Source: https://api.github.com/repositories/172097026/contents/docs/architecture/decisions/0017-brute-force-protection-of-application-endpoints.md?ref=27963156d143930f59fa304f90a102813cd10ede
+License-file-SHA256: 35c43bc7397cebae9c339868e4c4e786385dcc0833f67669136c8894b330a1c0
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-data
+File: 0002-api-versioning-strategy.md
+Source: https://api.github.com/repositories/233028106/contents/docs/architecture/decisions/0002-api-versioning-strategy.md?ref=ef7fca692ebd9f08cfe1adf288a151b2e30d004a
+License-file-SHA256: e3906c03689e8e884ce36a7f9586bb70e25a120c9dee3a56903f7c0b1342f547
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/laa-court-data-adaptor
+File: 0002-store-common-platform-data-locally-for-event-replay.md
+Source: https://api.github.com/repositories/220248971/contents/docs/architecture/decisions/0002-store-common-platform-data-locally-for-event-replay.md?ref=ba91c8270e3f63270586f82947ea9bdb3c25c63c
+License-file-SHA256: c881ce6855785f0da0c55627dc5141f49a83c2b62d882c00b3d88b07668e6dcf
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-metrics
+File: 0004-use-grafana-for-our-data-visualisation.md
+Source: https://api.github.com/repositories/289024842/contents/docs/architecture/decisions/0004-use-grafana-for-our-data-visualisation.md?ref=b5f0aed771fbb70faf0f055f26f33d7352f16e15
+License-file-SHA256: 0d369a659e14bc0e5c234aa2825aa4af40f0f574f127c0bcb1e7f8c3fdecd120
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-metrics
+File: 0003-use-timestream-for-time-series-data-store.md
+Source: https://api.github.com/repositories/289024842/contents/docs/architecture/decisions/0003-use-timestream-for-time-series-data-store.md?ref=b5f0aed771fbb70faf0f055f26f33d7352f16e15
+License-file-SHA256: 0d369a659e14bc0e5c234aa2825aa4af40f0f574f127c0bcb1e7f8c3fdecd120
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/hmpps-single-accommodation-service-api
+File: 0001-adopt-a-ddd-lite-approach-for-domain-modelling.md
+Source: https://api.github.com/repositories/1089615314/contents/docs/architecture/decisions/0001-adopt-a-ddd-lite-approach-for-domain-modelling.md?ref=dbc9fa23df2f65f825ebaa0ebb5f62c1a4dd03d9
+License-file-SHA256: 05c3b9e7d347396dd791c336ec6daed6f95315fe03acf33e85c6d6a0e105b28c
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-use-an-lpa
+File: 0006-continuous-delivery.md
+Source: https://api.github.com/repositories/172097026/contents/docs/architecture/decisions/0006-continuous-delivery.md?ref=27963156d143930f59fa304f90a102813cd10ede
+License-file-SHA256: 35c43bc7397cebae9c339868e4c4e786385dcc0833f67669136c8894b330a1c0
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-use-an-lpa
+File: 0007-split-terraform-configuration.md
+Source: https://api.github.com/repositories/172097026/contents/docs/architecture/decisions/0007-split-terraform-configuration.md?ref=27963156d143930f59fa304f90a102813cd10ede
+License-file-SHA256: 35c43bc7397cebae9c339868e4c4e786385dcc0833f67669136c8894b330a1c0
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-digideps
+File: 0002-use-amazon-aurora-for-application-database.md
+Source: https://api.github.com/repositories/200621714/contents/docs/architecture/decisions/0002-use-amazon-aurora-for-application-database.md?ref=834ab50c907fa10d37b07553ff04e5431d670c96
+License-file-SHA256: 81c022b4702dc1a2e60a7b7f4ec1c852027e1565bee29021f2703dc642c3e517
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-use-an-lpa
+File: 0002-persistent-storage-uses-dynamodb.md
+Source: https://api.github.com/repositories/172097026/contents/docs/architecture/decisions/0002-persistent-storage-uses-dynamodb.md?ref=27963156d143930f59fa304f90a102813cd10ede
+License-file-SHA256: 35c43bc7397cebae9c339868e4c4e786385dcc0833f67669136c8894b330a1c0
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-data
+File: 0013-pact-broker.md
+Source: https://api.github.com/repositories/233028106/contents/docs/architecture/decisions/0013-pact-broker.md?ref=ef7fca692ebd9f08cfe1adf288a151b2e30d004a
+License-file-SHA256: e3906c03689e8e884ce36a7f9586bb70e25a120c9dee3a56903f7c0b1342f547
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-data
+File: 0010-api-repo-structure.md
+Source: https://api.github.com/repositories/233028106/contents/docs/architecture/decisions/0010-api-repo-structure.md?ref=ef7fca692ebd9f08cfe1adf288a151b2e30d004a
+License-file-SHA256: e3906c03689e8e884ce36a7f9586bb70e25a120c9dee3a56903f7c0b1342f547
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-use-an-lpa
+File: 0020-common-service-images-specifying-image-tags.md
+Source: https://api.github.com/repositories/172097026/contents/docs/architecture/decisions/0020-common-service-images-specifying-image-tags.md?ref=27963156d143930f59fa304f90a102813cd10ede
+License-file-SHA256: 35c43bc7397cebae9c339868e4c4e786385dcc0833f67669136c8894b330a1c0
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-data
+File: 0003-opg-data-api-specification.md
+Source: https://api.github.com/repositories/233028106/contents/docs/architecture/decisions/0003-opg-data-api-specification.md?ref=ef7fca692ebd9f08cfe1adf288a151b2e30d004a
+License-file-SHA256: e3906c03689e8e884ce36a7f9586bb70e25a120c9dee3a56903f7c0b1342f547
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-use-an-lpa
+File: 0022-choice-of-library-to-interface-with-gov-uk-one-login.md
+Source: https://api.github.com/repositories/172097026/contents/docs/architecture/decisions/0022-choice-of-library-to-interface-with-gov-uk-one-login.md?ref=27963156d143930f59fa304f90a102813cd10ede
+License-file-SHA256: 35c43bc7397cebae9c339868e4c4e786385dcc0833f67669136c8894b330a1c0
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-use-an-lpa
+File: 0011-the-same-zend-application-will-be-used-for-both-viewer-and-actor-components.md
+Source: https://api.github.com/repositories/172097026/contents/docs/architecture/decisions/0011-the-same-zend-application-will-be-used-for-both-viewer-and-actor-components.md?ref=27963156d143930f59fa304f90a102813cd10ede
+License-file-SHA256: 35c43bc7397cebae9c339868e4c4e786385dcc0833f67669136c8894b330a1c0
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-use-an-lpa
+File: 0003-session-storage-using-jwt.md
+Source: https://api.github.com/repositories/172097026/contents/docs/architecture/decisions/0003-session-storage-using-jwt.md?ref=27963156d143930f59fa304f90a102813cd10ede
+License-file-SHA256: 35c43bc7397cebae9c339868e4c4e786385dcc0833f67669136c8894b330a1c0
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-use-an-lpa
+File: 0024-library-for-lpa-data-mapping.md
+Source: https://api.github.com/repositories/172097026/contents/docs/architecture/decisions/0024-library-for-lpa-data-mapping.md?ref=27963156d143930f59fa304f90a102813cd10ede
+License-file-SHA256: 35c43bc7397cebae9c339868e4c4e786385dcc0833f67669136c8894b330a1c0
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-use-an-lpa
+File: 0009-use-aws-kms-to-manage-session-encryption-keys.md
+Source: https://api.github.com/repositories/172097026/contents/docs/architecture/decisions/0009-use-aws-kms-to-manage-session-encryption-keys.md?ref=27963156d143930f59fa304f90a102813cd10ede
+License-file-SHA256: 35c43bc7397cebae9c339868e4c4e786385dcc0833f67669136c8894b330a1c0
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/opg-data
+File: 0007-error-handling-and-status-codes.md
+Source: https://api.github.com/repositories/233028106/contents/docs/architecture/decisions/0007-error-handling-and-status-codes.md?ref=ef7fca692ebd9f08cfe1adf288a151b2e30d004a
+License-file-SHA256: e3906c03689e8e884ce36a7f9586bb70e25a120c9dee3a56903f7c0b1342f547
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/send-legal-mail-to-prisons
+File: manual-cjsm-upload.md
+Source: https://api.github.com/repositories/424654818/contents/adr/manual-cjsm-upload.md?ref=9141cbf853e98d5e9c324d596fae8163749e7534
+License-file-SHA256: 65a8819b155e9dcce41c97e6e8be06f962277d892e00d909f5fbfbfb0543c14b
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/send-legal-mail-to-prisons
+File: Internal-external-UIs.md
+Source: https://api.github.com/repositories/424654818/contents/adr/Internal-external-UIs.md?ref=9141cbf853e98d5e9c324d596fae8163749e7534
+License-file-SHA256: 65a8819b155e9dcce41c97e6e8be06f962277d892e00d909f5fbfbfb0543c14b
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: hmrc/tracking-consent-frontend
+File: 0005-use-data-attribute-for-language.md
+Source: https://api.github.com/repositories/246620065/contents/docs/adr/0005-use-data-attribute-for-language.md?ref=f5396448b358a27cdbc5c8a7ea80ce14f2efa3aa
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: hmrc/help-frontend
+File: 0001-add-index-redirect-to-help-using-gov-uk.md
+Source: https://api.github.com/repositories/40124795/contents/docs/adr/0001-add-index-redirect-to-help-using-gov-uk.md?ref=3ab68f966bfcc4f1a77fd8d7a5b9d97b8672c613
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: hmrc/hmrc-frontend
+File: 0006-provide-back-link-helper.md
+Source: https://api.github.com/repositories/141454182/contents/docs/adr/0006-provide-back-link-helper.md?ref=7ae7e1850a5b6d6ff7c84088437cd84fccdaff6c
+License-file-SHA256: 31b749a4a0ace1e9aca10cc4e929ddd4e6c7c807321031a9a7e2e9f759bde79a
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: hmrc/tracking-consent-frontend
+File: 0011-handle-cookies-extended-by-cookie-consent-filter.md
+Source: https://api.github.com/repositories/246620065/contents/docs/adr/0011-handle-cookies-extended-by-cookie-consent-filter.md?ref=f5396448b358a27cdbc5c8a7ea80ce14f2efa3aa
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: hmrc/hmrc-frontend
+File: 0003-change-api-of-add-to-a-list-form.md
+Source: https://api.github.com/repositories/141454182/contents/docs/adr/0003-change-api-of-add-to-a-list-form.md?ref=7ae7e1850a5b6d6ff7c84088437cd84fccdaff6c
+License-file-SHA256: 31b749a4a0ace1e9aca10cc4e929ddd4e6c7c807321031a9a7e2e9f759bde79a
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: hmrc/tracking-consent-frontend
+File: 0009-create-a-library-for-reading-the-user-consent-cookie.md
+Source: https://api.github.com/repositories/246620065/contents/docs/adr/0009-create-a-library-for-reading-the-user-consent-cookie.md?ref=f5396448b358a27cdbc5c8a7ea80ce14f2efa3aa
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: hmrc/contact-frontend
+File: 0003-remove-login-redirection.md
+Source: https://api.github.com/repositories/121650658/contents/docs/adr/0003-remove-login-redirection.md?ref=f9a8338ad3dab890d4d3483995c6751e552e8139
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: hmrc/tracking-consent-frontend
+File: 0008-always-store-consents-individually.md
+Source: https://api.github.com/repositories/246620065/contents/docs/adr/0008-always-store-consents-individually.md?ref=f5396448b358a27cdbc5c8a7ea80ce14f2efa3aa
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: hmrc/tracking-consent-frontend
+File: 0002-use-data-attribute-for-gtm-container.md
+Source: https://api.github.com/repositories/246620065/contents/docs/adr/0002-use-data-attribute-for-gtm-container.md?ref=f5396448b358a27cdbc5c8a7ea80ce14f2efa3aa
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: hmrc/hmrc-frontend
+File: 0002-extract-list-with-actions-from-add-to-a-list.md
+Source: https://api.github.com/repositories/141454182/contents/docs/adr/0002-extract-list-with-actions-from-add-to-a-list.md?ref=7ae7e1850a5b6d6ff7c84088437cd84fccdaff6c
+License-file-SHA256: 31b749a4a0ace1e9aca10cc4e929ddd4e6c7c807321031a9a7e2e9f759bde79a
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: hmrc/hmrc-frontend
+File: 0007-add-print-stylesheet.md
+Source: https://api.github.com/repositories/141454182/contents/docs/adr/0007-add-print-stylesheet.md?ref=7ae7e1850a5b6d6ff7c84088437cd84fccdaff6c
+License-file-SHA256: 31b749a4a0ace1e9aca10cc4e929ddd4e6c7c807321031a9a7e2e9f759bde79a
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: hmrc/tracking-consent-frontend
+File: 0006-make-tracking-consent-available-on-non-tax-domains.md
+Source: https://api.github.com/repositories/246620065/contents/docs/adr/0006-make-tracking-consent-available-on-non-tax-domains.md?ref=f5396448b358a27cdbc5c8a7ea80ce14f2efa3aa
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: hmrc/tracking-consent-frontend
+File: 0004-namespace-the-gtm-container-attribute-for-tracking-consent.md
+Source: https://api.github.com/repositories/246620065/contents/docs/adr/0004-namespace-the-gtm-container-attribute-for-tracking-consent.md?ref=f5396448b358a27cdbc5c8a7ea80ce14f2efa3aa
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: hmrc/hmrc-frontend
+File: 0004-supply-uncompiled-javascript.md
+Source: https://api.github.com/repositories/141454182/contents/docs/adr/0004-supply-uncompiled-javascript.md?ref=7ae7e1850a5b6d6ff7c84088437cd84fccdaff6c
+License-file-SHA256: 31b749a4a0ace1e9aca10cc4e929ddd4e6c7c807321031a9a7e2e9f759bde79a
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: hmrc/contact-frontend
+File: 0002-remove-external-deskpro-from-load-test-dependencies.md
+Source: https://api.github.com/repositories/121650658/contents/docs/adr/0002-remove-external-deskpro-from-load-test-dependencies.md?ref=f9a8338ad3dab890d4d3483995c6751e552e8139
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: hmrc/tracking-consent-frontend
+File: 0010-make-visual-regression-tests-reproducible-on-jenkins.md
+Source: https://api.github.com/repositories/246620065/contents/docs/adr/0010-make-visual-regression-tests-reproducible-on-jenkins.md?ref=f5396448b358a27cdbc5c8a7ea80ce14f2efa3aa
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/oscer
+File: adr-authorization.md
+Source: https://api.github.com/repositories/1086692896/contents/docs/decisions/adr-authorization.md?ref=c0160fe2d62b319077f4614b991622825e558a3d
+License-file-SHA256: 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/wic-participant-recertification-portal
+File: 0009-parameter-validation.md
+Source: https://api.github.com/repositories/566367820/contents/docs/decisions/0009-parameter-validation.md?ref=9c6aba3a3261d243c84c54621fc4ff941cb669f2
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/template-infra
+File: 2023-06-05-database-migration-architecture.md
+Source: https://api.github.com/repositories/490911462/contents/docs/decisions/infra/2023-06-05-database-migration-architecture.md?ref=f17f3062e335de41db29d7516e249ffac1aaee1d
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/wic-participant-recertification-portal
+File: 0001-ci-cd-interface.md
+Source: https://api.github.com/repositories/566367820/contents/docs/decisions/0001-ci-cd-interface.md?ref=9c6aba3a3261d243c84c54621fc4ff941cb669f2
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/template-infra
+File: 2023-05-25-separate-database-infrastructure-into-separate-layer.md
+Source: https://api.github.com/repositories/490911462/contents/docs/decisions/infra/2023-05-25-separate-database-infrastructure-into-separate-layer.md?ref=f17f3062e335de41db29d7516e249ffac1aaee1d
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/template-infra
+File: 2022-10-04-ci-cd-interface.md
+Source: https://api.github.com/repositories/490911462/contents/docs/decisions/infra/2022-10-04-ci-cd-interface.md?ref=f17f3062e335de41db29d7516e249ffac1aaee1d
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/wic-participant-recertification-portal
+File: 0005-use-remix-for-project-architecture.md
+Source: https://api.github.com/repositories/566367820/contents/docs/decisions/0005-use-remix-for-project-architecture.md?ref=9c6aba3a3261d243c84c54621fc4ff941cb669f2
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/template-infra
+File: 2023-09-07-consolidate-infra-config-from-tfvars-files-into-config-module.md
+Source: https://api.github.com/repositories/490911462/contents/docs/decisions/infra/2023-09-07-consolidate-infra-config-from-tfvars-files-into-config-module.md?ref=f17f3062e335de41db29d7516e249ffac1aaee1d
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/template-infra
+File: 2023-05-25-provision-database-users-with-serverless-function.md
+Source: https://api.github.com/repositories/490911462/contents/docs/decisions/infra/2023-05-25-provision-database-users-with-serverless-function.md?ref=f17f3062e335de41db29d7516e249ffac1aaee1d
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/template-infra
+File: 2023-09-11-separate-app-infrastructure-into-layers.md
+Source: https://api.github.com/repositories/490911462/contents/docs/decisions/infra/2023-09-11-separate-app-infrastructure-into-layers.md?ref=f17f3062e335de41db29d7516e249ffac1aaee1d
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/template-infra
+File: 2023-05-09-separate-terraform-backend-configs-into-separate-config-files.md
+Source: https://api.github.com/repositories/490911462/contents/docs/decisions/infra/2023-05-09-separate-terraform-backend-configs-into-separate-config-files.md?ref=f17f3062e335de41db29d7516e249ffac1aaee1d
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/wic-participant-recertification-portal
+File: 0006-keep-eligibility-screener-and-recert-portal-separate.md
+Source: https://api.github.com/repositories/566367820/contents/docs/decisions/0006-keep-eligibility-screener-and-recert-portal-separate.md?ref=9c6aba3a3261d243c84c54621fc4ff941cb669f2
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/wic-participant-recertification-portal
+File: 0007-authentication.md
+Source: https://api.github.com/repositories/566367820/contents/docs/decisions/0007-authentication.md?ref=9c6aba3a3261d243c84c54621fc4ff941cb669f2
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/template-infra
+File: 2022-10-05-use-custom-implementation-of-github-oidc.md
+Source: https://api.github.com/repositories/490911462/contents/docs/decisions/infra/2022-10-05-use-custom-implementation-of-github-oidc.md?ref=f17f3062e335de41db29d7516e249ffac1aaee1d
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/template-infra
+File: 2022-10-07-manage-ecr-in-prod-account-module.md
+Source: https://api.github.com/repositories/490911462/contents/docs/decisions/infra/2022-10-07-manage-ecr-in-prod-account-module.md?ref=f17f3062e335de41db29d7516e249ffac1aaee1d
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/template-infra
+File: 2025-01-09-notifications-architecture.md
+Source: https://api.github.com/repositories/490911462/contents/docs/decisions/infra/2025-01-09-notifications-architecture.md?ref=f17f3062e335de41db29d7516e249ffac1aaee1d
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/template-infra
+File: 2023-11-28-feature-flags-system-design.md
+Source: https://api.github.com/repositories/490911462/contents/docs/decisions/infra/2023-11-28-feature-flags-system-design.md?ref=f17f3062e335de41db29d7516e249ffac1aaee1d
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/wic-participant-recertification-portal
+File: 0008-domain-management.md
+Source: https://api.github.com/repositories/566367820/contents/docs/decisions/0008-domain-management.md?ref=9c6aba3a3261d243c84c54621fc4ff941cb669f2
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/wic-participant-recertification-portal
+File: 0003-manage-ecr-in-prod-account-module.md
+Source: https://api.github.com/repositories/566367820/contents/docs/decisions/0003-manage-ecr-in-prod-account-module.md?ref=9c6aba3a3261d243c84c54621fc4ff941cb669f2
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/cobol-sequential
+File: 0001-choose-memory-format.md
+Source: https://api.github.com/repositories/615739633/contents/docs/decisions/0001-choose-memory-format.md?ref=f117b917a29c4c7c83c14a753be3b518e2d7ee22
+License-file-SHA256: 839be9b2f7e3381010e0bdc24bec86d06fe77e810671fa4eb766eae91a60a9ba
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/arpa-reporter
+File: 0003-use-react-for-frontend-development.md
+Source: https://api.github.com/repositories/916341277/contents/docs/decisions/0003-use-react-for-frontend-development.md?ref=d49b2d8717378bf75b351b8f8edc86f9fe8cb12a
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/wic-participant-recertification-portal
+File: 0002-use-custom-implementation-of-github-oidc.md
+Source: https://api.github.com/repositories/566367820/contents/docs/decisions/0002-use-custom-implementation-of-github-oidc.md?ref=9c6aba3a3261d243c84c54621fc4ff941cb669f2
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/wic-participant-recertification-portal-demo
+File: 0009-parameter-validation.md
+Source: https://api.github.com/repositories/659828428/contents/docs/decisions/0009-parameter-validation.md?ref=7fa8525a90b0566f00ddced35c513301a218ba94
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/oscer
+File: 2023-06-05-database-migration-architecture.md
+Source: https://api.github.com/repositories/1086692896/contents/docs/decisions/infra/2023-06-05-database-migration-architecture.md?ref=c0160fe2d62b319077f4614b991622825e558a3d
+License-file-SHA256: 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/wic-participant-recertification-portal-demo
+File: 0001-ci-cd-interface.md
+Source: https://api.github.com/repositories/659828428/contents/docs/decisions/0001-ci-cd-interface.md?ref=7fa8525a90b0566f00ddced35c513301a218ba94
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/oscer
+File: 2023-05-25-separate-database-infrastructure-into-separate-layer.md
+Source: https://api.github.com/repositories/1086692896/contents/docs/decisions/infra/2023-05-25-separate-database-infrastructure-into-separate-layer.md?ref=c0160fe2d62b319077f4614b991622825e558a3d
+License-file-SHA256: 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/oscer
+File: 2022-10-04-ci-cd-interface.md
+Source: https://api.github.com/repositories/1086692896/contents/docs/decisions/infra/2022-10-04-ci-cd-interface.md?ref=c0160fe2d62b319077f4614b991622825e558a3d
+License-file-SHA256: 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/wic-participant-recertification-portal-demo
+File: 0005-use-remix-for-project-architecture.md
+Source: https://api.github.com/repositories/659828428/contents/docs/decisions/0005-use-remix-for-project-architecture.md?ref=7fa8525a90b0566f00ddced35c513301a218ba94
+License-file-SHA256: a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: navapbc/oscer
+File: 2023-09-07-consolidate-infra-config-from-tfvars-files-into-config-module.md
+Source: https://api.github.com/repositories/1086692896/contents/docs/decisions/infra/2023-09-07-consolidate-infra-config-from-tfvars-files-into-config-module.md?ref=c0160fe2d62b319077f4614b991622825e558a3d
+License-file-SHA256: 0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
+
+---
+SPDX-License-Identifier: MIT
+Repository: microsoft/agent-governance-toolkit
+File: 0001-use-ed25519-for-agent-identity.md
+Source: https://api.github.com/repositories/1171111467/contents/docs/adr/0001-use-ed25519-for-agent-identity.md?ref=36ebb017887db510e8899527930bbe4f9f0c6f83
+License-file-SHA256: 7df20dcdf9197e9945c14858d41c60f11b52b93e5b69e2b63416b874d598d322
+
+---
+SPDX-License-Identifier: MIT
+Repository: github/gh-aw
+File: 25819-unified-copilot-error-detection-step.md
+Source: https://api.github.com/repositories/1036865607/contents/docs/adr/25819-unified-copilot-error-detection-step.md?ref=c3f7441854ed2b0b3e22bdfde2568fad80c62e7d
+License-file-SHA256: 2510b446bc1f0cf9702453075d20cd88631e20e5642658edb7325d9c1eb534f7
+
+---
+SPDX-License-Identifier: MIT
+Repository: github/gh-aw
+File: 0002-allow-secrets-in-step-env-bindings-under-strict-mode.md
+Source: https://api.github.com/repositories/1036865607/contents/docs/adr/0002-allow-secrets-in-step-env-bindings-under-strict-mode.md?ref=c3f7441854ed2b0b3e22bdfde2568fad80c62e7d
+License-file-SHA256: 2510b446bc1f0cf9702453075d20cd88631e20e5642658edb7325d9c1eb534f7
+
+---
+SPDX-License-Identifier: MIT
+Repository: github/gh-aw
+File: 0001-conditional-oidc-env-var-forwarding-to-mcp-gateway.md
+Source: https://api.github.com/repositories/1036865607/contents/docs/adr/0001-conditional-oidc-env-var-forwarding-to-mcp-gateway.md?ref=c3f7441854ed2b0b3e22bdfde2568fad80c62e7d
+License-file-SHA256: 2510b446bc1f0cf9702453075d20cd88631e20e5642658edb7325d9c1eb534f7
+
+---
+SPDX-License-Identifier: MIT
+Repository: github/gh-aw
+File: 0002-explicit-opt-in-allow-workflows-permission.md
+Source: https://api.github.com/repositories/1036865607/contents/docs/adr/0002-explicit-opt-in-allow-workflows-permission.md?ref=c3f7441854ed2b0b3e22bdfde2568fad80c62e7d
+License-file-SHA256: 2510b446bc1f0cf9702453075d20cd88631e20e5642658edb7325d9c1eb534f7
+
+---
+SPDX-License-Identifier: MIT
+Repository: github/gh-aw
+File: 25821-rust-style-source-context-and-plain-english-synthesis-for-compiler-errors.md
+Source: https://api.github.com/repositories/1036865607/contents/docs/adr/25821-rust-style-source-context-and-plain-english-synthesis-for-compiler-errors.md?ref=c3f7441854ed2b0b3e22bdfde2568fad80c62e7d
+License-file-SHA256: 2510b446bc1f0cf9702453075d20cd88631e20e5642658edb7325d9c1eb534f7
+
+---
+SPDX-License-Identifier: MIT
+Repository: github/gh-aw
+File: 25822-version-gated-no-ask-user-flag-for-autonomous-copilot-runs.md
+Source: https://api.github.com/repositories/1036865607/contents/docs/adr/25822-version-gated-no-ask-user-flag-for-autonomous-copilot-runs.md?ref=c3f7441854ed2b0b3e22bdfde2568fad80c62e7d
+License-file-SHA256: 2510b446bc1f0cf9702453075d20cd88631e20e5642658edb7325d9c1eb534f7
+
+---
+SPDX-License-Identifier: MIT
+Repository: eclipse-cdt-cloud/theia-trace-extension
+File: 0002-GraphQL.md
+Source: https://api.github.com/repositories/153494927/contents/doc/adr/0002-GraphQL.md?ref=818e44367a4b7ddc6146b99a2f289e9808174fe8
+License-file-SHA256: f98329bd746b2e6f52dbe71c3735b255c4e4c911547cb7b7fda3e557efa68d2a
+
+---
+SPDX-License-Identifier: MIT
+Repository: eclipse-cdt-cloud/theia-trace-extension
+File: 0003-D3-charts.md
+Source: https://api.github.com/repositories/153494927/contents/doc/adr/0003-D3-charts.md?ref=818e44367a4b7ddc6146b99a2f289e9808174fe8
+License-file-SHA256: f98329bd746b2e6f52dbe71c3735b255c4e4c911547cb7b7fda3e557efa68d2a
+
+---
+SPDX-License-Identifier: MIT
+Repository: eclipse-cdt-cloud/theia-trace-extension
+File: 0011-tsp-analysis-api.md
+Source: https://api.github.com/repositories/153494927/contents/doc/adr/0011-tsp-analysis-api.md?ref=818e44367a4b7ddc6146b99a2f289e9808174fe8
+License-file-SHA256: f98329bd746b2e6f52dbe71c3735b255c4e4c911547cb7b7fda3e557efa68d2a
+
+---
+SPDX-License-Identifier: MIT
+Repository: eclipse-cdt-cloud/theia-trace-extension
+File: 0013-flame-graph-support.md
+Source: https://api.github.com/repositories/153494927/contents/doc/adr/0013-flame-graph-support.md?ref=818e44367a4b7ddc6146b99a2f289e9808174fe8
+License-file-SHA256: f98329bd746b2e6f52dbe71c3735b255c4e4c911547cb7b7fda3e557efa68d2a
+
+---
+SPDX-License-Identifier: MIT
+Repository: eclipse-cdt-cloud/theia-trace-extension
+File: 0008-TimeRangeData-widget.md
+Source: https://api.github.com/repositories/153494927/contents/doc/adr/0008-TimeRangeData-widget.md?ref=818e44367a4b7ddc6146b99a2f289e9808174fe8
+License-file-SHA256: f98329bd746b2e6f52dbe71c3735b255c4e4c911547cb7b7fda3e557efa68d2a
+
+---
+SPDX-License-Identifier: MIT
+Repository: eclipse-cdt-cloud/theia-trace-extension
+File: 0010-data-types-in-columns.md
+Source: https://api.github.com/repositories/153494927/contents/doc/adr/0010-data-types-in-columns.md?ref=818e44367a4b7ddc6146b99a2f289e9808174fe8
+License-file-SHA256: f98329bd746b2e6f52dbe71c3735b255c4e4c911547cb7b7fda3e557efa68d2a
+
+---
+SPDX-License-Identifier: MIT
+Repository: eclipse-cdt-cloud/theia-trace-extension
+File: 0005-tsp-update-experiment.md
+Source: https://api.github.com/repositories/153494927/contents/doc/adr/0005-tsp-update-experiment.md?ref=818e44367a4b7ddc6146b99a2f289e9808174fe8
+License-file-SHA256: f98329bd746b2e6f52dbe71c3735b255c4e4c911547cb7b7fda3e557efa68d2a
+
+---
+SPDX-License-Identifier: MIT
+Repository: eclipse-cdt-cloud/theia-trace-extension
+File: 0012-data-provider-capabilities.md
+Source: https://api.github.com/repositories/153494927/contents/doc/adr/0012-data-provider-capabilities.md?ref=818e44367a4b7ddc6146b99a2f289e9808174fe8
+License-file-SHA256: f98329bd746b2e6f52dbe71c3735b255c4e4c911547cb7b7fda3e557efa68d2a
+
+---
+SPDX-License-Identifier: MIT
+Repository: eclipse-cdt-cloud/theia-trace-extension
+File: 0009-time-graph-search-functionality.md
+Source: https://api.github.com/repositories/153494927/contents/doc/adr/0009-time-graph-search-functionality.md?ref=818e44367a4b7ddc6146b99a2f289e9808174fe8
+License-file-SHA256: f98329bd746b2e6f52dbe71c3735b255c4e4c911547cb7b7fda3e557efa68d2a
+
+---
+SPDX-License-Identifier: MIT
+Repository: eclipse-cdt-cloud/theia-trace-extension
+File: 0004-Using-Hotjar-to-track-user-happiness.md
+Source: https://api.github.com/repositories/153494927/contents/doc/adr/0004-Using-Hotjar-to-track-user-happiness.md?ref=818e44367a4b7ddc6146b99a2f289e9808174fe8
+License-file-SHA256: f98329bd746b2e6f52dbe71c3735b255c4e4c911547cb7b7fda3e557efa68d2a
+
+---
+SPDX-License-Identifier: MIT
+Repository: eclipse-cdt-cloud/theia-trace-extension
+File: 0006-table-filtering.md
+Source: https://api.github.com/repositories/153494927/contents/doc/adr/0006-table-filtering.md?ref=818e44367a4b7ddc6146b99a2f289e9808174fe8
+License-file-SHA256: f98329bd746b2e6f52dbe71c3735b255c4e4c911547cb7b7fda3e557efa68d2a
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: fogfish/swarm
+File: ADR001_CONFIG.md
+Source: https://api.github.com/repositories/392366322/contents/doc/adr/ADR001_CONFIG.md?ref=7f7d45ccf6615b8860653389bc2d486138e74d20
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: MIT
+Repository: fogfish/iq
+File: 0010_streaming.md
+Source: https://api.github.com/repositories/961475497/contents/doc/adr/0010_streaming.md?ref=a08676dd391bc4c61b16063fbf7f4d09eeec30ef
+License-file-SHA256: dff1dac796afb6e12a2c86e3715f00e85ce6a76e0e5a3cb3a128756dc43d6419
+
+---
+SPDX-License-Identifier: MIT
+Repository: fogfish/iq
+File: 0003_progress_reporting.md
+Source: https://api.github.com/repositories/961475497/contents/doc/adr/0003_progress_reporting.md?ref=a08676dd391bc4c61b16063fbf7f4d09eeec30ef
+License-file-SHA256: dff1dac796afb6e12a2c86e3715f00e85ce6a76e0e5a3cb3a128756dc43d6419
+
+---
+SPDX-License-Identifier: MIT
+Repository: fogfish/iq
+File: 0006_key_value_io_system.md
+Source: https://api.github.com/repositories/961475497/contents/doc/adr/0006_key_value_io_system.md?ref=a08676dd391bc4c61b16063fbf7f4d09eeec30ef
+License-file-SHA256: dff1dac796afb6e12a2c86e3715f00e85ce6a76e0e5a3cb3a128756dc43d6419
+
+---
+SPDX-License-Identifier: MIT
+Repository: fogfish/iq
+File: 0009_automatic_caching.md
+Source: https://api.github.com/repositories/961475497/contents/doc/adr/0009_automatic_caching.md?ref=a08676dd391bc4c61b16063fbf7f4d09eeec30ef
+License-file-SHA256: dff1dac796afb6e12a2c86e3715f00e85ce6a76e0e5a3cb3a128756dc43d6419
+
+---
+SPDX-License-Identifier: MIT
+Repository: fogfish/iq
+File: 0004_intermediate_snapshots.md
+Source: https://api.github.com/repositories/961475497/contents/doc/adr/0004_intermediate_snapshots.md?ref=a08676dd391bc4c61b16063fbf7f4d09eeec30ef
+License-file-SHA256: dff1dac796afb6e12a2c86e3715f00e85ce6a76e0e5a3cb3a128756dc43d6419
+
+---
+SPDX-License-Identifier: MIT
+Repository: FormulaMonks/scaffoldizr
+File: 0004-windows-e2e-ci-smoke-only.md
+Source: https://api.github.com/repositories/719660540/contents/architecture/decisions/0004-windows-e2e-ci-smoke-only.md?ref=d4804ffc137d2fb35ca5ab63014d69fa8b2d20f7
+License-file-SHA256: 585e986201fd8cc660cc12297780047748d047313d5597433248ceea24af9f26
+
+---
+SPDX-License-Identifier: MIT
+Repository: FormulaMonks/scaffoldizr
+File: 0003-unified-structurizr-docker.md
+Source: https://api.github.com/repositories/719660540/contents/architecture/decisions/0003-unified-structurizr-docker.md?ref=d4804ffc137d2fb35ca5ab63014d69fa8b2d20f7
+License-file-SHA256: 585e986201fd8cc660cc12297780047748d047313d5597433248ceea24af9f26
+
+---
+SPDX-License-Identifier: MIT
+Repository: BrianCLong/summit
+File: adr-009-api-gateway-design.md
+Source: https://api.github.com/repositories/1034119024/contents/docs/ADR/adr-009-api-gateway-design.md?ref=b764a6290292a198cf03006afac58dd9b498ba4b
+License-file-SHA256: 6c6d05ae1adaa3626028fa20e8d4f28366db18e4423d4d1e95ed51c76dbaac14
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: jesuscorral/JCP.TicketWave
+File: 005-api-gateway.md
+Source: https://api.github.com/repositories/1104836760/contents/docs/adr/005-api-gateway.md?ref=d8c0641175358e3a0b64d67b3156f217817c5937
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: MIT
+Repository: axshowk/winvestco-trading-platform
+File: 0009-api-gateway-pattern.md
+Source: https://api.github.com/repositories/1114997828/contents/docs/adr/0009-api-gateway-pattern.md?ref=da3cbc1bb4bd598218ba6dd52200e07f9d8b9043
+License-file-SHA256: 694cf98eef48284832a30ba299cafea3cd01a86933472f88d69855590cb585f9
+
+---
+SPDX-License-Identifier: MIT
+Repository: semirtatli/StayHub
+File: 005-yarp-api-gateway.md
+Source: https://api.github.com/repositories/1170943960/contents/docs/adr/005-yarp-api-gateway.md?ref=3406a558640a984d6233a87745695aa0ceb7b996
+License-file-SHA256: 522d5e2e615d024e74aca976c7b5ea0d823850bd41d8aa97dfba99429eabf854
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: danielgaio/openbricks
+File: 002-gateway-authentication.md
+Source: https://api.github.com/repositories/1105842790/contents/docs/adr/002-gateway-authentication.md?ref=6d5a9153b57f9cdebd0c076ed30dbc9b6aadce0a
+License-file-SHA256: 32e3c9937e15fa7739c2df8d83968e8c9f41d837464d8737a87c8e95ba5746de
+
+---
+SPDX-License-Identifier: MIT
+Repository: dlozina/ai-document-platform
+File: 0006-api-gateway-integration.md
+Source: https://api.github.com/repositories/1066523599/contents/docs/adr/0006-api-gateway-integration.md?ref=90fc648312bd925b6fcf662607afc07a028b7bff
+License-file-SHA256: 36d2b028c5f7ad9e17ef1c370cb62179db9129e780abecf03ad5f36291fdac23
+
+---
+SPDX-License-Identifier: MIT
+Repository: gitHuyNgo/production-ready-rag-us-law
+File: 001-microservices-and-gateway.md
+Source: https://api.github.com/repositories/1112418909/contents/docs/adr/001-microservices-and-gateway.md?ref=fd331f103d9a99fbd0708fddfdb3fe25079d43be
+License-file-SHA256: cc80b3d149629eba429d5e5c2af08b8cd937e3d514400439c27c0a15af07cb21
+
+---
+SPDX-License-Identifier: MIT
+Repository: coding2themax/PetCore
+File: ADR-0008-api-gateway-routing.md
+Source: https://api.github.com/repositories/1131855296/contents/docs/adr/ADR-0008-api-gateway-routing.md?ref=b9b84fa9f6e66fa365465e0e755431b34b0ae5e1
+License-file-SHA256: ea166dedab5789b398505cdeec3274bbc40091588b5f3043da31383b122fac7b
+
+---
+SPDX-License-Identifier: CC-BY-4.0
+Repository: island-is/handbook
+File: 0006-what-api-management-tool-to-consider.md
+Source: https://api.github.com/repositories/259305127/contents/docs/adr/0006-what-api-management-tool-to-consider.md?ref=9cf3c87152829408d7d27ca672db1485ed4a2fa1
+License-file-SHA256: 9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: vijethph/MediFlow
+File: ADR-003-jwt-authentication.md
+Source: https://api.github.com/repositories/1090585667/contents/docs/adr/ADR-003-jwt-authentication.md?ref=9fd6163151bf7e3bc2d1d275f422a3261cadd597
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: MIT
+Repository: AkhileshMishra/AgenticHR
+File: 001-microservices-architecture.md
+Source: https://api.github.com/repositories/1053535025/contents/docs/adr/001-microservices-architecture.md?ref=865268f83bb38802bc1806cec994ed3c4f724a40
+License-file-SHA256: ce41a1d0fdda1972d256057841323409d68cfb32d6150a99607304081bedbdf7
+
+---
+SPDX-License-Identifier: MIT
+Repository: sharankumarreddyk/kubeai-ops
+File: 005-microservices-architecture.md
+Source: https://api.github.com/repositories/1165911292/contents/docs/adr/005-microservices-architecture.md?ref=3d5b043c889998f6a9488c1417d04b0011fb5ddb
+License-file-SHA256: 34f2d4b8efdd0a3f79cc722754040920f802b7735e1cb1615ea8637e8035cd7b
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: Kaikei-e/Alt
+File: 000180.md
+Source: https://api.github.com/repositories/993178201/contents/docs/ADR/000180.md?ref=8129e6b197a1a999853bd4f626db5ad071d86e34
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: MIT
+Repository: Azure-Samples/tutor
+File: 006-domain-decoupling.md
+Source: https://api.github.com/repositories/881556911/contents/docs/adr/006-domain-decoupling.md?ref=b1b00953c0bf5685bbb8dd1cd76663ce6397373f
+License-file-SHA256: d9a1b1e30d633d5732ea18e3cba9538d293ebc53e1a9e4e96ab739e0c5c4f1cb
+
+---
+SPDX-License-Identifier: MIT
+Repository: semirtatli/StayHub
+File: 008-jwt-authentication.md
+Source: https://api.github.com/repositories/1170943960/contents/docs/adr/008-jwt-authentication.md?ref=3406a558640a984d6233a87745695aa0ceb7b996
+License-file-SHA256: 522d5e2e615d024e74aca976c7b5ea0d823850bd41d8aa97dfba99429eabf854
+
+---
+SPDX-License-Identifier: MIT
+Repository: paruff/fawkes
+File: ADR-012 Metrics Monitoring and Management.md
+Source: https://api.github.com/repositories/389732978/contents/docs/adr/ADR-012%20Metrics%20Monitoring%20and%20Management.md?ref=651385fbdb2493a15a1cf9ce8ec418da304bce7a
+License-file-SHA256: fbd53b2512621ac0b13e31f9739720674e6334bc4dd0564b25b98b216a997a82
+
+---
+SPDX-License-Identifier: MIT
+Repository: ehudso7/sovereign
+File: 0001-system-architecture.md
+Source: https://api.github.com/repositories/1189460709/contents/docs/ADR/0001-system-architecture.md?ref=93db9287c96efea93ee99d96864d943aa279ca11
+License-file-SHA256: 101025161f889c1d86804207123354d0c324b3e4eb1d08b5ddbe1287aebd4fed
+
+---
+SPDX-License-Identifier: MIT
+Repository: Monkey-D-Luisi/vibe-flow
+File: ADR-001-migrate-from-mcp-to-openclaw.md
+Source: https://api.github.com/repositories/1073712029/contents/docs/adr/ADR-001-migrate-from-mcp-to-openclaw.md?ref=f21370ef6d1b95abb4c65c9fee0b73f8c3e21274
+License-file-SHA256: 3786d5811d534dbc0a1fdbf7f95747e962977f5b40a2b0a08515520e17fc8dc5
+
+---
+SPDX-License-Identifier: MIT
+Repository: unified-ui/unitfiedui-re-act-agent-service
+File: 001_SERVICE_AUTHENTICATION.md
+Source: https://api.github.com/repositories/1159384821/contents/docs/adr/001_SERVICE_AUTHENTICATION.md?ref=7a033fc6ac8dc2733695a183bdf49ba5601521f6
+License-file-SHA256: 117b7a5edbade42a20b4ba3411202095089bf20ff4ee4eb0eff6afe574aa6fbe
+
+---
+SPDX-License-Identifier: MIT
+Repository: ossamalafhel/demo-k8s-nuageup
+File: ADR-003-security-architecture.md
+Source: https://api.github.com/repositories/1064738568/contents/docs/adr/ADR-003-security-architecture.md?ref=7c48f8791ab8e68c587205c1ea5af67bd10801e9
+License-file-SHA256: 0a0ce6bebf5dd1f17407c7ae5abdf24beb84a757bc43111a73017a0f0e98ffc1
+
+---
+SPDX-License-Identifier: MIT
+Repository: baditaflorin/ServerClaw
+File: 0278-gotenberg-as-the-document-to-pdf-rendering-service.md
+Source: https://api.github.com/repositories/1207578184/contents/docs/adr/0278-gotenberg-as-the-document-to-pdf-rendering-service.md?ref=90d5546f28633fbb0fb0f52189a0e35d8478979f
+License-file-SHA256: abdb74ed4b6428c2747a76c50b95475762824f6cd7cae964915b0efa59ae12e7
+
+---
+SPDX-License-Identifier: MIT
+Repository: VestLedger/dealsphere-platform-docs
+File: ADR-0004-service-framework-defaults.md
+Source: https://api.github.com/repositories/1039112084/contents/docs/adr/ADR-0004-service-framework-defaults.md?ref=e5af34c4c5618325b2239b91052a2df71e98673d
+License-file-SHA256: 5bacee9db0bb8044db7cab4c582c0b225177a01fda11d5e1dd7f89f90b7c53f9
+
+---
+SPDX-License-Identifier: MIT
+Repository: soncco/copilot-orchestra
+File: 0003-monolith-modular-architecture.md
+Source: https://api.github.com/repositories/1134474898/contents/docs/adr/0003-monolith-modular-architecture.md?ref=986983617eab48269e3c29f3ad779a2337a6aee6
+License-file-SHA256: 797d425d00e8a823731bf95a016ca48ef9744ce84f896873da7ca177b73eb6b0
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: danielgaio/openbricks
+File: 001-jwt-authentication.md
+Source: https://api.github.com/repositories/1105842790/contents/docs/adr/001-jwt-authentication.md?ref=6d5a9153b57f9cdebd0c076ed30dbc9b6aadce0a
+License-file-SHA256: 32e3c9937e15fa7739c2df8d83968e8c9f41d837464d8737a87c8e95ba5746de
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: bybren-llc/rendertrust
+File: ADR-001-project-foundation-architecture.md
+Source: https://api.github.com/repositories/977572878/contents/docs/adr/ADR-001-project-foundation-architecture.md?ref=2cc346fe90ae58981a87e338f5c858c100a0ea0c
+License-file-SHA256: 2b23114b1a7965b3282ef3ff0010b49f23439f644695e2e4e9b7d6d721049f41
+
+---
+SPDX-License-Identifier: MIT
+Repository: varadharajaan/freightflow
+File: ADR-008-istio-service-mesh.md
+Source: https://api.github.com/repositories/1193458538/contents/docs/adr/ADR-008-istio-service-mesh.md?ref=425e982f7a2f403110114e31c942ffc13a36708a
+License-file-SHA256: 88778d5c1eb6c990b425ba033c79b5187eb2efa723b994ddebcaa3455d114cdb
+
+---
+SPDX-License-Identifier: MIT
+Repository: ryanmaclean/vibecode-webgui
+File: folder-structure-modularization.md
+Source: https://api.github.com/repositories/1021075367/contents/docs/ADR/folder-structure-modularization.md?ref=b6a2f87664610ec90bde5614af2beb328488151f
+License-file-SHA256: 31e0da1ff0c763ab71c28601d8c953385f23192afcfd20a58b4658c5e0e0a6d0
+
+---
+SPDX-License-Identifier: MIT
+Repository: ArielDRighi/ecommerce-async-resilient-system
+File: 005-nestjs-framework-selection.md
+Source: https://api.github.com/repositories/1062914892/contents/docs/adr/005-nestjs-framework-selection.md?ref=9fcc4d4728f15391fbe7a1d48422fed3723983b3
+License-file-SHA256: 293b8e5452567554ec049bf5255765df3762bebd5b8ab9479bfe1836ec76bba0
+
+---
+SPDX-License-Identifier: MIT
+Repository: exec-unit/openmeal-monorepo
+File: 001-monorepo.md
+Source: https://api.github.com/repositories/1097097832/contents/docs/adr/001-monorepo.md?ref=27b88b9074e45884db844babff9bc342bb0f349c
+License-file-SHA256: 83f0b4b94f337e8be784f15db222a8b75a3b90bd8bc165b921952ac71d9e1a1a
+
+---
+SPDX-License-Identifier: MIT
+Repository: ArielDRighi/microservices-ecommerce-system
+File: 005-nestjs-framework-selection.md
+Source: https://api.github.com/repositories/1077850892/contents/docs/adr/005-nestjs-framework-selection.md?ref=f1086bb93ee7f15dc012c2171feaf03ad8ca0ccf
+License-file-SHA256: 293b8e5452567554ec049bf5255765df3762bebd5b8ab9479bfe1836ec76bba0
+
+---
+SPDX-License-Identifier: MIT
+Repository: axshowk/winvestco-trading-platform
+File: 0002-microservices-architecture.md
+Source: https://api.github.com/repositories/1114997828/contents/docs/adr/0002-microservices-architecture.md?ref=da3cbc1bb4bd598218ba6dd52200e07f9d8b9043
+License-file-SHA256: 694cf98eef48284832a30ba299cafea3cd01a86933472f88d69855590cb585f9
+
+---
+SPDX-License-Identifier: MIT
+Repository: dlozina/ai-document-platform
+File: 0001-microservices-architecture.md
+Source: https://api.github.com/repositories/1066523599/contents/docs/adr/0001-microservices-architecture.md?ref=90fc648312bd925b6fcf662607afc07a028b7bff
+License-file-SHA256: 36d2b028c5f7ad9e17ef1c370cb62179db9129e780abecf03ad5f36291fdac23
+
+---
+SPDX-License-Identifier: MIT
+Repository: kjaworski/HomeManager
+File: 001-microservices-approach.md
+Source: https://api.github.com/repositories/1068493668/contents/docs/adr/001-microservices-approach.md?ref=00a0c1ae8b10fe4570a1fb80a6892ac2c5100d28
+License-file-SHA256: 2091cdd7f5c8d2037c15e89e42020a371ecbe8fbd17e5b79c52346be4be7e452
+
+---
+SPDX-License-Identifier: MIT
+Repository: Diatonic-AI/n8n-workflow-library
+File: ADR-001-aws-lambda-invocation-path.md
+Source: https://api.github.com/repositories/1124863418/contents/docs/adr/ADR-001-aws-lambda-invocation-path.md?ref=3c040bab2d0e4cab4f2e9160627a0632b86294be
+License-file-SHA256: 06dcddbb6908a0c6dd4a9e8ec822eea41d5a460a53089fecccc8a68049e99241
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: kv-shepherd/shepherd
+File: ADR-0038-adaptive-k8s-polling.md
+Source: https://api.github.com/repositories/1137243609/contents/docs/adr/ADR-0038-adaptive-k8s-polling.md?ref=4bebf5e78146e5b6b702cfc76445d87a317f6806
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: doublegate/OctoLLM
+File: 002-communication-patterns.md
+Source: https://api.github.com/repositories/1093941635/contents/docs/adr/002-communication-patterns.md?ref=68bf2c043b7decdd5fbffaa820d23ff2e936c39b
+License-file-SHA256: cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: r-irbe/octupus-crawler
+File: ADR-017-service-communication.md
+Source: https://api.github.com/repositories/1198194794/contents/docs/adr/ADR-017-service-communication.md?ref=0dfd395d0e3d0ee128a07ef897a753857495a040
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: MIT
+Repository: YakirShlomo/House-Helper
+File: ADR-010-microservices-architecture.md
+Source: https://api.github.com/repositories/1072649863/contents/docs/adr/ADR-010-microservices-architecture.md?ref=046de34c10c856f0203733c5e22c27a4766157a2
+License-file-SHA256: 7faaa32427318a01b68edee4859970ea5abfa4e2706b9c9e933be79ab60dfd96
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: adam-lewis09/Kafka-ParallelConsumer.NET
+File: 0004-error-handling-and-retry-strategies.md
+Source: https://api.github.com/repositories/1067884551/contents/docs/adr/0004-error-handling-and-retry-strategies.md?ref=1738632fe2d37e0bb762425790036ab4986a369e
+License-file-SHA256: 10bfdf44c2f0083a65adff0fa204a1c9515becd6b9bf81ef26f1e87477fe11e5
+
+---
+SPDX-License-Identifier: MIT
+Repository: ArielDRighi/ecommerce-async-resilient-system
+File: 011-idempotency-key-strategy.md
+Source: https://api.github.com/repositories/1062914892/contents/docs/adr/011-idempotency-key-strategy.md?ref=9fcc4d4728f15391fbe7a1d48422fed3723983b3
+License-file-SHA256: 293b8e5452567554ec049bf5255765df3762bebd5b8ab9479bfe1836ec76bba0
+
+---
+SPDX-License-Identifier: MIT
+Repository: ArielDRighi/microservices-ecommerce-system
+File: 011-idempotency-key-strategy.md
+Source: https://api.github.com/repositories/1077850892/contents/docs/adr/011-idempotency-key-strategy.md?ref=f1086bb93ee7f15dc012c2171feaf03ad8ca0ccf
+License-file-SHA256: 293b8e5452567554ec049bf5255765df3762bebd5b8ab9479bfe1836ec76bba0
+
+---
+SPDX-License-Identifier: MIT
+Repository: adamatdevops/mlifecycle-orchestrator
+File: 0004-kubernetes-deployment.md
+Source: https://api.github.com/repositories/1126666739/contents/docs/adr/0004-kubernetes-deployment.md?ref=334dd0f06286885de5b8748b18d2e5b24de41b58
+License-file-SHA256: bacdb1eebff0d7cb2362b4e81d46e69e901daa02252701ef4c800249cde5884f
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: defenseunicorns/peat-mesh
+File: 0001-kubernetes-istio-deployment.md
+Source: https://api.github.com/repositories/1166043346/contents/docs/adr/0001-kubernetes-istio-deployment.md?ref=a15ab64c2a63cc74131575a2ae61588102559c4d
+License-file-SHA256: 3455c0dea2306a70d15e0591703c1fb4604284824bb2d9de82f3ad37bfaf7b7b
+
+---
+SPDX-License-Identifier: MIT
+Repository: jscatala/demo_project
+File: 0001-kubernetes-native-deployment.md
+Source: https://api.github.com/repositories/1097183265/contents/docs/adr/0001-kubernetes-native-deployment.md?ref=3c78d107702b69f96a1af0799a5d9a9a49ae6c57
+License-file-SHA256: 9c14d6bccfdf32480795e71062c7181c1db3a8dc46bfb343711f6e2320f5ec4d
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: agencyenterprise/AE-Scientist
+File: 0015-railway-deployment.md
+Source: https://api.github.com/repositories/1087277336/contents/docs/adr/0015-railway-deployment.md?ref=0d1fffbff2fb8ce6c7849bdcb29a134d5b97bf37
+License-file-SHA256: 0dc1811264bb76e119d3f58a8e775d79abeb1708c9486d3861354c1688062350
+
+---
+SPDX-License-Identifier: MIT
+Repository: BrianCLong/summit
+File: 0004-compose-deployment-baseline.md
+Source: https://api.github.com/repositories/1034119024/contents/docs/ADR/0004-compose-deployment-baseline.md?ref=4680f9152687dbb09b280791bcb5ab1014e7fa8a
+License-file-SHA256: 6c6d05ae1adaa3626028fa20e8d4f28366db18e4423d4d1e95ed51c76dbaac14
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: opsteady/opsteady-legacy
+File: 0025-kubernetes-bootstrap.md
+Source: https://api.github.com/repositories/396705330/contents/docs/adr/0025-kubernetes-bootstrap.md?ref=598f862705c3d9c66b006c995d90bf1436fa152b
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: kubeopencode/kubeopencode
+File: 0002-task-crd-vs-kubernetes-job.md
+Source: https://api.github.com/repositories/1107190199/contents/docs/adr/0002-task-crd-vs-kubernetes-job.md?ref=032c4f9d6b58f33e67a3f93c5bb5d9a440dddef7
+License-file-SHA256: 43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1
+
+---
+SPDX-License-Identifier: MIT
+Repository: kmikol/ml-system
+File: 003-local-kubernetes.md
+Source: https://api.github.com/repositories/1182625654/contents/docs/adr/003-local-kubernetes.md?ref=5c75d0aa7a07b6b2a94cefa8b0ac439a1745fa04
+License-file-SHA256: 873403f5da5f3f9c8687c2fb85e638368d059f0cb308948158b0b40e4d42e8a5
+
+---
+SPDX-License-Identifier: MIT
+Repository: paruff/fawkes
+File: ADR-015 vault deployment.md
+Source: https://api.github.com/repositories/389732978/contents/docs/adr/ADR-015%20vault%20deployment.md?ref=651385fbdb2493a15a1cf9ce8ec418da304bce7a
+License-file-SHA256: fbd53b2512621ac0b13e31f9739720674e6334bc4dd0564b25b98b216a997a82
+
+---
+SPDX-License-Identifier: MIT
+Repository: carlosalcivar/gestionec-platform
+File: 005-deployment-strategy.md
+Source: https://api.github.com/repositories/1207990879/contents/docs/adr/005-deployment-strategy.md?ref=571572ec1dab1234e78785c1c8ef3fe418ef4181
+License-file-SHA256: 878dbc70ea221c9342745deae2a967d58a95a5b5f1189d54263fd5e3392156e7
+
+---
+SPDX-License-Identifier: MIT
+Repository: Yeshu076/AeroFlow-Microservices-Platform
+File: 003-deployment-strategy-aws.md
+Source: https://api.github.com/repositories/1127665892/contents/docs/adr/003-deployment-strategy-aws.md?ref=a4246a922090aa3608de5beba6539542a3894cf8
+License-file-SHA256: 40f8b614072579635e0ebc3e468c17ba52c649da768125e9da55826f2e50720f
+
+---
+SPDX-License-Identifier: MIT
+Repository: abhi10/chitram
+File: 0006-no-kubernetes-for-mvp.md
+Source: https://api.github.com/repositories/1120372392/contents/docs/adr/0006-no-kubernetes-for-mvp.md?ref=d097e4041e49fa2df82959baf32c693edc6ed1bc
+License-file-SHA256: 1a1fd3dae6359044679ad3398f13f85ef89fcac514bb53f84c6e2c32ef264c06
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: adefemi171/k8s.LogJedi
+File: 0001-operator-and-llm-service-split.md
+Source: https://api.github.com/repositories/1175959058/contents/docs/adr/0001-operator-and-llm-service-split.md?ref=f5b59b0acdb5ebfcf45a3db6b20ba4029da8f3d2
+License-file-SHA256: dbc7ddacd4c27d627592525c64131177b321891b260d887ccfe3f023dcc6211d
+
+---
+SPDX-License-Identifier: MIT
+Repository: judeoyovbaire/mlops-platform
+File: 007-skip-service-mesh.md
+Source: https://api.github.com/repositories/1107166605/contents/docs/adr/007-skip-service-mesh.md?ref=cfd24aba1c03e8429f73c861f6922b6a12b19c93
+License-file-SHA256: b9d48f65050d229e6d7518471c729a2a9449180744041e65004c6ff9e3956483
+
+---
+SPDX-License-Identifier: BSD-3-Clause
+Repository: ldamasio/robson
+File: ADR-0013-production-deployment-integrity.md
+Source: https://api.github.com/repositories/230934403/contents/docs/adr/ADR-0013-production-deployment-integrity.md?ref=9683c4e62e383c523268483cf734ffdddf998936
+License-file-SHA256: 5238f10fae311fcb60de52d7e04136c4c58f7df96aae92c10ea38a9cd4bd06ed
+
+---
+SPDX-License-Identifier: MIT
+Repository: Monkey-D-Luisi/vibe-flow
+File: ADR-011-docker-deployment-strategy.md
+Source: https://api.github.com/repositories/1073712029/contents/docs/adr/ADR-011-docker-deployment-strategy.md?ref=f21370ef6d1b95abb4c65c9fee0b73f8c3e21274
+License-file-SHA256: 3786d5811d534dbc0a1fdbf7f95747e962977f5b40a2b0a08515520e17fc8dc5
+
+---
+SPDX-License-Identifier: MIT
+Repository: rodacato/drawhaus
+File: 004-kamal-deployment.md
+Source: https://api.github.com/repositories/1173498558/contents/docs/adr/004-kamal-deployment.md?ref=f812577f82039e5ecd22e8f95171251e4710972d
+License-file-SHA256: 53be284c65c3b464deeeb0348fc8690edd272661cf258d72b18b9c48ddb23d89
+
+---
+SPDX-License-Identifier: MIT
+Repository: jimzandueta/cursed-powers
+File: 006-deployment-architecture.md
+Source: https://api.github.com/repositories/1203114822/contents/docs/adr/006-deployment-architecture.md?ref=baaa1fac9648e94cf115c20c45b43554916e769f
+License-file-SHA256: 256ea8727cb543aac1450ec3be5e7890810a04c8c53409fa27dc3323dfadc188
+
+---
+SPDX-License-Identifier: MIT
+Repository: ossamalafhel/demo-k8s-nuageup
+File: ADR-002-multi-az-deployment.md
+Source: https://api.github.com/repositories/1064738568/contents/docs/adr/ADR-002-multi-az-deployment.md?ref=7c48f8791ab8e68c587205c1ea5af67bd10801e9
+License-file-SHA256: 0a0ce6bebf5dd1f17407c7ae5abdf24beb84a757bc43111a73017a0f0e98ffc1
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: r-irbe/octupus-crawler
+File: ADR-004-gitops-deployment.md
+Source: https://api.github.com/repositories/1198194794/contents/docs/adr/ADR-004-gitops-deployment.md?ref=0dfd395d0e3d0ee128a07ef897a753857495a040
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: sirerun/mint
+File: 007-aws-ecs-fargate-deployment-target.md
+Source: https://api.github.com/repositories/1173337281/contents/docs/adr/007-aws-ecs-fargate-deployment-target.md?ref=7391c47f3a1c69da360c8b376069cbcb3fc32ee0
+License-file-SHA256: 8eea30faafa29acdfa9f4e03f44e613534c4fbb3182ad9a394ce740fd572a718
+
+---
+SPDX-License-Identifier: MIT
+Repository: jKulrativid/CU-Overflow-Subject-Service
+File: 2023-10-10-implementing-service-discovery.md
+Source: https://api.github.com/repositories/691163520/contents/docs/adr/2023-10-10-implementing-service-discovery.md?ref=08c6d656d10966cf9a8dd2ee717ddb4a8f3593d3
+License-file-SHA256: 7b8c6e1f8904e259f17dc5605ec0a5267cc2b2f6df6195c2438570b6c651e3df
+
+---
+SPDX-License-Identifier: MIT
+Repository: badbread/bread-fleet
+File: 0001-fleet-deployment-architecture.md
+Source: https://api.github.com/repositories/1205384912/contents/docs/adr/0001-fleet-deployment-architecture.md?ref=eeab4acda429eb440c0d5bb2092dcc3cb993c406
+License-file-SHA256: 2a767c56cf76544e711b130bb08a558479b6078b0f6c59906b02516b4458365d
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: sirerun/mint
+File: 008-azure-container-apps-deployment-target.md
+Source: https://api.github.com/repositories/1173337281/contents/docs/adr/008-azure-container-apps-deployment-target.md?ref=7391c47f3a1c69da360c8b376069cbcb3fc32ee0
+License-file-SHA256: 8eea30faafa29acdfa9f4e03f44e613534c4fbb3182ad9a394ce740fd572a718
+
+---
+SPDX-License-Identifier: MIT
+Repository: Sophie-l-l/capstone
+File: 005-google-cloud-platform-deployment.md
+Source: https://api.github.com/repositories/1057425712/contents/docs/adr/005-google-cloud-platform-deployment.md?ref=59bb0991d8c30f9cb7b7f4b71b99058cda0a3a3d
+License-file-SHA256: f05e73ec3baf14aba66c397e2d7a5a66f411d2001262d4c6d73d61565398f675
+
+---
+SPDX-License-Identifier: MIT
+Repository: josedab/genesis
+File: 0010-rest-api-optional-deployment.md
+Source: https://api.github.com/repositories/1146714132/contents/docs/adr/0010-rest-api-optional-deployment.md?ref=b528c41c8d1f6e32495c651ec25a24608c2e7310
+License-file-SHA256: dd0b7ed84cac289b5ac6f4db43bfcb4ec525fc7f95b6d873df8fdd5a7a47e1e1
+
+---
+SPDX-License-Identifier: MIT
+Repository: floroz/paniere
+File: 005-deployment-hosting-solutions.md
+Source: https://api.github.com/repositories/976643450/contents/docs/adr/005-deployment-hosting-solutions.md?ref=a3729751ddb81ca999735782323d6f500d52db48
+License-file-SHA256: fc019f2940583aed0f60235acaeba6c3ddc9a045440694745515394207b1e29c
+
+---
+SPDX-License-Identifier: MIT
+Repository: victorolave/plinto
+File: 0005-deployment-distribution-nginx.md
+Source: https://api.github.com/repositories/1125537738/contents/docs/adr/0005-deployment-distribution-nginx.md?ref=c622ca118d85f2d851849edfff8a3ce2b5eb8f20
+License-file-SHA256: 0856dbbef4d06dd6c35c1b289c6b66c8639b240979302c4fefcdf3a8f96b5b6a
+
+---
+SPDX-License-Identifier: MIT
+Repository: api-platform/demo
+File: 0005-http-cache-with-souin.md
+Source: https://api.github.com/repositories/71341253/contents/docs/adr/0005-http-cache-with-souin.md?ref=ba6243feb795a9bc0c6900b26ce3e5db0509fece
+License-file-SHA256: 2c6be5e9f2e23b457f381c321a50954397d17750b6383d961e31d199a940e2e7
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: josedab/isolate
+File: ADR-0008-kubernetes-native-orchestration.md
+Source: https://api.github.com/repositories/1133352921/contents/docs/adr/ADR-0008-kubernetes-native-orchestration.md?ref=7543dcca46e1b7718310fb2808c47b6b1f072fea
+License-file-SHA256: 8cf930b2e8f27ed6408a6f8d5c94814864ac640a782778f62dece420a8c61c8e
+
+---
+SPDX-License-Identifier: MIT
+Repository: peteroden/gitlab-copilot-agent
+File: 0003-kubernetes-migration-plan.md
+Source: https://api.github.com/repositories/1156616996/contents/docs/adr/0003-kubernetes-migration-plan.md?ref=c88d291ca18631e5b566953fba7e291117a874f6
+License-file-SHA256: d46e9b7f91fc3aaca7f7f4d57f8000e5483261605e325feb16bc28d849b91766
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: abstractivemachines/toska-mesh-cs
+File: 003-consul-service-discovery.md
+Source: https://api.github.com/repositories/1102125770/contents/docs/adr/003-consul-service-discovery.md?ref=57534564ef61423128c35a3726ca28b362c30a1f
+License-file-SHA256: 1bd3c6542eec96625ef906a0a54cb654ccea9c514c72341068afc224f943d0dc
+
+---
+SPDX-License-Identifier: MIT
+Repository: Azure-Samples/tutor
+File: 003-aca-microservices.md
+Source: https://api.github.com/repositories/881556911/contents/docs/adr/003-aca-microservices.md?ref=b1b00953c0bf5685bbb8dd1cd76663ce6397373f
+License-file-SHA256: d9a1b1e30d633d5732ea18e3cba9538d293ebc53e1a9e4e96ab739e0c5c4f1cb
+
+---
+SPDX-License-Identifier: MIT
+Repository: boxwhine/the-things-ive-seen
+File: 0010-k3d-local-kubernetes.md
+Source: https://api.github.com/repositories/196083675/contents/docs/adr/0010-k3d-local-kubernetes.md?ref=0ee584034ad32cf96245915e490af449aa1be8be
+License-file-SHA256: 2bc17735c2e90a9cfae38c4b5eaee9b06bfa41c729a4f752de2507b762fbebd1
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: r-irbe/octupus-crawler
+File: ADR-005-local-kubernetes.md
+Source: https://api.github.com/repositories/1198194794/contents/docs/adr/ADR-005-local-kubernetes.md?ref=0dfd395d0e3d0ee128a07ef897a753857495a040
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: MIT
+Repository: KooshaPari/argis-extensions
+File: ADR-008-Multi-Platform-Deployment.md
+Source: https://api.github.com/repositories/1202508037/contents/docs/adr/ADR-008-Multi-Platform-Deployment.md?ref=3cb2fd62bab393ebb772bf35a8f28d3bd5e6860c
+License-file-SHA256: 2971234380c28f1e343f9b926c6402bb0c8dc70c2c0fad2c68ff62a3faad0055
+
+---
+SPDX-License-Identifier: MIT
+Repository: shortlink-org/gitops
+File: 0003-maintaining-kubernetes.md
+Source: https://api.github.com/repositories/993525965/contents/docs/ADR/decisions/0003-maintaining-kubernetes.md?ref=0997b300e87afa07c28e44225ce292db783f62b8
+License-file-SHA256: 25ad6b11d708789299be18b16b103d5577c11a88dd9fd8af05b332dc75ab8d22
+
+---
+SPDX-License-Identifier: MIT
+Repository: shortlink-org/shortlink
+File: 0013-security.md
+Source: https://api.github.com/repositories/204742393/contents/docs/ADR/decisions/0013-security.md?ref=b7bad0c4f71407163beecb8882cd72b831ecd6b3
+License-file-SHA256: 25ad6b11d708789299be18b16b103d5577c11a88dd9fd8af05b332dc75ab8d22
+
+---
+SPDX-License-Identifier: MIT
+Repository: Altinn/altinn-studio
+File: 2025-10-22-pdf-generation-architecture.md
+Source: https://api.github.com/repositories/136911355/contents/docs/adr/2025-10-22-pdf-generation-architecture.md?ref=2ddd86368e2d76df05efb3f9f1d2717b74ccc6b4
+License-file-SHA256: 5a7f77e95c49d01d5ae2426c60094eab9e0f80ca7d0525550029bfaa50a63239
+
+---
+SPDX-License-Identifier: MIT
+Repository: Thakurvaibhav/k8s
+File: 0003-envoy-gateway-over-traditional-ingress.md
+Source: https://api.github.com/repositories/132446902/contents/docs/adr/0003-envoy-gateway-over-traditional-ingress.md?ref=59e8c84e43b4baa4a42d5fbfcd2c76e4bf7798b3
+License-file-SHA256: 7e64b8193450dacda217e998d7b988cc01d442f574fc6f5758f7c4bdb33263dc
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: lornu-ai/agentnav
+File: 001-runtime-deployment-strategy.md
+Source: https://api.github.com/repositories/1086797762/contents/docs/adr/001-runtime-deployment-strategy.md?ref=6754ecf2ea86610cf1e90d3ac5bc1a7de50627f3
+License-file-SHA256: 40ec230f62b19aa3068330e4cf3408955ffdc4433c9903b6ec6702f184738d13
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: josedab/feather
+File: 0017-single-binary-deployment.md
+Source: https://api.github.com/repositories/1127288202/contents/docs/adr/0017-single-binary-deployment.md?ref=5bcf5b376ebb7d88eed20a488053fa1a3ba2bfc8
+License-file-SHA256: c159f425e6f6cadf5bb9bb7b44806dcf2c8500a831502c811f601465ab09dd42
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: jbejenar/ripple-next
+File: 006-no-kubernetes.md
+Source: https://api.github.com/repositories/1167167563/contents/docs/adr/006-no-kubernetes.md?ref=a8120165ffa0edf44de54e9816756091d335b048
+License-file-SHA256: 109d3002e94c6826f83866632a742f181df4a746999388d18dbdc15d0643ed30
+
+---
+SPDX-License-Identifier: MIT
+Repository: joewynn/SaaSGuard
+File: ADR-003-render-deployment.md
+Source: https://api.github.com/repositories/1181934660/contents/docs/ADR/ADR-003-render-deployment.md?ref=902473a6a57e9b5728b7a36dfe70de4f09a0db5b
+License-file-SHA256: adb7cb99699ea73894e4fab757ee884414a67fe51eced0c59b654f0cb4fa64be
+
+---
+SPDX-License-Identifier: MIT
+Repository: judeoyovbaire/mlops-platform
+File: 003-rawdeployment-mode-kserve.md
+Source: https://api.github.com/repositories/1107166605/contents/docs/adr/003-rawdeployment-mode-kserve.md?ref=cfd24aba1c03e8429f73c861f6922b6a12b19c93
+License-file-SHA256: b9d48f65050d229e6d7518471c729a2a9449180744041e65004c6ff9e3956483
+
+---
+SPDX-License-Identifier: MIT
+Repository: Thakurvaibhav/k8s
+File: 0005-centralized-ops-cluster-topology.md
+Source: https://api.github.com/repositories/132446902/contents/docs/adr/0005-centralized-ops-cluster-topology.md?ref=59e8c84e43b4baa4a42d5fbfcd2c76e4bf7798b3
+License-file-SHA256: 7e64b8193450dacda217e998d7b988cc01d442f574fc6f5758f7c4bdb33263dc
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: MS3Inc/tavros
+File: 0019-prefer-daemonsets-over-sidecars.md
+Source: https://api.github.com/repositories/314664180/contents/docs/adr/0019-prefer-daemonsets-over-sidecars.md?ref=28172774758bd5f2003d20aa88ddf25ef8b9f502
+License-file-SHA256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: redhat-et/zero-trust-agent-demo
+File: 0004-kustomize-deployment-variants.md
+Source: https://api.github.com/repositories/1142715703/contents/docs/adr/0004-kustomize-deployment-variants.md?ref=53e708ec13114065f98d92a198df9dcd2bd2f07a
+License-file-SHA256: 88ec900bf8a196acf3b678f1e62905f43d5ef4db7edad2c799c00e7a19adabf7
+
+---
+SPDX-License-Identifier: Apache-2.0
+Repository: doublegate/OctoLLM
+File: 005-deployment-platform.md
+Source: https://api.github.com/repositories/1093941635/contents/docs/adr/005-deployment-platform.md?ref=68bf2c043b7decdd5fbffaa820d23ff2e936c39b
+License-file-SHA256: cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30
+
+---
+SPDX-License-Identifier: MIT
+Repository: josedab/strata
+File: ADR-0010-graceful-shutdown.md
+Source: https://api.github.com/repositories/1127198940/contents/docs/adr/ADR-0010-graceful-shutdown.md?ref=c6b4db61b210fb100933cffb1444024f37e52562
+License-file-SHA256: e46414a08b0433876cbefa3a604ff98d877e3f3d60d7445c235b4fafcc6a1944
+
+---
+SPDX-License-Identifier: MIT
+Repository: gitHuyNgo/production-ready-rag-us-law
+File: 004-chat-memory-stores.md
+Source: https://api.github.com/repositories/1112418909/contents/docs/adr/004-chat-memory-stores.md?ref=fd331f103d9a99fbd0708fddfdb3fe25079d43be
+License-file-SHA256: cc80b3d149629eba429d5e5c2af08b8cd937e3d514400439c27c0a15af07cb21
+
+---
+SPDX-License-Identifier: MIT
+Repository: ghimele/homelab
+File: ADR-009-Secrets-Managment.md
+Source: https://api.github.com/repositories/839293362/contents/docs/adr/ADR-009-Secrets-Managment.md?ref=babd7c036cb07166d31c50208ee589ba15db0189
+License-file-SHA256: af0f4a9026626c8f604f4349f7159da9515c63b06c19e9c531b6c1fd53f187a3
+
+---
+SPDX-License-Identifier: MIT
+Repository: digitalservicebund/a2j-kommunikationsplattform
+File: 0004-how-we-do-user-and-api-authentication.md
+Source: https://api.github.com/repositories/865272225/contents/doc/adr/0004-how-we-do-user-and-api-authentication.md?ref=5ab53751000e57dbb2e034c8cfc32546d8d24b16
+License-file-SHA256: 982358e61a520a517c250fd54651d375b31bd4ff23a32909eaee3f3f2e55f479
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/hmpps-accredited-programmes-api
+File: 0004-bulk-replace-api-data.md
+Source: https://api.github.com/repositories/615402552/contents/doc/adr/0004-bulk-replace-api-data.md?ref=bd9c2c94840b2b1a11045965aea3f18202855f45
+License-file-SHA256: 5e5f62c1a968ce42ae610fde7a32cfac4b10734013f13ae1344ea312d0e8cc92
+
+---
+SPDX-License-Identifier: MIT
+Repository: rebecamendez/rebeca-hexagonal-nest-template
+File: 0001-api-architecture.md
+Source: https://api.github.com/repositories/957223751/contents/doc/adr/0001-api-architecture.md?ref=d821fa13eed02f19a1f5bcce6a6a8a637f2eaf22
+License-file-SHA256: 54097f962998cea71d0f4beacec3b25539aa75cd5066dbd2d0d9d354c966e3df
+
+---
+SPDX-License-Identifier: MIT
+Repository: uk-gov-mirror/ministryofjustice.hmpps-manage-supervisions
+File: 0002-start-with-a-monolith.md
+Source: https://api.github.com/repositories/356784337/contents/doc/adr/0002-start-with-a-monolith.md?ref=1c11bab8e467d40536d670f303f1d9ce3c1e9b93
+License-file-SHA256: adad4bed06a3341a51784e36e1662ef55a155bfb72690a20841773e0d0ea271b
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/hmpps-probation-integration-services
+File: 0007-bootstrap-new-projects-using-github-actions-workflow.md
+Source: https://api.github.com/repositories/500855647/contents/doc/adr/0007-bootstrap-new-projects-using-github-actions-workflow.md?ref=36cc86ec9815d8b401a6a37222c407bc60794afb
+License-file-SHA256: 82aed9c1fc756cddbdaf701f7fa2b30de82bb55bcce2457e59064d6ea280cdad
+
+---
+SPDX-License-Identifier: MIT
+Repository: jmaister/taronja-gateway
+File: 0009-rate-limiter.md
+Source: https://api.github.com/repositories/973851976/contents/doc/adr/0009-rate-limiter.md?ref=aa99de5299205d0c4e0ec4ad872379f540de68c0
+License-file-SHA256: f1b056c342db2c724351cc15a0997fa39e2be4f3358c293214f92eb6877ba92f
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/hmpps-accredited-programmes-ui
+File: 0004-release-with-continuous-deployment.md
+Source: https://api.github.com/repositories/615401726/contents/doc/adr/0004-release-with-continuous-deployment.md?ref=0380e0edd72fae31d12dee7bdf08ebcf10dc3a8f
+License-file-SHA256: 5e5f62c1a968ce42ae610fde7a32cfac4b10734013f13ae1344ea312d0e8cc92
+
+---
+SPDX-License-Identifier: MIT
+Repository: ministryofjustice/hmpps-accredited-programmes-api
+File: 0003-release-with-continuous-deployment.md
+Source: https://api.github.com/repositories/615402552/contents/doc/adr/0003-release-with-continuous-deployment.md?ref=bd9c2c94840b2b1a11045965aea3f18202855f45
+License-file-SHA256: 5e5f62c1a968ce42ae610fde7a32cfac4b10734013f13ae1344ea312d0e8cc92
+
+---
+SPDX-License-Identifier: MIT
+Repository: aharbii/movie-finder-docs
+File: 0000-register.md
+Source: https://api.github.com/repositories/1188362699/contents/architecture/decisions/0000-register.md?ref=59b2c36595abd568db47bdd71f6d6c195f2648ae
+License-file-SHA256: 1a9fddfe8645d07d9f92f2fd0859df01b7b64c6d7c25b8859a2ea3530139d8ed
+
+---
+SPDX-License-Identifier: MIT
+Repository: aharbii/movie-finder-docs
+File: 0001-initial-architecture.md
+Source: https://api.github.com/repositories/1188362699/contents/architecture/decisions/0001-initial-architecture.md?ref=59b2c36595abd568db47bdd71f6d6c195f2648ae
+License-file-SHA256: 1a9fddfe8645d07d9f92f2fd0859df01b7b64c6d7c25b8859a2ea3530139d8ed
+
+---
+SPDX-License-Identifier: MIT
+Repository: aharbii/movie-finder-docs
+File: 0007-persistent-langgraph-checkpointing.md
+Source: https://api.github.com/repositories/1188362699/contents/architecture/decisions/0007-persistent-langgraph-checkpointing.md?ref=59b2c36595abd568db47bdd71f6d6c195f2648ae
+License-file-SHA256: 1a9fddfe8645d07d9f92f2fd0859df01b7b64c6d7c25b8859a2ea3530139d8ed
+

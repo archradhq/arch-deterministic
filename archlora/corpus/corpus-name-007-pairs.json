@@ -1,0 +1,262 @@
+[
+  {
+    "id": "name-001",
+    "variant": "positive — gateway node with no name field",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-HTTP-MISSING-NAME-007",
+          "severity": "warning",
+          "nodeId": "api-gateway",
+          "message": "HTTP-like node 'api-gateway' has no display name",
+          "fix": "Set a short human-readable name for docs, OpenAPI titles, and team communication."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "name-002",
+    "variant": "positive — api node with empty string name",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "rest-api", "type": "api", "name": "", "config": { "authRequired": true } },
+          { "id": "order-service", "type": "service", "name": "Order Service" }
+        ],
+        "edges": [
+          { "from": "rest-api", "to": "order-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-HTTP-MISSING-NAME-007",
+          "severity": "warning",
+          "nodeId": "rest-api",
+          "message": "HTTP-like node 'rest-api' has no display name",
+          "fix": "Set a short human-readable name for docs, OpenAPI titles, and team communication."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "name-003",
+    "variant": "negative — gateway with a name set",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "name-004",
+    "variant": "negative — service nodes without names do not trigger this rule",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [],
+      "note": "IR-LINT-HTTP-MISSING-NAME-007 only applies to HTTP-like node types. Service nodes without names do not trigger this rule."
+    }
+  },
+
+  {
+    "id": "name-005",
+    "variant": "positive — multiple HTTP nodes, all missing names",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "web-gateway", "type": "gateway", "config": { "authRequired": true } },
+          { "id": "mobile-gateway", "type": "gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" }
+        ],
+        "edges": [
+          { "from": "web-gateway", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "mobile-gateway", "to": "user-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-HTTP-MISSING-NAME-007",
+          "severity": "warning",
+          "nodeId": "web-gateway",
+          "message": "HTTP-like node 'web-gateway' has no display name",
+          "fix": "Set a short human-readable name for docs, OpenAPI titles, and team communication."
+        },
+        {
+          "code": "IR-LINT-HTTP-MISSING-NAME-007",
+          "severity": "warning",
+          "nodeId": "mobile-gateway",
+          "message": "HTTP-like node 'mobile-gateway' has no display name",
+          "fix": "Set a short human-readable name for docs, OpenAPI titles, and team communication."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "name-006",
+    "variant": "positive — bff missing name",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "web-bff", "type": "bff", "config": { "authRequired": true } },
+          { "id": "profile-service", "type": "service", "name": "Profile Service" }
+        ],
+        "edges": [
+          { "from": "web-bff", "to": "profile-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-HTTP-MISSING-NAME-007",
+          "severity": "warning",
+          "nodeId": "web-bff",
+          "message": "HTTP-like node 'web-bff' has no display name",
+          "fix": "Set a short human-readable name for docs, OpenAPI titles, and team communication."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "name-007",
+    "variant": "negative — grpc node with a name set",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "grpc-gateway", "type": "grpc", "name": "gRPC Gateway", "config": { "authRequired": true } },
+          { "id": "billing-service", "type": "service", "name": "Billing Service" }
+        ],
+        "edges": [
+          { "from": "grpc-gateway", "to": "billing-service", "metadata": { "protocol": "grpc" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "name-008",
+    "variant": "positive — whitespace-only name treated as missing",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "   ", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-HTTP-MISSING-NAME-007",
+          "severity": "warning",
+          "nodeId": "api-gateway",
+          "message": "HTTP-like node 'api-gateway' has no display name",
+          "fix": "Set a short human-readable name for docs, OpenAPI titles, and team communication."
+        }
+      ],
+      "note": "The rule trims the name value before checking. A name of only whitespace is treated as empty."
+    }
+  },
+
+  {
+    "id": "name-009",
+    "variant": "negative — http type node with name set",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "main-http", "type": "http", "name": "Main HTTP Handler", "config": { "url": "/health", "authRequired": true } },
+          { "id": "data-service", "type": "service", "name": "Data Service" }
+        ],
+        "edges": [
+          { "from": "main-http", "to": "data-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "name-010",
+    "variant": "positive — mixed: one HTTP node has name, another does not",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "internal-api", "type": "api", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "internal-api", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-HTTP-MISSING-NAME-007",
+          "severity": "warning",
+          "nodeId": "internal-api",
+          "message": "HTTP-like node 'internal-api' has no display name",
+          "fix": "Set a short human-readable name for docs, OpenAPI titles, and team communication."
+        }
+      ]
+    }
+  }
+]

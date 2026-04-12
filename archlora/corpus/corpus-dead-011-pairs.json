@@ -1,0 +1,270 @@
+[
+  {
+    "id": "dead-001",
+    "variant": "positive — service receives edges but has no outgoing edges",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "notification-service", "type": "service", "name": "Notification Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "notification-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-DEAD-NODE-011",
+          "severity": "warning",
+          "nodeId": "notification-service",
+          "message": "Node 'notification-service' (type: service) receives edges but has no outgoing edges — possible missing integration or dead component",
+          "fix": "Add an outgoing edge to a downstream node, or remove this node if it is no longer active."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "dead-002",
+    "variant": "positive — worker receives events but forwards nowhere",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "event-bus", "type": "queue", "name": "Event Bus" },
+          { "id": "legacy-processor", "type": "worker", "name": "Legacy Processor" }
+        ],
+        "edges": [
+          { "from": "event-bus", "to": "legacy-processor", "metadata": { "protocol": "amqp" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-DEAD-NODE-011",
+          "severity": "warning",
+          "nodeId": "legacy-processor",
+          "message": "Node 'legacy-processor' (type: worker) receives edges but has no outgoing edges — possible missing integration or dead component",
+          "fix": "Add an outgoing edge to a downstream node, or remove this node if it is no longer active."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "dead-003",
+    "variant": "positive — multiple dead nodes in same graph",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "report-service", "type": "service", "name": "Report Service" },
+          { "id": "export-service", "type": "service", "name": "Export Service" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "report-service", "metadata": { "protocol": "https" } },
+          { "from": "api-gateway", "to": "export-service", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-DEAD-NODE-011",
+          "severity": "warning",
+          "nodeId": "report-service",
+          "message": "Node 'report-service' (type: service) receives edges but has no outgoing edges — possible missing integration or dead component",
+          "fix": "Add an outgoing edge to a downstream node, or remove this node if it is no longer active."
+        },
+        {
+          "code": "IR-LINT-DEAD-NODE-011",
+          "severity": "warning",
+          "nodeId": "export-service",
+          "message": "Node 'export-service' (type: service) receives edges but has no outgoing edges — possible missing integration or dead component",
+          "fix": "Add an outgoing edge to a downstream node, or remove this node if it is no longer active."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "dead-004",
+    "variant": "negative — database is a valid sink, no violation",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "user-service", "type": "service", "name": "User Service" },
+          { "id": "user-db", "type": "database", "name": "User DB" }
+        ],
+        "edges": [
+          { "from": "user-service", "to": "user-db", "metadata": { "protocol": "tcp" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "dead-005",
+    "variant": "negative — queue is a valid sink, no violation",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "order-service", "type": "service", "name": "Order Service" },
+          { "id": "email-queue", "type": "queue", "name": "Email Queue" }
+        ],
+        "edges": [
+          { "from": "order-service", "to": "email-queue", "metadata": { "protocol": "amqp" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "dead-006",
+    "variant": "negative — http node is a valid sink (entry with no outgoing is caught by other rules)",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "load-balancer", "type": "service", "name": "Load Balancer" },
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway" }
+        ],
+        "edges": [
+          { "from": "load-balancer", "to": "api-gateway", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "dead-007",
+    "variant": "negative — service has both incoming and outgoing edges (healthy node)",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" },
+          { "id": "user-db", "type": "database", "name": "User DB" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "user-service", "to": "user-db", "metadata": { "protocol": "tcp" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": []
+    }
+  },
+
+  {
+    "id": "dead-008",
+    "variant": "positive — analytics aggregator receives from multiple services but outputs nowhere",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "order-service", "type": "service", "name": "Order Service" },
+          { "id": "payment-service", "type": "service", "name": "Payment Service" },
+          { "id": "analytics-aggregator", "type": "service", "name": "Analytics Aggregator" },
+          { "id": "order-db", "type": "database", "name": "Order DB" },
+          { "id": "payment-db", "type": "database", "name": "Payment DB" }
+        ],
+        "edges": [
+          { "from": "order-service", "to": "analytics-aggregator", "metadata": { "protocol": "https" } },
+          { "from": "payment-service", "to": "analytics-aggregator", "metadata": { "protocol": "https" } },
+          { "from": "order-service", "to": "order-db", "metadata": { "protocol": "tcp" } },
+          { "from": "payment-service", "to": "payment-db", "metadata": { "protocol": "tcp" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-DEAD-NODE-011",
+          "severity": "warning",
+          "nodeId": "analytics-aggregator",
+          "message": "Node 'analytics-aggregator' (type: service) receives edges but has no outgoing edges — possible missing integration or dead component",
+          "fix": "Add an outgoing edge to a downstream node, or remove this node if it is no longer active."
+        }
+      ]
+    }
+  },
+
+  {
+    "id": "dead-009",
+    "variant": "negative — truly isolated node (no edges at all) is caught by ISOLATED-NODE-005, not this rule",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "user-service", "type": "service", "name": "User Service" },
+          { "id": "orphan-service", "type": "service", "name": "Orphan Service" },
+          { "id": "user-db", "type": "database", "name": "User DB" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "user-service", "metadata": { "protocol": "https" } },
+          { "from": "user-service", "to": "user-db", "metadata": { "protocol": "tcp" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-ISOLATED-NODE-005",
+          "severity": "warning",
+          "nodeId": "orphan-service",
+          "message": "Node 'orphan-service' is not connected to any edge (disconnected subgraph)",
+          "fix": "Remove the orphan node or add edges so it participates in the architecture."
+        }
+      ],
+      "note": "IR-LINT-DEAD-NODE-011 only fires for nodes with incoming edges but no outgoing. Nodes with zero edges are caught by IR-LINT-ISOLATED-NODE-005 instead."
+    }
+  },
+
+  {
+    "id": "dead-010",
+    "variant": "positive — cache proxy receives traffic but has no downstream",
+    "instruction": "Given this IR graph, what architecture violations exist?",
+    "input": {
+      "graph": {
+        "nodes": [
+          { "id": "api-gateway", "type": "gateway", "name": "API Gateway", "config": { "authRequired": true } },
+          { "id": "cache-proxy", "type": "proxy", "name": "Cache Proxy" }
+        ],
+        "edges": [
+          { "from": "api-gateway", "to": "cache-proxy", "metadata": { "protocol": "https" } }
+        ]
+      }
+    },
+    "output": {
+      "violations": [
+        {
+          "code": "IR-LINT-DEAD-NODE-011",
+          "severity": "warning",
+          "nodeId": "cache-proxy",
+          "message": "Node 'cache-proxy' (type: proxy) receives edges but has no outgoing edges — possible missing integration or dead component",
+          "fix": "Add an outgoing edge to a downstream node, or remove this node if it is no longer active."
+        }
+      ]
+    }
+  }
+]
