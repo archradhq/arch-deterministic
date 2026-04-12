@@ -1,0 +1,1186 @@
+# Stack Overflow sources — archlora/scrape_stackoverflow.py
+# Network content license: CC BY-SA 4.0 — see https://stackoverflow.com/help/licensing
+# API terms: https://api.stackexchange.com/docs/terms-of-use
+# Original post text not stored in JSONL — IR derived via GPT-4o (transformative).
+# Retain with distributed corpus for CC BY-SA attribution (and ShareAlike as applicable).
+
+---
+Question-ID: 38071714
+Answer-ID: 38079681
+Title: When and How to use GraphQL with microservice architecture
+Tags: architecture, microservices, graphql
+URL: https://stackoverflow.com/questions/38071714/when-and-how-to-use-graphql-with-microservice-architecture
+Score: 280
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 29644916
+Answer-ID: 29675246
+Title: Microservice Authentication strategy
+Tags: authentication, architecture, microservices
+URL: https://stackoverflow.com/questions/29644916/microservice-authentication-strategy
+Score: 178
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 43612866
+Answer-ID: 43618284
+Title: Microservices with shared database? using multiple ORM&#39;s?
+Tags: database, database-design, orm, architecture, microservices
+URL: https://stackoverflow.com/questions/43612866/microservices-with-shared-database-using-multiple-orms
+Score: 69
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 44085454
+Answer-ID: 44085976
+Title: Join table between Different Microservices
+Tags: architecture, microservices
+URL: https://stackoverflow.com/questions/44085454/join-table-between-different-microservices
+Score: 44
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 41640621
+Answer-ID: 41862674
+Title: Data Sharing between micro services
+Tags: design-patterns, architecture, microservices, aws-api-gateway, data-sharing
+URL: https://stackoverflow.com/questions/41640621/data-sharing-between-micro-services
+Score: 39
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 41795612
+Answer-ID: 41811770
+Title: How to deploy microservices on Heroku
+Tags: heroku, architecture, jhipster, microservices
+URL: https://stackoverflow.com/questions/41795612/how-to-deploy-microservices-on-heroku
+Score: 36
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 41010290
+Answer-ID: 41010663
+Title: Microservices: REST vs Messaging
+Tags: rest, architecture, messaging, microservices
+URL: https://stackoverflow.com/questions/41010290/microservices-rest-vs-messaging
+Score: 35
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 37915326
+Answer-ID: 37921274
+Title: How to keep DB in sync when using microservices architecture?
+Tags: architecture, microservices
+URL: https://stackoverflow.com/questions/37915326/how-to-keep-db-in-sync-when-using-microservices-architecture
+Score: 34
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 33202053
+Answer-ID: 33213217
+Title: Product Versioning Microservices
+Tags: architecture, docker, domain-driven-design, soa, microservices
+URL: https://stackoverflow.com/questions/33202053/product-versioning-microservices
+Score: 29
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 47837207
+Answer-ID: 48021163
+Title: Entity-level access restriction in the microservice architecture based on user or group membership
+Tags: security, architecture, permissions, microservices
+URL: https://stackoverflow.com/questions/47837207/entity-level-access-restriction-in-the-microservice-architecture-based-on-user-o
+Score: 28
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 33399988
+Answer-ID: 33407393
+Title: Microservices: datasource per instance or per microservice?
+Tags: database, architecture, microservices
+URL: https://stackoverflow.com/questions/33399988/microservices-datasource-per-instance-or-per-microservice
+Score: 26
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 22513893
+Answer-ID: 23056484
+Title: Microservices and SOA using messaging
+Tags: architecture, messaging, soa, microservices
+URL: https://stackoverflow.com/questions/22513893/microservices-and-soa-using-messaging
+Score: 22
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 30027545
+Answer-ID: 35682767
+Title: Vert.x 3 and Microservices
+Tags: architecture, vert.x, microservices
+URL: https://stackoverflow.com/questions/30027545/vert-x-3-and-microservices
+Score: 22
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 57788014
+Answer-ID: 57791951
+Title: Microservices : aggregate data : is there some good patterns?
+Tags: design-patterns, architecture, microservices
+URL: https://stackoverflow.com/questions/57788014/microservices-aggregate-data-is-there-some-good-patterns
+Score: 21
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 35381163
+Answer-ID: 35401130
+Title: Best practice to organize authorization in microservice architecture?
+Tags: authentication, architecture, authorization, microservices
+URL: https://stackoverflow.com/questions/35381163/best-practice-to-organize-authorization-in-microservice-architecture
+Score: 21
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 44579396
+Answer-ID: 44581341
+Title: In microservices should i use pub/sub instead RPC to get more loosely couple architecture?
+Tags: architecture, rpc, publish-subscribe, microservices
+URL: https://stackoverflow.com/questions/44579396/in-microservices-should-i-use-pub-sub-instead-rpc-to-get-more-loosely-couple-arc
+Score: 18
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 43983286
+Answer-ID: 43985329
+Title: GraphQL and Microservices
+Tags: rest, architecture, microservices, graphql
+URL: https://stackoverflow.com/questions/43983286/graphql-and-microservices
+Score: 17
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 45661006
+Answer-ID: 45661246
+Title: What is the difference between Monolith and n Layer?
+Tags: architecture, microservices, n-tier-architecture, n-layer
+URL: https://stackoverflow.com/questions/45661006/what-is-the-difference-between-monolith-and-n-layer
+Score: 16
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 66241844
+Answer-ID: 67439317
+Title: Using gRPC and/or GraphQL for microservice architecture
+Tags: architecture, graphql, microservices, grpc, rpc
+URL: https://stackoverflow.com/questions/66241844/using-grpc-and-or-graphql-for-microservice-architecture
+Score: 16
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 52298830
+Answer-ID: 52310805
+Title: Data validation across different microservices
+Tags: java, rest, spring-boot, architecture, microservices
+URL: https://stackoverflow.com/questions/52298830/data-validation-across-different-microservices
+Score: 15
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 50700178
+Answer-ID: 50717704
+Title: Should API gateway be responsible for authorisation?
+Tags: authentication, architecture, authorization, microservices, api-gateway
+URL: https://stackoverflow.com/questions/50700178/should-api-gateway-be-responsible-for-authorisation
+Score: 15
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 47918407
+Answer-ID: 47920156
+Title: Microservice architecture - carry message through services when order doesn&#39;t matter
+Tags: design-patterns, architecture, rabbitmq, message-queue, microservices
+URL: https://stackoverflow.com/questions/47918407/microservice-architecture-carry-message-through-services-when-order-doesnt-ma
+Score: 14
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 54862355
+Answer-ID: 54864010
+Title: Data replication in microservices
+Tags: architecture, microservices
+URL: https://stackoverflow.com/questions/54862355/data-replication-in-microservices
+Score: 14
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 53545963
+Answer-ID: 53551794
+Title: internal communication Microservices through API Gateway
+Tags: architecture, microservices, api-gateway
+URL: https://stackoverflow.com/questions/53545963/internal-communication-microservices-through-api-gateway
+Score: 12
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 41837637
+Answer-ID: 41837882
+Title: Microservices vs multi-layered architecture
+Tags: asp.net-web-api, architecture, microservices, multi-layer
+URL: https://stackoverflow.com/questions/41837637/microservices-vs-multi-layered-architecture
+Score: 11
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 66918637
+Answer-ID: 66919795
+Title: Is event sourcing an enhanced pattern of choreography-based SAGA pattern?
+Tags: apache-kafka, redis, architecture, microservices, saga
+URL: https://stackoverflow.com/questions/66918637/is-event-sourcing-an-enhanced-pattern-of-choreography-based-saga-pattern
+Score: 11
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 36642718
+Answer-ID: 36645418
+Title: Two microservices for read and write to one database table
+Tags: architecture, microservices
+URL: https://stackoverflow.com/questions/36642718/two-microservices-for-read-and-write-to-one-database-table
+Score: 11
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 61684831
+Answer-ID: 66686572
+Title: Guidance for Blazor Server with API Gateway and Microservices
+Tags: architecture, microservices, blazor, blazor-server-side, api-gateway
+URL: https://stackoverflow.com/questions/61684831/guidance-for-blazor-server-with-api-gateway-and-microservices
+Score: 10
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 54673313
+Answer-ID: 54676222
+Title: Microservices – best practices to retrieve the related data to specific user from the other micro services with the minimal memory/time loss
+Tags: architecture, microservices
+URL: https://stackoverflow.com/questions/54673313/microservices-best-practices-to-retrieve-the-related-data-to-specific-user-fro
+Score: 9
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 36519652
+Answer-ID: 36522884
+Title: Share data between microservices
+Tags: database-design, architecture, microservices
+URL: https://stackoverflow.com/questions/36519652/share-data-between-microservices
+Score: 9
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 47938835
+Answer-ID: 48132731
+Title: How to create replay mechanism within event-drive microservice
+Tags: java, architecture, transactions, microservices, event-driven-design
+URL: https://stackoverflow.com/questions/47938835/how-to-create-replay-mechanism-within-event-drive-microservice
+Score: 9
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 49171571
+Answer-ID: 49185945
+Title: Search queries in microservice architecture
+Tags: architecture, microservices
+URL: https://stackoverflow.com/questions/49171571/search-queries-in-microservice-architecture
+Score: 9
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 62956789
+Answer-ID: 69337841
+Title: Microservices extensions/plugins architecture
+Tags: network-programming, design-patterns, architecture, microservices, architectural-patterns
+URL: https://stackoverflow.com/questions/62956789/microservices-extensions-plugins-architecture
+Score: 9
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 56585409
+Answer-ID: 56586168
+Title: How to break a django website into microservices
+Tags: django, design-patterns, architecture, django-rest-framework, microservices
+URL: https://stackoverflow.com/questions/56585409/how-to-break-a-django-website-into-microservices
+Score: 8
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 40966759
+Answer-ID: 40972366
+Title: Microservices: Centralized Authorization vs Authorization in each service
+Tags: architecture, microservices
+URL: https://stackoverflow.com/questions/40966759/microservices-centralized-authorization-vs-authorization-in-each-service
+Score: 8
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 70648467
+Answer-ID: 71053967
+Title: MSK vs SQS + SNS
+Tags: amazon-web-services, architecture, microservices, messaging, aws-msk
+URL: https://stackoverflow.com/questions/70648467/msk-vs-sqs-sns
+Score: 7
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 43246560
+Answer-ID: 43249081
+Title: Microservices Architecture: Chatty services or data duplication
+Tags: architecture, domain-driven-design, microservices
+URL: https://stackoverflow.com/questions/43246560/microservices-architecture-chatty-services-or-data-duplication
+Score: 7
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 30908112
+Answer-ID: 30909381
+Title: Micro Service cross service dependencies
+Tags: architecture, microservices
+URL: https://stackoverflow.com/questions/30908112/micro-service-cross-service-dependencies
+Score: 7
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 60466031
+Answer-ID: 60469902
+Title: Updating build dependencies in lots of microservices easily
+Tags: java, spring-boot, architecture, microservices, software-design
+URL: https://stackoverflow.com/questions/60466031/updating-build-dependencies-in-lots-of-microservices-easily
+Score: 7
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 58491622
+Answer-ID: 58498348
+Title: Authorization in API Gateway vs Microservice Endpoints
+Tags: security, design-patterns, architecture, authorization, microservices
+URL: https://stackoverflow.com/questions/58491622/authorization-in-api-gateway-vs-microservice-endpoints
+Score: 7
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 58517773
+Answer-ID: 58524143
+Title: How to manage Many To Many relations in microservices architecture?
+Tags: java, architecture, many-to-many, microservices, entities
+URL: https://stackoverflow.com/questions/58517773/how-to-manage-many-to-many-relations-in-microservices-architecture
+Score: 6
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 48457264
+Answer-ID: 48473695
+Title: Integrating SignalR for microservice with API Gateway
+Tags: architecture, signalr, microservices, asp.net-core-signalr
+URL: https://stackoverflow.com/questions/48457264/integrating-signalr-for-microservice-with-api-gateway
+Score: 6
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 46311488
+Answer-ID: 46328132
+Title: Confused about ESBs as a solution to point-to-point integration
+Tags: architecture, microservices, esb
+URL: https://stackoverflow.com/questions/46311488/confused-about-esbs-as-a-solution-to-point-to-point-integration
+Score: 6
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 61163261
+Answer-ID: 61163500
+Title: How do I manage multiple databases on microservices?
+Tags: database, web, architecture, microservices
+URL: https://stackoverflow.com/questions/61163261/how-do-i-manage-multiple-databases-on-microservices
+Score: 6
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 59801685
+Answer-ID: 59844366
+Title: Microservice authorization pattern with api gateway
+Tags: architecture, authorization, microservices
+URL: https://stackoverflow.com/questions/59801685/microservice-authorization-pattern-with-api-gateway
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 43350278
+Answer-ID: 50266272
+Title: SemVer and Microservices
+Tags: architecture, microservices, semantic-versioning
+URL: https://stackoverflow.com/questions/43350278/semver-and-microservices
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 26094969
+Answer-ID: 26376984
+Title: Design a generic job scheduler
+Tags: architecture, job-scheduling, n-tier-architecture, system-design
+URL: https://stackoverflow.com/questions/26094969/design-a-generic-job-scheduler
+Score: 16
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 46069921
+Answer-ID: 46083772
+Title: Is there a difference between API gateway pattern and BFF?
+Tags: microservices, netflix-zuul, api-gateway
+URL: https://stackoverflow.com/questions/46069921/is-there-a-difference-between-api-gateway-pattern-and-bff
+Score: 26
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 58316573
+Answer-ID: 58318678
+Title: Aggregation of data on API Gateway
+Tags: microservices, aws-api-gateway, azure-api-management, api-gateway, ocelot
+URL: https://stackoverflow.com/questions/58316573/aggregation-of-data-on-api-gateway
+Score: 20
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 60050154
+Answer-ID: 61234808
+Title: How good is Krakend compared to Kong?
+Tags: microservices, api-gateway, kong, spring-cloud-gateway, krakend
+URL: https://stackoverflow.com/questions/60050154/how-good-is-krakend-compared-to-kong
+Score: 17
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 61997463
+Answer-ID: 62000476
+Title: 404 trying to route the Upstream path to downstream path in Ocelot
+Tags: .net-core, microservices, api-gateway, ocelot
+URL: https://stackoverflow.com/questions/61997463/404-trying-to-route-the-upstream-path-to-downstream-path-in-ocelot
+Score: 16
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 54598813
+Answer-ID: 54599188
+Title: Zuul Deployment in Kubernetes
+Tags: kubernetes, microservices, netflix-zuul, api-gateway
+URL: https://stackoverflow.com/questions/54598813/zuul-deployment-in-kubernetes
+Score: 14
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 31546631
+Answer-ID: 60895767
+Title: What are the option to API gateway with docker?
+Tags: docker, authentication, microservices, api-gateway, tyk
+URL: https://stackoverflow.com/questions/31546631/what-are-the-option-to-api-gateway-with-docker
+Score: 12
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 51573236
+Answer-ID: 51598031
+Title: How to properly use express-gateway for authentication of a web app?
+Tags: node.js, express, microservices, api-gateway, express-gateway
+URL: https://stackoverflow.com/questions/51573236/how-to-properly-use-express-gateway-for-authentication-of-a-web-app
+Score: 12
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 68044745
+Answer-ID: 68074337
+Title: API Gateway Pattern vs Aggregator Pattern (In the context of microservices)
+Tags: microservices, aggregate, api-gateway
+URL: https://stackoverflow.com/questions/68044745/api-gateway-pattern-vs-aggregator-pattern-in-the-context-of-microservices
+Score: 11
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 62079202
+Answer-ID: 62651656
+Title: Microservices, API Gateways, and Frontends
+Tags: node.js, http, nginx, microservices, api-gateway
+URL: https://stackoverflow.com/questions/62079202/microservices-api-gateways-and-frontends
+Score: 7
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 55547886
+Answer-ID: 55548064
+Title: Should I use an API Gateway or Service Mesh?
+Tags: kubernetes, microservices, istio, api-gateway
+URL: https://stackoverflow.com/questions/55547886/should-i-use-an-api-gateway-or-service-mesh
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 66708646
+Answer-ID: 66741908
+Title: Implementing Spring Cloud Gateway In The Same Project
+Tags: spring, spring-boot, microservices, api-gateway, spring-cloud-gateway
+URL: https://stackoverflow.com/questions/66708646/implementing-spring-cloud-gateway-in-the-same-project
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 51282283
+Answer-ID: 51383106
+Title: Multi-Tenant Authentication with AWS Cognito
+Tags: amazon-web-services, authentication, microservices, multi-tenant, amazon-cognito
+URL: https://stackoverflow.com/questions/51282283/multi-tenant-authentication-with-aws-cognito
+Score: 22
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 60153377
+Answer-ID: 60182596
+Title: Keycloak authentication flow in a microservices based environment
+Tags: spring-boot, authentication, microservices, openid, keycloak
+URL: https://stackoverflow.com/questions/60153377/keycloak-authentication-flow-in-a-microservices-based-environment
+Score: 11
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 55394912
+Answer-ID: 55398953
+Title: How to authenticate JSON web tokens (JWT) across different APIs?
+Tags: authentication, jwt, microservices
+URL: https://stackoverflow.com/questions/55394912/how-to-authenticate-json-web-tokens-jwt-across-different-apis
+Score: 6
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 27007353
+Answer-ID: 28976675
+Title: How does data denormalization work with the Microservice Pattern?
+Tags: database, denormalization, microservices
+URL: https://stackoverflow.com/questions/27007353/how-does-data-denormalization-work-with-the-microservice-pattern
+Score: 89
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 31104540
+Answer-ID: 31110967
+Title: DB consistency with microservices
+Tags: database, soa, microservices
+URL: https://stackoverflow.com/questions/31104540/db-consistency-with-microservices
+Score: 31
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 42053559
+Answer-ID: 42055559
+Title: Eventual consistency with both database and message queue records
+Tags: database, domain-driven-design, message-queue, microservices, eventual-consistency
+URL: https://stackoverflow.com/questions/42053559/eventual-consistency-with-both-database-and-message-queue-records
+Score: 17
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 55275001
+Answer-ID: 55519370
+Title: How to design microservice database one to many?
+Tags: database, foreign-keys, microservices
+URL: https://stackoverflow.com/questions/55275001/how-to-design-microservice-database-one-to-many
+Score: 7
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 43179951
+Answer-ID: 43205307
+Title: Business data querying/reporting in service oriented architecture
+Tags: database, reporting, soa, microservices, database-replication
+URL: https://stackoverflow.com/questions/43179951/business-data-querying-reporting-in-service-oriented-architecture
+Score: 6
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 41445442
+Answer-ID: 41475346
+Title: How to sync the database with the microservices (and the new one)?
+Tags: mysql, database, message-queue, microservices, nsq
+URL: https://stackoverflow.com/questions/41445442/how-to-sync-the-database-with-the-microservices-and-the-new-one
+Score: 6
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 345414
+Answer-ID: 351560
+Title: ASP.NET Web Site + Windows Forms App + WCF Service: Client Credentials
+Tags: asp.net, wcf, authentication, architecture
+URL: https://stackoverflow.com/questions/345414/asp-net-web-site-windows-forms-app-wcf-service-client-credentials
+Score: 18
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 31303426
+Answer-ID: 37130080
+Title: What is considered &quot;best practice&quot; for user authentication/authorization for WPF and WCF applications?
+Tags: wcf, authentication, architecture, authorization, desktop-application
+URL: https://stackoverflow.com/questions/31303426/what-is-considered-best-practice-for-user-authentication-authorization-for-wpf
+Score: 7
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 64687757
+Answer-ID: 64921617
+Title: Authorization architecture in microservice cluster
+Tags: python, authentication, kubernetes, proxy, architecture
+URL: https://stackoverflow.com/questions/64687757/authorization-architecture-in-microservice-cluster
+Score: 6
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 31854458
+Answer-ID: 32058801
+Title: Claim based access control in a distributed system
+Tags: c#, authentication, architecture, authorization, claims-based-identity
+URL: https://stackoverflow.com/questions/31854458/claim-based-access-control-in-a-distributed-system
+Score: 6
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 4657141
+Answer-ID: 4804703
+Title: Strategies for handling cross-platform user authentication and authorization
+Tags: c++, authentication, architecture, cross-platform, authorization
+URL: https://stackoverflow.com/questions/4657141/strategies-for-handling-cross-platform-user-authentication-and-authorization
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 3224893
+Answer-ID: 3225394
+Title: RESTful HTTP: Showing different representations to two users on the same URI
+Tags: authentication, architecture, rest, restful-authentication, access-control
+URL: https://stackoverflow.com/questions/3224893/restful-http-showing-different-representations-to-two-users-on-the-same-uri
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 25287734
+Answer-ID: 25288269
+Title: REST actions and URL API design considerations
+Tags: rest, architecture, servicestack
+URL: https://stackoverflow.com/questions/25287734/rest-actions-and-url-api-design-considerations
+Score: 96
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 9943445
+Answer-ID: 9943532
+Title: What do I need to create a RESTful API Server in Java?
+Tags: java, web-services, rest, architecture
+URL: https://stackoverflow.com/questions/9943445/what-do-i-need-to-create-a-restful-api-server-in-java
+Score: 43
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 1408571
+Answer-ID: 1418741
+Title: RESTful Authorization
+Tags: architecture, rest, permissions, authorization
+URL: https://stackoverflow.com/questions/1408571/restful-authorization
+Score: 26
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 343288
+Answer-ID: 343306
+Title: What am I not understanding about REST?
+Tags: architecture, rest
+URL: https://stackoverflow.com/questions/343288/what-am-i-not-understanding-about-rest
+Score: 19
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 15922531
+Answer-ID: 16231521
+Title: Symfony2 And Single Webpage Applications using a framework like AngularJS
+Tags: rest, symfony, architecture, knockout.js, angularjs
+URL: https://stackoverflow.com/questions/15922531/symfony2-and-single-webpage-applications-using-a-framework-like-angularjs
+Score: 19
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 8546061
+Answer-ID: 8550599
+Title: Best way to secure javascript front end/REST back end architecture web site?
+Tags: java, javascript, security, rest, architecture
+URL: https://stackoverflow.com/questions/8546061/best-way-to-secure-javascript-front-end-rest-back-end-architecture-web-site
+Score: 16
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 11297471
+Answer-ID: 11297559
+Title: Why are RESTful Applications easier to scale
+Tags: web-services, rest, architecture
+URL: https://stackoverflow.com/questions/11297471/why-are-restful-applications-easier-to-scale
+Score: 14
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 34499144
+Answer-ID: 34663665
+Title: Clean and generic project structure for GO applications and mongodb
+Tags: go, architecture, restful-architecture
+URL: https://stackoverflow.com/questions/34499144/clean-and-generic-project-structure-for-go-applications-and-mongodb
+Score: 14
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 1937006
+Answer-ID: 1937046
+Title: Can you build a RESTful Business Logic Layer?
+Tags: web-services, architecture, rest
+URL: https://stackoverflow.com/questions/1937006/can-you-build-a-restful-business-logic-layer
+Score: 14
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 3788771
+Answer-ID: 3988675
+Title: good practice: REST API as the interface between the interface layer and business layer?
+Tags: rest, architecture
+URL: https://stackoverflow.com/questions/3788771/good-practice-rest-api-as-the-interface-between-the-interface-layer-and-busines
+Score: 12
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 5947414
+Answer-ID: 5949308
+Title: Using POST as a workaround for the URL character limit
+Tags: rest, architecture, http-verbs
+URL: https://stackoverflow.com/questions/5947414/using-post-as-a-workaround-for-the-url-character-limit
+Score: 12
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 23114421
+Answer-ID: 23663257
+Title: RESTful API: Where should I code my workflow?
+Tags: rest, architecture, workflow, restful-architecture
+URL: https://stackoverflow.com/questions/23114421/restful-api-where-should-i-code-my-workflow
+Score: 12
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 6067538
+Answer-ID: 6067635
+Title: RESTful web services vs Socket Programming for a Data Intensive Application
+Tags: ruby-on-rails, sockets, network-programming, rest, architecture
+URL: https://stackoverflow.com/questions/6067538/restful-web-services-vs-socket-programming-for-a-data-intensive-application
+Score: 10
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 49496614
+Answer-ID: 49496936
+Title: Is it wise to build an MVC app around a RESTful API using nothing but HttpClient?
+Tags: c#, asp.net-mvc, rest, architecture
+URL: https://stackoverflow.com/questions/49496614/is-it-wise-to-build-an-mvc-app-around-a-restful-api-using-nothing-but-httpclient
+Score: 10
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 23284646
+Answer-ID: 23299498
+Title: CQRS - sending response by command with immediate consistency
+Tags: rest, architecture, cqrs, event-sourcing
+URL: https://stackoverflow.com/questions/23284646/cqrs-sending-response-by-command-with-immediate-consistency
+Score: 10
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 11268599
+Answer-ID: 11282073
+Title: Erlang/OTP architecture: RESTful protocol for SOAish services
+Tags: rest, architecture, erlang, soa, erlang-otp
+URL: https://stackoverflow.com/questions/11268599/erlang-otp-architecture-restful-protocol-for-soaish-services
+Score: 10
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 46994302
+Answer-ID: 46995895
+Title: The role of Aggregate roots in a REST API (DDD)
+Tags: rest, architecture, domain-driven-design, data-modeling, aggregateroot
+URL: https://stackoverflow.com/questions/46994302/the-role-of-aggregate-roots-in-a-rest-api-ddd
+Score: 7
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 12780475
+Answer-ID: 12863373
+Title: RESTful webservice with Silex PHP : good choice?
+Tags: php, web-services, rest, architecture, silex
+URL: https://stackoverflow.com/questions/12780475/restful-webservice-with-silex-php-good-choice
+Score: 7
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 18644029
+Answer-ID: 18644525
+Title: Python/Django REST API Architecture
+Tags: python, django, rest, architecture
+URL: https://stackoverflow.com/questions/18644029/python-django-rest-api-architecture
+Score: 6
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 69469350
+Answer-ID: 69470460
+Title: Next.js + API on same server
+Tags: node.js, reactjs, rest, architecture, next.js
+URL: https://stackoverflow.com/questions/69469350/next-js-api-on-same-server
+Score: 6
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 9453359
+Answer-ID: 9465332
+Title: Architecture: API as core for a website &amp; mobile-app
+Tags: php, rest, architecture, kohana, hmvc
+URL: https://stackoverflow.com/questions/9453359/architecture-api-as-core-for-a-website-mobile-app
+Score: 6
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 5971252
+Answer-ID: 5971524
+Title: What are the benefits of switching legacy RPC style services over to REST?
+Tags: web-services, rest, architecture, rpc
+URL: https://stackoverflow.com/questions/5971252/what-are-the-benefits-of-switching-legacy-rpc-style-services-over-to-rest
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 32509334
+Answer-ID: 32560973
+Title: Should API infrastructure classes be part of the domain in DDD?
+Tags: rest, architecture, domain-driven-design
+URL: https://stackoverflow.com/questions/32509334/should-api-infrastructure-classes-be-part-of-the-domain-in-ddd
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 14878707
+Answer-ID: 14878852
+Title: REst GET Vs POST with big message body
+Tags: http, rest, architecture, http-post, http-get
+URL: https://stackoverflow.com/questions/14878707/rest-get-vs-post-with-big-message-body
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 6219695
+Answer-ID: 6219814
+Title: When serving responses from a REST API with the hypermedia constraint, how to indicate to client which HTTP method(verb) to use?
+Tags: rest, architecture, hateoas
+URL: https://stackoverflow.com/questions/6219695/when-serving-responses-from-a-rest-api-with-the-hypermedia-constraint-how-to-in
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 71994961
+Answer-ID: 72012641
+Title: how we should design communication between different internal Microservices
+Tags: java, spring, rest, architecture, microservices
+URL: https://stackoverflow.com/questions/71994961/how-we-should-design-communication-between-different-internal-microservices
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 36300362
+Answer-ID: 36403737
+Title: Bigger projects Node.js and RESTful API
+Tags: node.js, rest, architecture
+URL: https://stackoverflow.com/questions/36300362/bigger-projects-node-js-and-restful-api
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 48201224
+Answer-ID: 48203197
+Title: Kafka AND REST for communication between microservices?
+Tags: rest, architecture, apache-kafka, message-queue, microservices
+URL: https://stackoverflow.com/questions/48201224/kafka-and-rest-for-communication-between-microservices
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 39640800
+Answer-ID: 39717273
+Title: Re-deploy spring boot service without restart?
+Tags: java, rest, deployment, spring-boot, architecture
+URL: https://stackoverflow.com/questions/39640800/re-deploy-spring-boot-service-without-restart
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 32284869
+Answer-ID: 32285766
+Title: Rest API different models for POST and GET/PUT
+Tags: rest, architecture
+URL: https://stackoverflow.com/questions/32284869/rest-api-different-models-for-post-and-get-put
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 37561985
+Answer-ID: 37766875
+Title: Consuming own API for web app - Authentication process with OAuth2
+Tags: authentication, oauth-2.0, credentials, api-design, user-accounts
+URL: https://stackoverflow.com/questions/37561985/consuming-own-api-for-web-app-authentication-process-with-oauth2
+Score: 18
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 17637081
+Answer-ID: 33686819
+Title: Central vs. Distributed Authentication and Authorization
+Tags: authentication, oauth, api-design, user-accounts
+URL: https://stackoverflow.com/questions/17637081/central-vs-distributed-authentication-and-authorization
+Score: 11
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 65030095
+Answer-ID: 65042819
+Title: Should I return user data in an authentication endpoint using JWT?
+Tags: rest, authentication, jwt, api-design
+URL: https://stackoverflow.com/questions/65030095/should-i-return-user-data-in-an-authentication-endpoint-using-jwt
+Score: 8
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 6004068
+Answer-ID: 6004733
+Title: RESTful API keys suggestions
+Tags: rest, authentication, api-design, api-key
+URL: https://stackoverflow.com/questions/6004068/restful-api-keys-suggestions
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 40807355
+Answer-ID: 40825216
+Title: Scheduled messages with RabbitMQ
+Tags: rabbitmq, message-queue, microservices
+URL: https://stackoverflow.com/questions/40807355/scheduled-messages-with-rabbitmq
+Score: 11
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 56622485
+Answer-ID: 56622714
+Title: Should an API Gateway Communicate via a Queue or directly to other μServices?
+Tags: microservices, message-queue, cqrs, gateway, event-sourcing
+URL: https://stackoverflow.com/questions/56622485/should-an-api-gateway-communicate-via-a-queue-or-directly-to-other-%ce%bcservices
+Score: 11
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 53537413
+Answer-ID: 53538739
+Title: Using Amazon SQS for multiple consumers receiving the same message
+Tags: amazon-web-services, microservices, message-queue, amazon-sqs
+URL: https://stackoverflow.com/questions/53537413/using-amazon-sqs-for-multiple-consumers-receiving-the-same-message
+Score: 6
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 4916701
+Answer-ID: 4916842
+Title: How to implement a caching model without violating MVC pattern?
+Tags: c#, asp.net-mvc, caching, architecture, asp.net-mvc-3
+URL: https://stackoverflow.com/questions/4916701/how-to-implement-a-caching-model-without-violating-mvc-pattern
+Score: 29
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 38655927
+Answer-ID: 38668262
+Title: Reliable Collection Caching as Cache in Service Fabric
+Tags: c#, azure, caching, architecture, azure-service-fabric
+URL: https://stackoverflow.com/questions/38655927/reliable-collection-caching-as-cache-in-service-fabric
+Score: 10
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 5631838
+Answer-ID: 12909598
+Title: Caching architecture advise for a specific scenario
+Tags: c#, .net, oracle-database, caching, architecture
+URL: https://stackoverflow.com/questions/5631838/caching-architecture-advise-for-a-specific-scenario
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 49009127
+Answer-ID: 49013262
+Title: Caching Strategy/Design Pattern for complex queries
+Tags: caching, design-patterns, redis, architecture, azure-sql-database
+URL: https://stackoverflow.com/questions/49009127/caching-strategy-design-pattern-for-complex-queries
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 2113280
+Answer-ID: 2113830
+Title: Mid-Tier Help Needed
+Tags: c#, architecture, caching, soa
+URL: https://stackoverflow.com/questions/2113280/mid-tier-help-needed
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 4095369
+Answer-ID: 4103417
+Title: Design of &quot;I am alive&quot; service
+Tags: c#, caching, web-applications, architecture, appfabric
+URL: https://stackoverflow.com/questions/4095369/design-of-i-am-alive-service
+Score: 5
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 62587073
+Answer-ID: 71454227
+Title: Why not monolithic event driven architecture?
+Tags: architecture, event-driven
+URL: https://stackoverflow.com/questions/62587073/why-not-monolithic-event-driven-architecture
+Score: 9
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
+---
+Question-ID: 55009503
+Answer-ID: 66983730
+Title: How services generate and use public and secret API keys?
+Tags: node.js, security, api-design
+URL: https://stackoverflow.com/questions/55009503/how-services-generate-and-use-public-and-secret-api-keys
+Score: 16
+License: CC BY-SA 4.0 — https://stackoverflow.com/help/licensing
+Stack API terms: https://api.stackexchange.com/docs/terms-of-use
+
