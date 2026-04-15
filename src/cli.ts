@@ -25,6 +25,13 @@ import {
 } from './yamlToIr.js';
 import { openApiStringToCanonicalIr, OpenApiIngestError } from './openapi-to-ir.js';
 import { runValidateDrift } from './validate-drift.js';
+import { readOpenApiSpecInput, isHttpOrHttpsUrl, parseHeaderPairs } from './ingest/openapi.js';
+import { ingestBackstageCatalog, BackstageIngestError } from './ingest/backstage.js';
+import {
+  mergeIrFragments,
+  FragmentMergeError,
+  FragmentMergeConflictError,
+} from './fragment/merge.js';
 
 async function writeTree(baseDir: string, files: Record<string, string>): Promise<void> {
   for (const [rel, content] of Object.entries(files)) {
@@ -92,7 +99,7 @@ program
   .description(
     'Validate your architecture before you write code. Deterministic compiler + linter — FastAPI / Express (no LLM, no server).'
   )
-  .version('0.1.6');
+  .version('0.2.0');
 
 program
   .command('validate')
@@ -213,15 +220,32 @@ const ingest = program.command('ingest').description(
 ingest
   .command('openapi')
   .description('OpenAPI 3.x JSON/YAML → IR graph (HTTP nodes per operation; commit + archrad validate in CI)')
-  .requiredOption('-s, --spec <path>', 'Path to OpenAPI 3.x document (.json, .yaml, or .yml)')
+  .requiredOption(
+    '-s, --spec <path-or-url>',
+    'Path or https URL to OpenAPI 3.x document (.json, .yaml, or .yml)'
+  )
   .option('-o, --out <path>', 'Write IR JSON to file (default: print to stdout)')
-  .action(async (cmdOpts: { spec: string; out?: string }) => {
-    const specPath = resolve(cmdOpts.spec);
+  .option(
+    '-H, --header <pair>',
+    'HTTP header when --spec is a URL (repeatable). Example: -H "Authorization: Bearer token"',
+    (value: string, prev: string[]) => [...prev, value],
+    [] as string[],
+  )
+  .action(async (cmdOpts: { spec: string; out?: string; header?: string[] }) => {
     let text: string;
     try {
-      text = await readFile(specPath, 'utf8');
-    } catch {
-      console.error('archrad ingest openapi: could not read --spec file');
+      const headers =
+        isHttpOrHttpsUrl(cmdOpts.spec.trim()) && cmdOpts.header?.length
+          ? parseHeaderPairs(cmdOpts.header)
+          : undefined;
+      text = await readOpenApiSpecInput(cmdOpts.spec, headers);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (isHttpOrHttpsUrl(cmdOpts.spec.trim())) {
+        console.error(`archrad ingest openapi: could not fetch --spec URL (${msg})`);
+      } else {
+        console.error('archrad ingest openapi: could not read --spec file');
+      }
       process.exitCode = 1;
       return;
     }
@@ -245,6 +269,115 @@ ingest
       console.log(`archrad ingest openapi: wrote IR JSON to ${outPath}`);
     } else {
       process.stdout.write(json);
+    }
+  });
+
+ingest
+  .command('backstage')
+  .description(
+    'Backstage catalog-info.yaml → IR graph (Component, Resource, API, System; follows Location file targets)'
+  )
+  .requiredOption('-c, --catalog <dir>', 'Root directory to scan for catalog-info.yaml / Location targets')
+  .option('-o, --out <path>', 'Write IR JSON to file (default: print to stdout)')
+  .option('--report-json', 'Print ingest report JSON to stderr')
+  .action(async (cmdOpts: { catalog: string; out?: string; reportJson?: boolean }) => {
+    try {
+      const { ir, report } = await ingestBackstageCatalog(cmdOpts.catalog);
+      const json = canonicalIrToJsonString(ir);
+      if (cmdOpts.reportJson) {
+        console.error(JSON.stringify(report, null, 2));
+      } else {
+        console.error(
+          `archrad ingest backstage: catalog files scanned: ${report.catalogFilesScanned} | locations: ${report.locationsFollowed} | entities: ${JSON.stringify(report.entitiesByKind)}`,
+        );
+        if (report.skipped.length) {
+          console.error(`archrad ingest backstage: skipped ${report.skipped.length} (see --report-json)`);
+        }
+      }
+      if (cmdOpts.out) {
+        const outPath = resolve(cmdOpts.out);
+        await mkdir(dirname(outPath), { recursive: true });
+        await writeFile(outPath, json, 'utf8');
+        console.log(`archrad ingest backstage: wrote IR JSON to ${outPath}`);
+      } else {
+        process.stdout.write(json);
+      }
+    } catch (e) {
+      if (e instanceof BackstageIngestError) {
+        console.error(`archrad ingest backstage: ${e.message}`);
+      } else {
+        console.error('archrad ingest backstage:', e);
+      }
+      process.exitCode = 1;
+    }
+  });
+
+const fragment = program.command('fragment').description('Combine IR fragments from multiple ingest sources');
+
+fragment
+  .command('merge')
+  .description(
+    'Merge two or more IR JSON files — by default union on node id (dedupe identical; conflicts → stderr); use --prefix-fragments for disjoint union'
+  )
+  .requiredOption(
+    '-f, --fragments <files...>',
+    'IR JSON files to merge (space-separated; at least 2)',
+  )
+  .option('-o, --out <path>', 'Write merged IR JSON (default: print to stdout)')
+  .option(
+    '--prefix-fragments',
+    'Prefix each fragment’s ids (no cross-fragment id matching; legacy behavior)',
+  )
+  .action(async (cmdOpts: { fragments: string | string[]; out?: string; prefixFragments?: boolean }) => {
+    const raw = cmdOpts.fragments;
+    const files = (Array.isArray(raw) ? raw : raw != null ? [raw] : []).filter(Boolean);
+    if (files.length < 2) {
+      console.error('archrad fragment merge: provide at least 2 --fragments paths');
+      process.exitCode = 1;
+      return;
+    }
+    const parsed: Record<string, unknown>[] = [];
+    for (const f of files) {
+      const p = resolve(f);
+      const raw = await readIrJsonFromPath(p);
+      if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) {
+        console.error(`archrad fragment merge: could not read IR: ${p}`);
+        process.exitCode = 1;
+        return;
+      }
+      parsed.push(raw as Record<string, unknown>);
+    }
+    try {
+      const labels = files.map((f) => f.split(/[/\\]/).pop() ?? f);
+      const merged = mergeIrFragments(parsed, {
+        labels,
+        prefixFragments: Boolean(cmdOpts.prefixFragments),
+      });
+      for (const w of merged.warnings) {
+        console.error(w);
+      }
+      const json = canonicalIrToJsonString(merged.ir);
+      if (cmdOpts.out) {
+        const outPath = resolve(cmdOpts.out);
+        await mkdir(dirname(outPath), { recursive: true });
+        await writeFile(outPath, json, 'utf8');
+        console.log(`archrad fragment merge: wrote IR JSON to ${outPath}`);
+      } else {
+        process.stdout.write(json);
+      }
+    } catch (e) {
+      if (e instanceof FragmentMergeConflictError) {
+        for (const line of e.reportLines) {
+          console.error(line);
+        }
+        process.exitCode = 1;
+      } else if (e instanceof FragmentMergeError) {
+        console.error(`archrad fragment merge: ${e.message}`);
+        process.exitCode = 1;
+      } else {
+        console.error('archrad fragment merge:', e);
+        process.exitCode = 1;
+      }
     }
   });
 

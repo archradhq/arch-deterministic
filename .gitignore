@@ -3,3 +3,9 @@ out/
 demo-out
 demo-payment-retry-out
 golden-path-out
+.adr-cache/
+archlora/.adr-cache/
+archlora/.apis-guru-cache/
+archlora/.so-cache/
+archlora/__pycache__/
+/test-ir.json

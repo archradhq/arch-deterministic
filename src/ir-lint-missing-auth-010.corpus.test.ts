@@ -1,6 +1,6 @@
 /**
  * Training / eval corpus for IR-LINT-MISSING-AUTH-010 (20 graphs).
- * Raw examples live in `corpus/corpus-auth-010-pairs.json` (package root).
+ * Raw examples live in `archlora/corpus/corpus-auth-010-pairs.json`.
  * `augmentCorpusGraph` strips IR-LINT-NO-HEALTHCHECK-003 / IR-LINT-DEAD-NODE-011 / IR-LINT-SYNC-CHAIN-001 noise
  * so the oracle focuses on **010** (and **009** when multiple HTTP entries exist).
  */
@@ -21,7 +21,7 @@ type Example = {
 };
 
 const examples = JSON.parse(
-  readFileSync(join(__dirname, '../corpus/corpus-auth-010-pairs.json'), 'utf8'),
+  readFileSync(join(__dirname, '../archlora/corpus/corpus-auth-010-pairs.json'), 'utf8'),
 ) as Example[];
 
 /** Expected IR-LINT-MISSING-AUTH-010 nodeIds (after augment). IR-LINT-MULTIPLE-HTTP-ENTRIES-009 is asserted separately. */

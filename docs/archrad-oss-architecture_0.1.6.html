@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>@archrad/deterministic — OSS Architecture</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg: #0d0f14;
+  --surface: #13161d;
+  --surface2: #1a1e28;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.12);
+  --text: #e2e5ed;
+  --muted: #5c6370;
+  --blue: #4d9fff;
+  --blue-dim: rgba(77,159,255,0.1);
+  --green: #3ddba8;
+  --green-dim: rgba(61,219,168,0.1);
+  --amber: #f5c842;
+  --amber-dim: rgba(245,200,66,0.1);
+  --coral: #ff6b6b;
+  --coral-dim: rgba(255,107,107,0.1);
+  --purple: #b08dfa;
+  --purple-dim: rgba(176,141,250,0.1);
+  --teal: #22d3ee;
+  --teal-dim: rgba(34,211,238,0.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.header {
+  max-width: 900px;
+  margin: 0 auto 2.5rem;
+}
+
+.header-top {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.pkg-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--blue);
+  background: var(--blue-dim);
+  border: 0.5px solid rgba(77,159,255,0.2);
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+
+.header h1 {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.header p {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+  max-width: 600px;
+}
+
+.tab-row {
+  display: flex;
+  gap: 4px;
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  max-width: 640px;
+  margin: 0 auto 2rem;
+  flex-wrap: wrap;
+}
+
+.tab {
+  flex: 1;
+  min-width: 100px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.tab.active {
+  background: var(--blue);
+  color: #fff;
+  font-weight: 500;
+}
+
+.tab:hover:not(.active) {
+  color: var(--text);
+  background: var(--surface2);
+}
+
+.panel { display: none; max-width: 900px; margin: 0 auto; }
+.panel.active { display: block; }
+
+/* ── Diagram primitives ── */
+
+.diagram {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+}
+
+.diagram-title {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 1.25rem;
+}
+
+.layer-group {
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.layer-tag {
+  position: absolute;
+  top: -1px;
+  left: 12px;
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 0 0 6px 6px;
+  border: 0.5px solid var(--border);
+  border-top: none;
+}
+
+.nodes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  border: 0.5px solid var(--border);
+  background: var(--surface2);
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.node:hover { border-color: var(--border2); }
+.node.active-node { border-color: var(--blue); background: var(--blue-dim); }
+
+.dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dot-blue { background: var(--blue); }
+.dot-green { background: var(--green); }
+.dot-amber { background: var(--amber); }
+.dot-coral { background: var(--coral); }
+.dot-purple { background: var(--purple); }
+.dot-teal { background: var(--teal); }
+.dot-gray { background: var(--muted); }
+
+.arrow { color: var(--blue); opacity: 0.4; font-size: 18px; text-align: center; margin: 4px 0; }
+.arrow-label { font-size: 9px; font-family: 'JetBrains Mono', monospace; color: var(--muted); text-align: center; margin: 2px 0 6px; }
+
+/* Layer colors */
+.lg-entry { border-color: rgba(34,211,238,0.2); }
+.lg-entry .layer-tag { background: var(--teal-dim); color: var(--teal); }
+.lg-core { border-color: rgba(77,159,255,0.25); box-shadow: 0 0 16px rgba(77,159,255,0.05); }
+.lg-core .layer-tag { background: var(--blue-dim); color: var(--blue); }
+.lg-codegen { border-color: rgba(61,219,168,0.2); }
+.lg-codegen .layer-tag { background: var(--green-dim); color: var(--green); }
+.lg-post { border-color: rgba(176,141,250,0.2); }
+.lg-post .layer-tag { background: var(--purple-dim); color: var(--purple); }
+.lg-data { border-color: rgba(245,200,66,0.2); }
+.lg-data .layer-tag { background: var(--amber-dim); color: var(--amber); }
+.lg-security { border-color: rgba(255,107,107,0.2); }
+.lg-security .layer-tag { background: var(--coral-dim); color: var(--coral); }
+.lg-ext { border-color: rgba(61,219,168,0.15); border-style: dashed; }
+.lg-ext .layer-tag { background: var(--green-dim); color: var(--green); }
+
+/* Detail card */
+.detail-card {
+  background: var(--surface2);
+  border: 0.5px solid var(--blue);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-top: 12px;
+  display: none;
+  animation: fadein 0.15s ease;
+}
+
+.detail-card.visible { display: block; }
+
+@keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+.detail-title { font-size: 13px; font-weight: 600; color: var(--blue); margin-bottom: 6px; }
+.detail-body { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.detail-body code { font-family: 'JetBrains Mono', monospace; color: var(--text); background: var(--surface); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+
+/* Flow diagrams */
+.flow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 1rem 0;
+}
+
+.flow-step {
+  background: var(--surface2);
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  text-align: center;
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.flow-step.highlight { border-color: var(--blue); background: var(--blue-dim); color: #93c5fd; }
+.flow-step.success { border-color: var(--green); background: var(--green-dim); color: var(--green); }
+.flow-step.warn { border-color: var(--amber); background: var(--amber-dim); color: var(--amber); }
+.flow-step.error { border-color: var(--coral); background: var(--coral-dim); color: var(--coral); }
+
+.flow-branch {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  margin: 0;
+}
+
+.flow-branch-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.branch-label { font-size: 9px; font-family: 'JetBrains Mono', monospace; color: var(--muted); margin: 3px 0; }
+
+/* Rule table */
+.rule-table { width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'JetBrains Mono', monospace; }
+.rule-table th { text-align: left; padding: 8px 10px; color: var(--muted); font-weight: 500; border-bottom: 0.5px solid var(--border); font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; }
+.rule-table td { padding: 8px 10px; border-bottom: 0.5px solid var(--border); vertical-align: top; }
+.rule-table tr:last-child td { border-bottom: none; }
+.rule-table tr:hover td { background: var(--surface2); }
+.code-badge { background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 4px; padding: 2px 6px; font-size: 10px; white-space: nowrap; }
+.sev-warning { color: var(--amber); }
+
+/* Security diagram */
+.security-split {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.security-box {
+  background: var(--surface2);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.security-box.vpc { border-color: rgba(61,219,168,0.3); }
+.security-box.cloud { border-color: rgba(77,159,255,0.2); opacity: 0.6; }
+
+.security-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.boundary-line {
+  width: 2px;
+  height: 80px;
+  background: repeating-linear-gradient(to bottom, var(--coral) 0, var(--coral) 4px, transparent 4px, transparent 8px);
+  opacity: 0.5;
+}
+
+.boundary-label {
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--coral);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  opacity: 0.7;
+}
+
+.sec-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.sec-item:last-child { margin-bottom: 0; }
+.check { color: var(--green); font-size: 12px; }
+.cross { color: var(--coral); font-size: 12px; }
+
+@media (max-width: 600px) {
+  .security-split { grid-template-columns: 1fr; }
+  .boundary-line { width: 60px; height: 2px; }
+  .boundary-label { writing-mode: horizontal-tb; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <span class="pkg-name">@archrad/deterministic</span>
+  </div>
+  <h1>OSS Architecture</h1>
+  <p>Deterministic compiler and linter for system architecture. No AI, no network calls, no cloud dependency. Click any component for detail.</p>
+</div>
+
+<div class="tab-row">
+  <button class="tab active" onclick="showPanel('components', event)">Components</button>
+  <button class="tab" onclick="showPanel('dataflow', event)">Data flow</button>
+  <button class="tab" onclick="showPanel('flows', event)">CLI / MCP flows</button>
+  <button class="tab" onclick="showPanel('security', event)">Security model</button>
+  <button class="tab" onclick="showPanel('rules', event)">IR-LINT rules</button>
+  <button class="tab" onclick="showPanel('extension', event)">Extension points</button>
+</div>
+
+<!-- ── PANEL 1: Components ── -->
+<div class="panel active" id="panel-components">
+  <div class="diagram">
+    <div class="diagram-title">Component view — click any node for detail</div>
+
+    <div class="layer-group lg-entry">
+      <div class="layer-tag">entrypoints</div>
+      <div class="nodes">
+        <div class="node" onclick="showDetail('cli', event)"><span class="dot dot-teal"></span>archrad CLI (cli.ts)</div>
+        <div class="node" onclick="showDetail('mcp', event)"><span class="dot dot-teal"></span>archrad-mcp (mcp-server.ts)</div>
+      </div>
+    </div>
+
+    <div class="arrow">↓</div>
+
+    <div class="layer-group lg-core">
+      <div class="layer-tag">library core (index.ts)</div>
+      <div class="nodes">
+        <div class="node" onclick="showDetail('norm', event)"><span class="dot dot-blue"></span>normalizeIrGraph</div>
+        <div class="node" onclick="showDetail('struct', event)"><span class="dot dot-blue"></span>validateIrStructural</div>
+        <div class="node" onclick="showDetail('lint', event)"><span class="dot dot-blue"></span>validateIrLint</div>
+        <div class="node" onclick="showDetail('pp', event)"><span class="dot dot-blue"></span>PolicyPack loader</div>
+        <div class="node" onclick="showDetail('reg', event)"><span class="dot dot-blue"></span>LINT_RULE_REGISTRY</div>
+        <div class="node" onclick="showDetail('graph', event)"><span class="dot dot-blue"></span>buildParsedLintGraph</div>
+      </div>
+    </div>
+
+    <div class="arrow">↓</div>
+
+    <div class="layer-group lg-codegen">
+      <div class="layer-tag">deterministic codegen</div>
+      <div class="nodes">
+        <div class="node" onclick="showDetail('exp', event)"><span class="dot dot-green"></span>runDeterministicExport</div>
+        <div class="node" onclick="showDetail('py', event)"><span class="dot dot-green"></span>pythonFastAPI.ts</div>
+        <div class="node" onclick="showDetail('node', event)"><span class="dot dot-green"></span>nodeExpress.ts</div>
+        <div class="node" onclick="showDetail('gold', event)"><span class="dot dot-green"></span>golden-bundle.ts</div>
+      </div>
+    </div>
+
+    <div class="arrow">↓</div>
+
+    <div class="layer-group lg-post">
+      <div class="layer-tag">post-export checks</div>
+      <div class="nodes">
+        <div class="node" onclick="showDetail('oas', event)"><span class="dot dot-purple"></span>OpenAPI structural</div>
+        <div class="node" onclick="showDetail('drift', event)"><span class="dot dot-purple"></span>runValidateDrift</div>
+      </div>
+    </div>
+
+    <div id="comp-detail" class="detail-card">
+      <div class="detail-title" id="detail-title"></div>
+      <div class="detail-body" id="detail-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PANEL 2: Data flow ── -->
+<div class="panel" id="panel-dataflow">
+  <div class="diagram">
+    <div class="diagram-title">Data flow — IR JSON to findings or exported code</div>
+
+    <div class="layer-group lg-data" style="margin-bottom:10px">
+      <div class="layer-tag">input</div>
+      <div class="nodes" style="margin-top:10px">
+        <div class="node"><span class="dot dot-amber"></span>IR JSON { graph: { nodes[], edges[] } }</div>
+      </div>
+    </div>
+
+    <div class="arrow">↓</div>
+    <div class="arrow-label">normalize + materialize (internal to validateIrStructural)</div>
+
+    <div class="layer-group lg-core">
+      <div class="layer-tag">validation pipeline — structural first, lint only if no structural errors</div>
+      <div class="nodes" style="margin-top:10px;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div class="node"><span class="dot dot-blue"></span>validateIrStructural → IR-STRUCT-*</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--muted)">if no errors →</span>
+          <div class="node"><span class="dot dot-blue"></span>validateIrLint (builds ParsedLintGraph internally) → IR-LINT-*</div>
+          <div class="node" style="border-style:dashed"><span class="dot dot-amber"></span>PolicyPack visitors compiled → input to lint (optional)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow">↓</div>
+    <div class="arrow-label">sortFindings (errors first)</div>
+
+    <div class="layer-group lg-data">
+      <div class="layer-tag">output — validate path</div>
+      <div class="nodes" style="margin-top:10px">
+        <div class="node"><span class="dot dot-amber"></span>IrStructuralFinding[] { code, severity, message, nodeId?, fixHint? }</div>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+
+    <div class="layer-group lg-codegen">
+      <div class="layer-tag">output — export + drift path</div>
+      <div class="nodes" style="margin-top:10px;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div class="node"><span class="dot dot-green"></span>runDeterministicExport</div>
+          <div class="node"><span class="dot dot-green"></span>Export file map Record&lt;path, contents&gt;</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div class="node"><span class="dot dot-purple"></span>runValidateDrift → DRIFT-MISSING / DRIFT-MODIFIED</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PANEL 3: Flows ── -->
+<div class="panel" id="panel-flows">
+  <div class="diagram">
+    <div class="diagram-title">archrad validate flow</div>
+    <div class="flow">
+      <div class="flow-step highlight">Read IR from --ir path</div>
+      <div class="arrow">↓</div>
+      <div class="flow-step">validateIrStructural\nnormalize → IR-STRUCT-*</div>
+      <div class="arrow">↓</div>
+      <div class="flow-step">hasIrStructuralErrors?</div>
+      <div class="arrow">↓</div>
+      <div class="flow-branch">
+        <div class="flow-branch-col">
+          <div class="branch-label">yes →</div>
+          <div class="flow-step warn">skip validateIrLint</div>
+        </div>
+        <div class="flow-branch-col">
+          <div class="branch-label">no →</div>
+          <div class="flow-step highlight">validateIrLint\n+ optional PolicyPack</div>
+        </div>
+      </div>
+      <div class="arrow">↓</div>
+      <div class="flow-step">sortFindings / print or --json</div>
+      <div class="arrow">↓</div>
+      <div class="flow-branch">
+        <div class="flow-branch-col">
+          <div class="branch-label">fail →</div>
+          <div class="flow-step error">exit 1</div>
+        </div>
+        <div class="flow-branch-col">
+          <div class="branch-label">pass →</div>
+          <div class="flow-step success">exit 0</div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:8px">
+      Exit policy: error severity always fails. Warnings fail only with --fail-on-warning or --max-warnings N.
+    </div>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">archrad validate-drift flow</div>
+    <div class="flow">
+      <div class="flow-step highlight">Read IR + --out (export directory)</div>
+      <div class="arrow">↓</div>
+      <div class="flow-step">runValidateDrift</div>
+      <div class="arrow">↓</div>
+      <div class="flow-step">normalize + structural + lint\n(export build pass)</div>
+      <div class="arrow">↓</div>
+      <div class="flow-step">runDeterministicExport in memory</div>
+      <div class="arrow">↓</div>
+      <div class="flow-step">diff expected vs on-disk files</div>
+      <div class="arrow">↓</div>
+      <div class="flow-step warn">DRIFT-MISSING / DRIFT-MODIFIED findings</div>
+      <div class="arrow">↓</div>
+      <div class="flow-step">exit code from combined findings + policy</div>
+    </div>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">MCP session (stdio) — tools delegate to same library core as CLI</div>
+    <div class="flow">
+      <div class="flow-step highlight">IDE / host → stdio JSON-RPC</div>
+      <div class="arrow">↓</div>
+      <div class="flow-step">archrad-mcp receives tool call</div>
+      <div class="arrow">↓</div>
+      <div class="flow-branch">
+        <div class="flow-branch-col">
+          <div class="branch-label">archrad_validate_ir</div>
+          <div class="flow-step" style="min-width:140px">normalize\n→ structural\n→ lint</div>
+        </div>
+        <div class="flow-branch-col">
+          <div class="branch-label">archrad_validate_drift</div>
+          <div class="flow-step" style="min-width:140px">runValidateDrift\n(same as CLI)</div>
+        </div>
+        <div class="flow-branch-col">
+          <div class="branch-label">archrad_suggest_fix</div>
+          <div class="flow-step" style="min-width:140px">getStaticRuleGuidance\n(no network)</div>
+        </div>
+      </div>
+      <div class="arrow">↓</div>
+      <div class="flow-step success">findings JSON → IDE</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PANEL 4: Security ── -->
+<div class="panel" id="panel-security">
+  <div class="diagram">
+    <div class="diagram-title">Security model — what stays local</div>
+
+    <div class="security-split">
+      <div class="security-box vpc">
+        <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--green);font-weight:700;margin-bottom:10px;letter-spacing:0.05em">CUSTOMER MACHINE / VPC</div>
+        <div class="sec-item"><span class="check">✓</span>IR graph JSON</div>
+        <div class="sec-item"><span class="check">✓</span>@archrad/deterministic engine</div>
+        <div class="sec-item"><span class="check">✓</span>PolicyPack YAML / JSON</div>
+        <div class="sec-item"><span class="check">✓</span>Findings output</div>
+        <div class="sec-item"><span class="check">✓</span>Exported code files</div>
+        <div class="sec-item"><span class="check">✓</span>archrad-mcp (stdio only)</div>
+      </div>
+
+      <div class="security-boundary">
+        <div class="boundary-line"></div>
+        <div class="boundary-label">trust boundary</div>
+        <div class="boundary-line"></div>
+      </div>
+
+      <div class="security-box cloud">
+        <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted);font-weight:700;margin-bottom:10px;letter-spacing:0.05em">EXTERNAL (OSS MODE)</div>
+        <div class="sec-item"><span class="cross">✗</span>No telemetry</div>
+        <div class="sec-item"><span class="cross">✗</span>No network calls</div>
+        <div class="sec-item"><span class="cross">✗</span>No auth tokens</div>
+        <div class="sec-item"><span class="cross">✗</span>No data egress</div>
+        <div class="sec-item"><span class="cross">✗</span>No network port opened</div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;padding:12px 14px;background:var(--surface2);border:0.5px solid var(--border);border-radius:8px">
+      <div style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--muted);line-height:1.8">
+        <span style="color:var(--green)">Air-gap capable</span> — works with zero internet access after install.<br>
+        <span style="color:var(--green)">MCP transport</span> — stdio only in OSS. No port opened.<br>
+        <span style="color:var(--green)">No native deps</span> — pure JS, no binary extensions.<br>
+        <span style="color:var(--green)">Node ≥ 20</span> required. No cloud SDK dependencies.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PANEL 5: Rules ── -->
+<div class="panel" id="panel-rules">
+  <div class="diagram">
+    <div class="diagram-title">Built-in IR-LINT rules — all deterministic, no AI in validation path</div>
+    <table class="rule-table">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>What it catches</th>
+          <th>Sev</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="code-badge">IR-LINT-SYNC-CHAIN-001</span></td><td>Sync dependency chain depth ≥ 3 from HTTP entry (async edges excluded)</td><td class="sev-warning">warning</td></tr>
+        <tr><td><span class="code-badge">IR-LINT-DIRECT-DB-ACCESS-002</span></td><td>HTTP-like node connects directly to datastore — no service layer</td><td class="sev-warning">warning</td></tr>
+        <tr><td><span class="code-badge">IR-LINT-NO-HEALTHCHECK-003</span></td><td>No HTTP node exposes /health, /healthz, /ping, /status, /ready, /live</td><td class="sev-warning">warning</td></tr>
+        <tr><td><span class="code-badge">IR-LINT-HIGH-FANOUT-004</span></td><td>Node has ≥ 5 outgoing edges (threshold fixed at 5 in OSS)</td><td class="sev-warning">warning</td></tr>
+        <tr><td><span class="code-badge">IR-LINT-ISOLATED-NODE-005</span></td><td>Node with no edges when graph has edges elsewhere</td><td class="sev-warning">warning</td></tr>
+        <tr><td><span class="code-badge">IR-LINT-DUPLICATE-EDGE-006</span></td><td>Same from→to pair appears more than once</td><td class="sev-warning">warning</td></tr>
+        <tr><td><span class="code-badge">IR-LINT-HTTP-MISSING-NAME-007</span></td><td>HTTP-like node has no display name field</td><td class="sev-warning">warning</td></tr>
+        <tr><td><span class="code-badge">IR-LINT-DATASTORE-NO-INCOMING-008</span></td><td>Datastore node has no incoming edges</td><td class="sev-warning">warning</td></tr>
+        <tr><td><span class="code-badge">IR-LINT-MULTIPLE-HTTP-ENTRIES-009</span></td><td>Multiple HTTP entry nodes with no incoming edges</td><td class="sev-warning">warning</td></tr>
+        <tr><td><span class="code-badge">IR-LINT-MISSING-AUTH-010</span></td><td>HTTP entry node has no auth node or auth config (often relevant to PCI-DSS / HIPAA compliance contexts)</td><td class="sev-warning">warning</td></tr>
+        <tr><td><span class="code-badge">IR-LINT-DEAD-NODE-011</span></td><td>Node receives edges but has no outgoing edges (non-sink types only)</td><td class="sev-warning">warning</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── PANEL 6: Extension ── -->
+<div class="panel" id="panel-extension">
+  <div class="diagram">
+    <div class="diagram-title">Extension points</div>
+
+    <div class="layer-group lg-ext" style="margin-bottom:12px">
+      <div class="layer-tag">PolicyPack — declarative YAML/JSON (no TypeScript required)</div>
+      <div style="margin-top:14px;background:var(--surface);border-radius:8px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);line-height:1.8">
+        <span style="color:var(--green)">apiVersion:</span> archrad/v1<br>
+        <span style="color:var(--green)">kind:</span> PolicyPack<br>
+        <span style="color:var(--green)">rules:</span><br>
+        &nbsp;&nbsp;<span style="color:var(--blue)">- id:</span> ORG-NO-DIRECT-DB<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--blue)">message:</span> Services must not connect directly to databases<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--blue)">severity:</span> error<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--blue)">match:</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--blue)">edge:</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--blue)">from:</span> { type: service }<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--blue)">to:</span> { type: database }
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace">
+        Load: <span style="color:var(--text)">archrad validate --ir ir.json --policies ./policies/</span><br>
+        MCP: <span style="color:var(--text)">archrad_validate_ir { policiesDirectory: "./policies" }</span>
+      </div>
+    </div>
+
+    <div class="layer-group lg-ext" style="margin-bottom:12px">
+      <div class="layer-tag">Custom lint visitors — TypeScript API</div>
+      <div style="margin-top:14px;background:var(--surface);border-radius:8px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);line-height:1.8">
+        <span style="color:var(--blue)">import</span> { validateIrLint } <span style="color:var(--blue)">from</span> <span style="color:var(--amber)">'@archrad/deterministic'</span>;<br><br>
+        <span style="color:var(--blue)">const</span> myRule = (g: ParsedLintGraph) => {<br>
+        &nbsp;&nbsp;<span style="color:var(--muted)">// inspect g.nodeById, g.edges, g.adj</span><br>
+        &nbsp;&nbsp;<span style="color:var(--blue)">return</span> [];<br>
+        };<br><br>
+        <span style="color:var(--blue)">const</span> findings = validateIrLint(ir, {<br>
+        &nbsp;&nbsp;policyRuleVisitors: [myRule]<br>
+        });
+      </div>
+    </div>
+
+    <div class="layer-group lg-ext">
+      <div class="layer-tag">Adding built-in rules — append to registry</div>
+      <div style="margin-top:14px;background:var(--surface);border-radius:8px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);line-height:1.8">
+        <span style="color:var(--muted)">// lint-rules.ts</span><br>
+        <span style="color:var(--blue)">export function</span> ruleMyNewRule(g: ParsedLintGraph) {<br>
+        &nbsp;&nbsp;<span style="color:var(--blue)">return</span> [];<br>
+        }<br><br>
+        <span style="color:var(--blue)">export const</span> LINT_RULE_REGISTRY = [<br>
+        &nbsp;&nbsp;...existingRules,<br>
+        &nbsp;&nbsp;<span style="color:var(--green)">ruleMyNewRule</span>,  <span style="color:var(--muted)">// ← append here</span><br>
+        ];
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showPanel(id, e) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  (e || event).target.classList.add('active');
+}
+
+const DETAILS = {
+  cli: {
+    title: 'archrad CLI (cli.ts)',
+    body: 'The CLI entrypoint. Commands: <code>validate</code>, <code>export</code>, <code>validate-drift</code>, <code>ingest openapi</code>. Calls the library core directly. Exit codes: 1 on errors, 0 on pass. Controlled by <code>--fail-on-warning</code> and <code>--max-warnings</code>.'
+  },
+  mcp: {
+    title: 'archrad-mcp (mcp-server.ts)',
+    body: 'MCP stdio server. Six tools: <code>archrad_validate_ir</code>, <code>archrad_lint_summary</code>, <code>archrad_validate_drift</code>, <code>archrad_suggest_fix</code>, <code>archrad_policy_packs_load</code>, <code>archrad_list_rule_codes</code>. Delegates to the same library core as the CLI — no separate engine.'
+  },
+  norm: {
+    title: 'normalizeIrGraph (ir-structural.ts) + materializeNormalizedGraph (ir-normalize.ts)',
+    body: '<code>normalizeIrGraph</code> is defined in <code>ir-structural.ts</code> and is called internally by <code>validateIrStructural</code> and <code>buildParsedLintGraph</code>. <code>materializeNormalizedGraph</code> in <code>ir-normalize.ts</code> handles slot normalization and produces the stable <code>NormalizedGraph</code> shape. These are internal steps — CLI entrypoints call <code>validateIrStructural</code> and <code>validateIrLint</code>, not normalizeIrGraph directly.'
+  },
+  struct: {
+    title: 'validateIrStructural (ir-structural.ts)',
+    body: 'Runs IR-STRUCT-* checks: node id uniqueness, HTTP path/method requirements, edge endpoint existence, directed cycle detection. Returns <code>IrStructuralFinding[]</code>. Errors from this layer block lint and codegen by default.'
+  },
+  lint: {
+    title: 'validateIrLint (ir-lint.ts)',
+    body: 'Thin orchestrator. Calls <code>buildParsedLintGraph</code> then runs <code>runArchitectureLinting</code> (built-in IR-LINT-* rules) and any optional <code>policyRuleVisitors</code>. Returns combined findings. Sorting by severity is done at the CLI layer via <code>sortFindings</code>.'
+  },
+  pp: {
+    title: 'PolicyPack loader (policy-pack.ts)',
+    body: 'Compiles YAML/JSON PolicyPack files into rule visitor functions (<code>ParsedLintGraph → IrStructuralFinding[]</code>). Two load modes: <code>loadPolicyPacksFromDirectory(dir)</code> for filesystem, <code>loadPolicyPacksFromFiles(sources)</code> for in-memory content.'
+  },
+  reg: {
+    title: 'LINT_RULE_REGISTRY (lint-rules.ts)',
+    body: 'Ordered array of 11 built-in rule functions. Each function takes a <code>ParsedLintGraph</code> and returns <code>IrStructuralFinding[]</code>. Add a new rule by implementing the function and appending to the registry — no framework registration needed.'
+  },
+  graph: {
+    title: 'buildParsedLintGraph (lint-graph.ts)',
+    body: 'Builds the <code>ParsedLintGraph</code> used by all lint rules: <code>nodeById</code> map, <code>edges</code> array, <code>adj</code> adjacency map, <code>outDegree</code>, <code>inDegree</code>. Shared predicates: <code>isHttpLikeType</code>, <code>isDbLikeType</code>, <code>isQueueLikeNodeType</code>, <code>isAuthLikeNodeType</code>.'
+  },
+  exp: {
+    title: 'runDeterministicExport (exportPipeline.ts)',
+    body: 'Orchestrates code generation: validate → generate files via language-specific generators → run OpenAPI structural checks on the bundle. Returns an export file map (<code>Record&lt;relativePath, contents&gt;</code>) used by drift detection.'
+  },
+  py: {
+    title: 'pythonFastAPI.ts',
+    body: 'Generates FastAPI Python code from the IR. Produces route handlers, Pydantic models, and OpenAPI-compatible structure. Does not import network or cloud clients — offline-capable.'
+  },
+  node: {
+    title: 'nodeExpress.ts',
+    body: 'Generates Express.js Node.js code from the IR. Produces route handlers and middleware scaffolding. Does not import network or cloud clients.'
+  },
+  gold: {
+    title: 'golden-bundle.ts',
+    body: 'Generates the golden layer: Dockerfile, docker-compose.yml, Makefile. These are deterministic outputs — same IR always produces the same files.'
+  },
+  oas: {
+    title: 'OpenAPI structural (openapi-structural.ts)',
+    body: 'Validates the OpenAPI bundle generated from the IR export. Checks document shape (required top-level fields) — not Spectral-style semantic lint. Runs after codegen, before file write.'
+  },
+  drift: {
+    title: 'runValidateDrift (validate-drift.ts)',
+    body: 'Compares a fresh deterministic export (in memory) against an existing on-disk directory. Produces <code>DRIFT-MISSING</code> (expected file not on disk) and <code>DRIFT-MODIFIED</code> (file differs from expected) findings. Used in CI to catch architecture drift between releases.'
+  },
+};
+
+function showDetail(key, e) {
+  const d = DETAILS[key];
+  if (!d) return;
+  document.getElementById('detail-title').textContent = d.title;
+  document.getElementById('detail-body').innerHTML = d.body;
+  const card = document.getElementById('comp-detail');
+  card.classList.add('visible');
+  document.querySelectorAll('.node').forEach(n => n.classList.remove('active-node'));
+  (e || event).currentTarget.classList.add('active-node');
+}
+</script>
+
+</body>
+</html>

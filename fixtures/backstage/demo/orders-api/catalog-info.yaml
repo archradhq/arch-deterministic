@@ -1,0 +1,9 @@
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: orders-api
+  namespace: default
+  title: Orders HTTP API
+spec:
+  type: openapi
+  lifecycle: production

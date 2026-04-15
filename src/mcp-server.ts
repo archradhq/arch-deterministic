@@ -29,7 +29,7 @@ import {
   MCP_TOOL_ARCHRAD_VALIDATE_IR,
 } from './mcp-server-tools-patch.js';
 
-const VERSION = '0.1.6';
+const VERSION = '0.2.0';
 
 /** Hard cap for `irPath` reads (see docs/MCP.md). */
 const MAX_IR_FILE_BYTES = 25 * 1024 * 1024;

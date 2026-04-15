@@ -43,8 +43,12 @@ ArchRAD is a blueprint compiler and governance layer. You define your architectu
 |---------|---------------|-------|
 | `archrad validate` | Graph structure + architecture lint | `IR-STRUCT-*` `IR-LINT-*` |
 | `archrad validate-drift` | IR vs generated code on disk | `DRIFT-*` |
-| `archrad ingest openapi` | Derive IR from existing OpenAPI spec | — |
+| `archrad ingest openapi` | Derive IR from OpenAPI (local path or https URL for `--spec`; `-H` for URL auth headers) | — |
+| `archrad ingest backstage` | Backstage `catalog-info.yaml` → IR (Component, Resource, API, System; Location file targets) | — |
+| `archrad fragment merge` | Merge 2+ IR files — union by `node.id` (conflicts → stderr); `--prefix-fragments` for disjoint union | — |
 | `archrad export` | Compile IR → FastAPI or Express + Docker | — |
+
+**Ingest + merge workflows:** see **`docs/INGEST.md`**.
 
 ## CI integration
 

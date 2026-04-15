@@ -1,6 +1,6 @@
 {
   "name": "@archrad/deterministic",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "A deterministic compiler and linter for system architecture. Validate your architecture before you write code. OSS: structural validation + basic architecture lint (rule-based); FastAPI/Express export; OpenAPI document-shape; golden Docker/Makefile — no LLM.",
   "keywords": [
     "archrad",
@@ -70,7 +70,8 @@
     "generate-corpus": "node scripts/generate-corpus.mjs",
     "smoke:mcp": "node scripts/smoke-mcp.mjs",
     "record:demo:payment-retry": "vhs scripts/record-demo-payment-retry.tape",
-    "record:demo:drift": "vhs scripts/record-demo-drift.tape"
+    "record:demo:drift": "vhs scripts/record-demo-drift.tape",
+    "combine-corpus": "node scripts/combine-corpus.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

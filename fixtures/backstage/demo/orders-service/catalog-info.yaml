@@ -1,0 +1,14 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: orders-service
+  namespace: default
+  title: Orders Service
+spec:
+  type: service
+  lifecycle: production
+  owner: team-a
+  system: system:default/acme-system
+  dependsOn:
+    - resource:default/orders-db
+    - api:default/orders-api

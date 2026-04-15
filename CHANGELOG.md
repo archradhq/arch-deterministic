@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-04-14
+
+**Theme:** Ingest — turn existing enterprise artifacts into validated IR.
+
+### Added
+
+- **`archrad ingest backstage`** — **`--catalog <dir>`**: recursively scan for `catalog-info.yaml` / `catalog.yaml`; map **Component**, **Resource**, **API**, **System** to IR nodes; follow **Location** `spec.targets` / `spec.target` file pointers (http(s) URLs skipped with a report entry). Edges from **`spec.dependsOn`** and **`spec.system`**. Default excludes: `node_modules`, `dist`, `.git`, `build`, `coverage`, `.next`, `target`. Summary on stderr; optional **`--report-json`**; CI-safe exit **0** / **1**. Live Catalog API (**`--url` / `--token`**) deferred. `src/ingest/backstage.ts`.
+- **`archrad fragment merge`** — Merge **two or more** IR JSON files. Default **union-by-`node.id`**: duplicate id + identical body deduplicated; duplicate id + any body difference → **`FragmentMergeConflictError`**, full report to stderr, no output file, exit **1**. Unknown edge endpoints → **WARN** and skip. **`--prefix-fragments`** restores disjoint union with per-fragment id prefixes and **`provenance.mode: 'prefix'`**. `src/fragment/merge.ts`.
+- **`archrad ingest openapi`** — **`--spec`** accepts **http(s) URL** or local path (`src/ingest/openapi.ts`). Repeatable **`-H` / `--header`** for URL fetches only (e.g. `Authorization: Bearer …`); ignored for local paths. Default **Accept** and **User-Agent** on HTTP requests.
+- **`docs/INGEST.md`** — ingest + merge workflow; YAML-only Backstage; aligned command names; no IR “v1.1” claim.
+- **`docs/OSS_DOCUMENTATION_VERSIONING.md`** — tier-1 OSS docs versioned per release; **`RELEASING.md`** checklist updated.
+- **Fixtures** — `fixtures/backstage/demo/`, `fixtures/backstage/location/` for Backstage smoke tests.
+- **Tests** — `src/fragment/merge.test.ts`, `src/ingest.integration.test.ts` (spawn `dist/cli.js`).
+
+### Fixed
+
+- **`ir-lint-missing-auth-010.corpus.test.ts`** — corpus path corrected to `archlora/corpus/corpus-auth-010-pairs.json`.
+
 ## [0.1.6] - 2026-04-10
 
 ### Added
@@ -135,7 +153,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documented **codegen vs validation** for retry/timeout IR fields and **InkByte vs OSS** scope in README and structural/semantic doc.
 - README positioning: **deterministic compiler and linter for system architecture**; validation layers table (OSS vs Cloud); **`validate-drift`**, drift GIF / trust-loop recording docs, library **`runValidateDrift`** example.
 
-[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/archradhq/arch-deterministic/compare/v0.1.6...v0.2.0
 [0.1.6]: https://github.com/archradhq/arch-deterministic/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/archradhq/arch-deterministic/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/archradhq/arch-deterministic/compare/v0.1.3...v0.1.4
