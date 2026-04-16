@@ -100,6 +100,20 @@ export {
 } from './yamlToIr.js';
 
 export {
+  dockerComposeToCanonicalIr,
+  DockerComposeInitError,
+  inferTypeFromImage,
+  connectionUrlHost,
+} from './init/docker-compose.js';
+
+export {
+  readTextFromPathOrUrl,
+  readOpenApiSpecInput,
+  isHttpOrHttpsUrl,
+  parseHeaderPairs,
+} from './ingest/openapi.js';
+
+export {
   openApiDocumentToHttpNodes,
   openApiDocumentToCanonicalIr,
   openApiStringToCanonicalIr,

@@ -25,13 +25,22 @@ import {
 } from './yamlToIr.js';
 import { openApiStringToCanonicalIr, OpenApiIngestError } from './openapi-to-ir.js';
 import { runValidateDrift } from './validate-drift.js';
-import { readOpenApiSpecInput, isHttpOrHttpsUrl, parseHeaderPairs } from './ingest/openapi.js';
+import {
+  readOpenApiSpecInput,
+  readTextFromPathOrUrl,
+  isHttpOrHttpsUrl,
+  parseHeaderPairs,
+} from './ingest/openapi.js';
 import { ingestBackstageCatalog, BackstageIngestError } from './ingest/backstage.js';
 import {
   mergeIrFragments,
   FragmentMergeError,
   FragmentMergeConflictError,
 } from './fragment/merge.js';
+import {
+  dockerComposeToCanonicalIr,
+  DockerComposeInitError,
+} from './init/docker-compose.js';
 
 async function writeTree(baseDir: string, files: Record<string, string>): Promise<void> {
   for (const [rel, content] of Object.entries(files)) {
@@ -99,7 +108,79 @@ program
   .description(
     'Validate your architecture before you write code. Deterministic compiler + linter — FastAPI / Express (no LLM, no server).'
   )
-  .version('0.2.0');
+  .version('0.3.0');
+
+program
+  .command('init')
+  .description('Generate IR from local artifacts (Docker Compose — zero hand-authored JSON)')
+  .requiredOption(
+    '-f, --from <path>',
+    'Source file: docker-compose.yml, docker-compose.yaml, or compose.yml'
+  )
+  .option('-o, --output <path>', 'Write IR JSON (default: archrad-graph.json)')
+  .option('--dry-run', 'Print IR JSON to stdout; do not write a file')
+  .option('--verbose', 'Print mapping decisions to stderr')
+  .action(
+    async (cmdOpts: { from: string; output?: string; dryRun?: boolean; verbose?: boolean }) => {
+      const fromPath = resolve(cmdOpts.from);
+      let text: string;
+      try {
+        text = await readFile(fromPath, 'utf8');
+      } catch (e) {
+        const err = e as NodeJS.ErrnoException;
+        if (err?.code === 'ENOENT') {
+          console.error(`archrad init: file not found at ${fromPath}`);
+        } else {
+          console.error(`archrad init: could not read file (${err?.message ?? String(e)})`);
+        }
+        process.exitCode = 1;
+        return;
+      }
+
+      let ir: Record<string, unknown>;
+      let report: { services: number; edges: number; warnings: string[] };
+      let verboseLines: string[];
+      try {
+        const r = dockerComposeToCanonicalIr(text, { fileLabel: fromPath });
+        ir = r.ir;
+        report = r.report;
+        verboseLines = r.verboseLines;
+      } catch (e) {
+        if (e instanceof DockerComposeInitError) {
+          console.error(`archrad init: ${e.message}`);
+        } else {
+          console.error('archrad init:', e);
+        }
+        process.exitCode = 1;
+        return;
+      }
+
+      for (const w of report.warnings) {
+        console.error(`archrad init: warning: ${w}`);
+      }
+
+      if (cmdOpts.verbose) {
+        console.error('archrad init: mapping:');
+        for (const line of verboseLines) {
+          console.error(line);
+        }
+        console.error(
+          `archrad init: summary: ${report.services} nodes, ${report.edges} edges, ${report.warnings.length} warning(s)`
+        );
+      }
+
+      const json = canonicalIrToJsonString(ir);
+      if (cmdOpts.dryRun) {
+        process.stdout.write(json);
+        return;
+      }
+
+      const outPath = resolve(cmdOpts.output ?? 'archrad-graph.json');
+      await mkdir(dirname(outPath), { recursive: true });
+      await writeFile(outPath, json, 'utf8');
+      console.log(`archrad init: wrote IR JSON to ${outPath} (${report.services} nodes, ${report.edges} edges)`);
+    }
+  );
 
 program
   .command('validate')
@@ -175,17 +256,36 @@ program
 
 program
   .command('yaml-to-ir')
-  .description('Convert YAML graph → canonical IR JSON (for validate / export without hand-editing JSON)')
-  .requiredOption('-y, --yaml <path>', 'Path to YAML blueprint (`graph:` wrapper or bare `nodes:`)')
+  .description(
+    'Convert YAML graph → canonical IR JSON (local path, or https URL e.g. GitHub raw blueprint)'
+  )
+  .requiredOption(
+    '-y, --yaml <path-or-url>',
+    'YAML file path or https URL (`graph:` wrapper or bare `nodes:`)'
+  )
   .option('-o, --out <path>', 'Write JSON to file (default: print to stdout)')
+  .option(
+    '-H, --header <pair>',
+    'HTTP header when --yaml is a URL (repeatable). Example: -H "Authorization: Bearer <token>"',
+    (value: string, prev: string[]) => [...prev, value],
+    [] as string[],
+  )
   .action(
-    async (cmdOpts: { yaml: string; out?: string }) => {
-      const yamlPath = resolve(cmdOpts.yaml);
+    async (cmdOpts: { yaml: string; out?: string; header?: string[] }) => {
       let text: string;
       try {
-        text = await readFile(yamlPath, 'utf8');
-      } catch {
-        console.error('archrad yaml-to-ir: could not read --yaml file');
+        const headers =
+          isHttpOrHttpsUrl(cmdOpts.yaml.trim()) && cmdOpts.header?.length
+            ? parseHeaderPairs(cmdOpts.header)
+            : undefined;
+        text = await readTextFromPathOrUrl(cmdOpts.yaml, { extraHeaders: headers });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (isHttpOrHttpsUrl(cmdOpts.yaml.trim())) {
+          console.error(`archrad yaml-to-ir: could not fetch --yaml URL (${msg})`);
+        } else {
+          console.error('archrad yaml-to-ir: could not read --yaml file');
+        }
         process.exitCode = 1;
         return;
       }
@@ -408,6 +508,10 @@ program
   .option(
     '--max-warnings <n>',
     'With export: fail if total IR warning count > n (structural + lint warnings)'
+  )
+  .option(
+    '--policies <dir>',
+    'Directory of PolicyPack YAML/JSON (*.yaml, *.yml, *.json); merged after IR-LINT-* (skipped with --skip-ir-lint)'
   )
   .action(
     async (cmdOpts: {

@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 const pkgRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const cliJs = join(pkgRoot, 'dist', 'cli.js');
 const backstageDemo = join(pkgRoot, 'fixtures', 'backstage', 'demo');
+const composeDemo = join(pkgRoot, 'fixtures', 'docker-compose', 'demo-direct-db.yml');
 const minimal = join(pkgRoot, 'fixtures', 'minimal-graph.json');
 const ecommerce = join(pkgRoot, 'fixtures', 'ecommerce-with-warnings.json');
 
@@ -28,6 +29,20 @@ describe('ingest + fragment CLI (integration)', () => {
       expect(existsSync(out)).toBe(true);
       const j = JSON.parse(readFileSync(out, 'utf8')) as { graph?: { nodes?: unknown[] } };
       expect((j.graph?.nodes ?? []).length).toBeGreaterThan(0);
+    } finally {
+      if (existsSync(out)) unlinkSync(out);
+    }
+  });
+
+  it('init from docker-compose writes IR and validate runs', () => {
+    const out = join(pkgRoot, 'dist-init-compose-test.json');
+    try {
+      const r = run(['init', '--from', composeDemo, '-o', out]);
+      expect(r.status).toBe(0);
+      expect(existsSync(out)).toBe(true);
+      const v = run(['validate', '--ir', out]);
+      expect(v.status).toBe(0);
+      expect(v.stderr + v.stdout).toMatch(/IR-LINT-DIRECT-DB-ACCESS-002/);
     } finally {
       if (existsSync(out)) unlinkSync(out);
     }

@@ -30,17 +30,31 @@ export function isHttpOrHttpsUrl(s: string): boolean {
   }
 }
 
-/** Read OpenAPI document text from a local path or http(s) URL. */
-export async function readOpenApiSpecInput(
-  spec: string,
-  extraHeaders?: Record<string, string>,
+export const DEFAULT_ARCHRAD_UA =
+  'archrad (+https://github.com/archradhq/arch-deterministic)';
+
+export type ReadTextFromPathOrUrlOptions = {
+  extraHeaders?: Record<string, string>;
+  /** Default: YAML + JSON + plain (GitHub raw works). */
+  accept?: string;
+  userAgent?: string;
+};
+
+/**
+ * Read text from a local path or http(s) URL — shared by OpenAPI ingest, `yaml-to-ir`, etc.
+ */
+export async function readTextFromPathOrUrl(
+  pathOrUrl: string,
+  opts?: ReadTextFromPathOrUrlOptions,
 ): Promise<string> {
-  const trimmed = spec.trim();
+  const trimmed = pathOrUrl.trim();
   if (isHttpOrHttpsUrl(trimmed)) {
     const headers: Record<string, string> = {
-      Accept: 'application/json, application/yaml, application/x-yaml, text/yaml, text/plain, */*',
-      'User-Agent': INGEST_OPENAPI_UA,
-      ...extraHeaders,
+      Accept:
+        opts?.accept ??
+        'text/plain, text/yaml, application/yaml, application/x-yaml, application/json, */*',
+      'User-Agent': opts?.userAgent ?? DEFAULT_ARCHRAD_UA,
+      ...opts?.extraHeaders,
     };
     const res = await fetch(trimmed, {
       redirect: 'follow',
@@ -51,6 +65,17 @@ export async function readOpenApiSpecInput(
     }
     return await res.text();
   }
-  const specPath = resolve(trimmed);
-  return await readFile(specPath, 'utf8');
+  return await readFile(resolve(trimmed), 'utf8');
+}
+
+/** Read OpenAPI document text from a local path or http(s) URL. */
+export async function readOpenApiSpecInput(
+  spec: string,
+  extraHeaders?: Record<string, string>,
+): Promise<string> {
+  return readTextFromPathOrUrl(spec, {
+    extraHeaders,
+    accept: 'application/json, application/yaml, application/x-yaml, text/yaml, text/plain, */*',
+    userAgent: INGEST_OPENAPI_UA,
+  });
 }

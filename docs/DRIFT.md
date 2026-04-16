@@ -26,7 +26,9 @@ So: **regen vs reality** — a thin gate for CI and pre-merge checks.
 archrad validate-drift -i ./graph.json -t python -o ./out
 ```
 
-Use **`--json`** in CI. **`--strict-extra`** treats unexpected files in the output directory as findings. **`--skip-ir-lint`** / **`--policies`** follow the same semantics as **`export`** (see **`README.md`**).
+**Full flag list:** **`CLI_REFERENCE.md`** → **`archrad validate-drift`**.
+
+Use **`--json`** in CI. **`--strict-extra`** treats unexpected files in the output directory as findings. **`--skip-ir-lint`** / **`--policies`** follow the same semantics as **`export`** (see **`EXPORT.md`** and **`README.md`**).
 
 ## Library
 

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-03-28
+
+**Theme:** Generate — IR from Docker Compose without hand-authored JSON.
+
+### Added
+
+- **`archrad init`** — **`--from <docker-compose.yml|yaml|compose.yml>`**: map **services** → nodes (image-based type inference; published **ports** promote unknown images to **`gateway`** for HTTP-facing lint), **`depends_on`** → edges, **`DATABASE_URL`** / **`REDIS_URL`** / **`AMQP_URL`** / **`MONGODB_URI`** / … → edges when the URL hostname matches another service. **`--output`** (default **`archrad-graph.json`**), **`--dry-run`**, **`--verbose`**. **`src/init/docker-compose.ts`**.
+- **Fixture** — `fixtures/docker-compose/demo-direct-db.yml` for smoke tests.
+- **Docs:** **`docs/CLI_REFERENCE.md`** (all `archrad` commands and flags); **`docs/EXPORT.md`** (deterministic export + public positioning). **`INGEST.md`**, **`DRIFT.md`**, **`README.md`** cross-linked and aligned with CLI (**`--json`**, **`--skip-lint`**, **`--report-json`**, **`init -f`**, OpenAPI **`--out`**).
+- **`archrad yaml-to-ir`:** **`--yaml`** accepts an **https** URL (e.g. GitHub raw YAML); optional **`-H`** for authenticated fetches. Uses **`readTextFromPathOrUrl`** in **`src/ingest/openapi.ts`**.
+- **`scripts/github-validate-samples.mjs`** — public Git **tree** API (optional **`GITHUB_TOKEN`** / **`GH_TOKEN`** for rate limits): **`--repo owner/name`**, **`--ref`**, **`--prefix`**, **`--max`**, **`--scan-limit`**, **`--quiet` / `-q`**; **`--random-repo`** / **`--list-sample-repos`**; env **`ARCHRAD_VALIDATE_REPO`** when **`--repo`** is omitted. Classifies OpenAPI vs blueprint YAML, then **`yaml-to-ir`** / **`ingest openapi`** + **`validate`**.
+- **`archrad export`:** **`--policies <dir>`** wired in the CLI (PolicyPack merge with **`--skip-ir-lint`** semantics unchanged).
+
+### Fixed
+
+- **`scripts/github-validate-samples.mjs`** — **`--prefix`** no longer consumes the next flag when the prefix value is empty (e.g. PowerShell); tree fetch retries with the repo **default branch** when **`ref`** returns **404**.
+
 ## [0.2.0] - 2026-04-14
 
 **Theme:** Ingest — turn existing enterprise artifacts into validated IR.
@@ -153,7 +170,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documented **codegen vs validation** for retry/timeout IR fields and **InkByte vs OSS** scope in README and structural/semantic doc.
 - README positioning: **deterministic compiler and linter for system architecture**; validation layers table (OSS vs Cloud); **`validate-drift`**, drift GIF / trust-loop recording docs, library **`runValidateDrift`** example.
 
-[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/archradhq/arch-deterministic/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/archradhq/arch-deterministic/compare/v0.1.6...v0.2.0
 [0.1.6]: https://github.com/archradhq/arch-deterministic/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/archradhq/arch-deterministic/compare/v0.1.4...v0.1.5

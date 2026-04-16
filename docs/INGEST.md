@@ -1,16 +1,40 @@
 # Ingest — enterprise artifacts → ArchRad IR
 
-**Status:** 0.2.x — `archrad ingest backstage`, `archrad ingest openapi`, `archrad fragment merge`.
+**Status:** 0.3.x — `archrad init` (Docker Compose), `archrad ingest backstage`, `archrad ingest openapi`, `archrad fragment merge`.
 
-This document describes how to turn **Backstage YAML catalogs** and **OpenAPI** documents into **canonical IR** JSON, optionally **merge** fragments, then **`archrad validate`** (and export) as usual.
+This document describes how to turn **Docker Compose**, **Backstage YAML catalogs**, and **OpenAPI** documents into **canonical IR** JSON, optionally **merge** fragments, then **`archrad validate`** / **`archrad export`** as usual.
+
+**Full CLI flags:** **`CLI_REFERENCE.md`**.
+
+**YAML from GitHub:** use a **raw** URL with **`archrad yaml-to-ir --yaml <https://raw.githubusercontent.com/.../file.yaml>`**, then **`archrad validate --ir`**. Private repos: **`-H "Authorization: Bearer …"`** (same as OpenAPI URL ingest).
 
 ## 1. Commands
 
 | Command | Purpose |
 |--------|---------|
+| `archrad init` | Docker Compose → IR (cold start; no hand-authored JSON) |
 | `archrad ingest backstage` | Scan a directory for Backstage `catalog-info.yaml` / `catalog.yaml`, map entities → IR |
 | `archrad ingest openapi` | OpenAPI 3.x → IR (HTTP nodes per operation) |
 | `archrad fragment merge` | Combine 2+ IR JSON files into one graph |
+
+### 1.0 `archrad init`
+
+Maps **Compose services** → IR nodes (image-based types, `depends_on` and connection URLs → edges). Short flag **`-f`** is an alias for **`--from`**.
+
+| Option | Description |
+|--------|-------------|
+| **`-f, --from <path>`** | `docker-compose.yml`, `docker-compose.yaml`, or `compose.yml` |
+| **`-o, --output <path>`** | IR JSON out (default **`archrad-graph.json`**) |
+| **`--dry-run`** | Print IR to **stdout** |
+| **`--verbose`** | Mapping lines to **stderr** |
+
+```bash
+archrad init --from ./docker-compose.yml
+archrad init -f ./compose.yaml -o ./graph.json
+archrad validate --ir ./archrad-graph.json
+```
+
+Implementation: **`src/init/docker-compose.ts`**.
 
 ### 1.1 `archrad ingest backstage`
 
@@ -56,11 +80,16 @@ archrad fragment merge -f a.json b.json -o combined.json --prefix-fragments
 ## 2. Demo workflow
 
 ```bash
+archrad init --from ./docker-compose.yml -o ./from-compose.json
+archrad validate --ir ./from-compose.json --json   # machine-readable findings on stdout
+
 archrad ingest backstage --catalog ./services --out backstage.json
 archrad ingest openapi --spec https://api.company.com/openapi.json --out openapi.json
 archrad fragment merge --fragments backstage.json openapi.json --out combined.json
 archrad validate --ir combined.json
 ```
+
+**`archrad validate`** also supports **`--skip-lint`** (structural only). See **`CLI_REFERENCE.md`**.
 
 ## 3. Implementation map
 
@@ -82,4 +111,7 @@ archrad validate --ir combined.json
 ## 5. See also
 
 - **`docs/IR_CONTRACT.md`** — IR shape
+- **`docs/CLI_REFERENCE.md`** — all `archrad` commands and flags
+- **`docs/EXPORT.md`** — deterministic codegen (`archrad export`)
+- **`docs/DRIFT.md`** — `archrad validate-drift`
 - **`README.md`** — CLI overview

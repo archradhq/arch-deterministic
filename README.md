@@ -48,7 +48,7 @@ ArchRAD is a blueprint compiler and governance layer. You define your architectu
 | `archrad fragment merge` | Merge 2+ IR files — union by `node.id` (conflicts → stderr); `--prefix-fragments` for disjoint union | — |
 | `archrad export` | Compile IR → FastAPI or Express + Docker | — |
 
-**Ingest + merge workflows:** see **`docs/INGEST.md`**.
+**Ingest + merge workflows:** **`docs/INGEST.md`**. **All commands / flags:** **`docs/CLI_REFERENCE.md`**. **Codegen (`export`):** **`docs/EXPORT.md`**.
 
 ## CI integration
 
