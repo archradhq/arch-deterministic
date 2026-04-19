@@ -1,0 +1,46 @@
+openapi: 3.0.0
+info:
+  title: generated-express
+  version: 0.0.1
+paths:
+  /:
+    get:
+      responses:
+        "200":
+          description: OK
+components:
+  schemas:
+    Response:
+      type: object
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+        data:
+          type: object
+x-nonHttpNodes:
+  - id: api
+    type: gateway
+    name: "api"
+    configKeys:
+      - compose
+    schemaRef: "#/components/schemas/nonhttp_gateway_api"
+  - id: postgres
+    type: postgres
+    name: "postgres"
+    configKeys:
+      - compose
+    schemaRef: "#/components/schemas/nonhttp_postgres_postgres"
+  - id: redis
+    type: cache
+    name: "redis"
+    configKeys:
+      - compose
+    schemaRef: "#/components/schemas/nonhttp_cache_redis"
+  - id: nginx
+    type: gateway
+    name: "nginx"
+    configKeys:
+      - compose
+    schemaRef: "#/components/schemas/nonhttp_gateway_nginx"
