@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-04-19
+
+**Theme:** CI — GitHub Action, validate UX, SOC2 evidence hook.
+
+### Added
+
+- **`archrad validate`:** **`--fail-on error|warning|never`** (GitHub Actions style; **`never`** always exits **0**); **`--report <path>`** (self-contained HTML); **`--metrics-file <path>`** (JSON counts for CI); **`--findings-json-out <path>`** (findings array for integrations). Library: **`findingMetrics`**, **`validationExitPolicyFromFailOn`**, **`writeFindingsHtmlReport`** (`src/validate-report-html.ts`).
+- **`packages/archrad-action`** — GitHub Action: OSS mode; **enterprise** inputs **`soc2-org-id`**, **`soc2-api-key`**, optional **`export-dir`** + **`target`** (drift), **`api-base-url`** → POST evidence to **`/api/soc2/:orgId/evidence/github-action`** (ArchRad server). Tag **`v1`** tracks the first stable action release line in this monorepo.
+- **ArchRad server (InkByte product):** **`POST /api/soc2/:organizationId/evidence/github-action`** (Bearer org integration key vs **`settings.integrations.githubAction.apiKeySha256`**); evidence type **`github_action_governance`**; org schema **`settings.integrations.githubAction`**.
+
 ## [0.3.0] - 2026-04-16
 
 **Theme:** Generate — IR from Docker Compose without hand-authored JSON.
@@ -170,7 +180,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documented **codegen vs validation** for retry/timeout IR fields and **InkByte vs OSS** scope in README and structural/semantic doc.
 - README positioning: **deterministic compiler and linter for system architecture**; validation layers table (OSS vs Cloud); **`validate-drift`**, drift GIF / trust-loop recording docs, library **`runValidateDrift`** example.
 
-[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/archradhq/arch-deterministic/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/archradhq/arch-deterministic/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/archradhq/arch-deterministic/compare/v0.1.6...v0.2.0
 [0.1.6]: https://github.com/archradhq/arch-deterministic/compare/v0.1.5...v0.1.6

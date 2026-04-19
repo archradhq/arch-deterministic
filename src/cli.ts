@@ -13,11 +13,15 @@ import { validateIrStructural, hasIrStructuralErrors } from './ir-structural.js'
 import { validateIrLint, type ValidateIrLintOptions } from './ir-lint.js';
 import { loadPolicyPacksFromDirectory } from './policy-pack.js';
 import {
+  findingMetrics,
   printFindingsPretty,
   shouldFailFromFindings,
   sortFindings,
+  validationExitPolicyFromFailOn,
+  type FailOnMode,
   type ValidationExitPolicy,
 } from './cli-findings.js';
+import { writeFindingsHtmlReport } from './validate-report-html.js';
 import {
   parseYamlToCanonicalIr,
   canonicalIrToJsonString,
@@ -99,6 +103,15 @@ function exitPolicyFromOpts(opts: { failOnWarning?: boolean; maxWarnings?: strin
     failOnWarning: Boolean(opts.failOnWarning),
     maxWarnings: parseMaxWarnings(opts.maxWarnings),
   };
+}
+
+function validateCommandExitPolicy(opts: {
+  failOn?: FailOnMode;
+  failOnWarning?: boolean;
+  maxWarnings?: string;
+}): ValidationExitPolicy {
+  if (opts.failOn !== undefined) return validationExitPolicyFromFailOn(opts.failOn);
+  return exitPolicyFromOpts(opts);
 }
 
 const program = new Command();
@@ -199,6 +212,18 @@ program
     '--max-warnings <n>',
     'Exit with error if warning count is greater than n (e.g. 0 allows no warnings)'
   )
+  .addOption(
+    new Option(
+      '--fail-on <mode>',
+      'Exit policy: error | warning | never (GitHub Actions style; overrides --fail-on-warning when set)'
+    ).choices(['error', 'warning', 'never'] as const)
+  )
+  .option('--report <path>', 'Write a self-contained HTML report of all findings')
+  .option('--metrics-file <path>', 'Write finding counts as JSON (for CI / GitHub Actions outputs)')
+  .option(
+    '--findings-json-out <path>',
+    'Write findings array as JSON (same shape as --json stdout); still prints pretty to stderr unless --json'
+  )
   .action(
     async (cmdOpts: {
       ir: string;
@@ -207,6 +232,10 @@ program
       policies?: string;
       failOnWarning?: boolean;
       maxWarnings?: string;
+      failOn?: FailOnMode;
+      report?: string;
+      metricsFile?: string;
+      findingsJsonOut?: string;
     }) => {
       const irPath = resolve(cmdOpts.ir);
       const ir = await readIrJsonFromPath(irPath);
@@ -232,11 +261,28 @@ program
           : validateIrLint(ir, lintOpts);
       const combined = sortFindings([...structural, ...lint]);
 
+      if (cmdOpts.metricsFile) {
+        const m = findingMetrics(combined);
+        await writeFile(resolve(cmdOpts.metricsFile), `${JSON.stringify(m, null, 2)}\n`, 'utf8');
+      }
+      if (cmdOpts.report) {
+        await writeFindingsHtmlReport(combined, resolve(cmdOpts.report));
+      }
+
+      const forJson = combined.map((f) => ({
+        ...f,
+        layer: f.layer ?? (f.code.startsWith('IR-LINT-') ? 'lint' : 'structural'),
+      }));
+
+      if (cmdOpts.findingsJsonOut) {
+        await writeFile(
+          resolve(cmdOpts.findingsJsonOut),
+          `${JSON.stringify(forJson, null, 2)}\n`,
+          'utf8'
+        );
+      }
+
       if (cmdOpts.json) {
-        const forJson = combined.map((f) => ({
-          ...f,
-          layer: f.layer ?? (f.code.startsWith('IR-LINT-') ? 'lint' : 'structural'),
-        }));
         console.log(JSON.stringify(forJson, null, 2));
       } else {
         if (combined.length) {
@@ -247,7 +293,7 @@ program
         }
       }
 
-      const policy = exitPolicyFromOpts(cmdOpts);
+      const policy = validateCommandExitPolicy(cmdOpts);
       if (shouldFailFromFindings(combined, policy)) {
         process.exitCode = 1;
       }

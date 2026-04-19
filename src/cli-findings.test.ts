@@ -18,6 +18,14 @@ describe('cli-findings', () => {
     expect(shouldFailFromFindings(findings, { failOnWarning: false })).toBe(false);
   });
 
+  it('shouldFailFromFindings never fails when neverFail', () => {
+    const findings: IrStructuralFinding[] = [
+      { code: 'IR-STRUCT-X', severity: 'error', message: 'bad' },
+      { code: 'IR-LINT-X', severity: 'warning', message: 'w' },
+    ];
+    expect(shouldFailFromFindings(findings, { neverFail: true })).toBe(false);
+  });
+
   it('shouldFailFromFindings when warnings exceed maxWarnings', () => {
     const findings: IrStructuralFinding[] = [
       { code: 'A', severity: 'warning', message: '1' },

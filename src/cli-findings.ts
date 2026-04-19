@@ -77,7 +77,18 @@ export type ValidationExitPolicy = {
   failOnWarning?: boolean;
   /** Fail when warning count is strictly greater than this (undefined = no limit) */
   maxWarnings?: number;
+  /** When true, never exit with failure (e.g. GitHub Action `fail-on: never`). */
+  neverFail?: boolean;
 };
+
+export type FailOnMode = 'error' | 'warning' | 'never';
+
+/** Maps `fail-on` style inputs to exit policy (GitHub Actions / CI). */
+export function validationExitPolicyFromFailOn(mode: FailOnMode): ValidationExitPolicy {
+  if (mode === 'never') return { neverFail: true };
+  if (mode === 'warning') return { failOnWarning: true };
+  return {};
+}
 
 export function countBySeverity(findings: IrStructuralFinding[], sev: IrStructuralFinding['severity']): number {
   return findings.filter((f) => f.severity === sev).length;
@@ -85,6 +96,7 @@ export function countBySeverity(findings: IrStructuralFinding[], sev: IrStructur
 
 /** true = exit with failure */
 export function shouldFailFromFindings(findings: IrStructuralFinding[], policy: ValidationExitPolicy): boolean {
+  if (policy.neverFail) return false;
   if (findings.some((f) => f.severity === 'error')) return true;
   const w = countBySeverity(findings, 'warning');
   if (Boolean(policy.failOnWarning) && w > 0) return true;
@@ -93,6 +105,21 @@ export function shouldFailFromFindings(findings: IrStructuralFinding[], policy: 
 }
 
 const SEV_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2 };
+
+/** Counts for CI / GitHub Action outputs. */
+export function findingMetrics(findings: IrStructuralFinding[]): {
+  findingsCount: number;
+  errorCount: number;
+  warningCount: number;
+  infoCount: number;
+} {
+  return {
+    findingsCount: findings.length,
+    errorCount: countBySeverity(findings, 'error'),
+    warningCount: countBySeverity(findings, 'warning'),
+    infoCount: countBySeverity(findings, 'info'),
+  };
+}
 
 export function sortFindings(findings: IrStructuralFinding[]): IrStructuralFinding[] {
   return [...findings].sort((a, b) => {

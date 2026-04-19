@@ -91,7 +91,16 @@ export {
 
 export { isHttpLikeType, isHttpEndpointType, isDbLikeType, isQueueLikeNodeType, isAuthLikeNodeType } from './graphPredicates.js';
 
-export { sortFindings, shouldFailFromFindings, type ValidationExitPolicy } from './cli-findings.js';
+export {
+  sortFindings,
+  shouldFailFromFindings,
+  findingMetrics,
+  validationExitPolicyFromFailOn,
+  type ValidationExitPolicy,
+  type FailOnMode,
+} from './cli-findings.js';
+
+export { writeFindingsHtmlReport } from './validate-report-html.js';
 
 export {
   parseYamlToCanonicalIr,

@@ -24,11 +24,16 @@ Structural validation (**`IR-STRUCT-*`**) plus architecture lint (**`IR-LINT-*`*
 | **`--policies <dir>`** | PolicyPack YAML/JSON directory; merged after built-in **`IR-LINT-*`** (unless **`--skip-lint`**). |
 | **`--fail-on-warning`** | Exit **1** if any warning (or structural error). |
 | **`--max-warnings <n>`** | Exit **1** if warning count **>** `n`. |
+| **`--fail-on <mode>`** | **`error`** (default) \| **`warning`** \| **`never`** — GitHub Actions style; when set, overrides **`--fail-on-warning`** / **`--max-warnings`**. **`never`** always exits **0**. |
+| **`--report <path>`** | Write a self-contained **HTML** report of all findings. |
+| **`--metrics-file <path>`** | Write **`findingsCount`**, **`errorCount`**, **`warningCount`**, **`infoCount`** as JSON (for CI outputs). |
+| **`--findings-json-out <path>`** | Write the findings array as JSON (same shape as **`--json`** on stdout); still prints pretty logs unless **`--json`**. |
 
 ```bash
 archrad validate --ir ./graph.json
 archrad validate --ir ./graph.json --json
 archrad validate --ir ./graph.json --skip-lint
+archrad validate --ir ./graph.json --fail-on never --report violations.html --metrics-file metrics.json
 ```
 
 ---
