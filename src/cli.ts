@@ -45,6 +45,11 @@ import {
   dockerComposeToCanonicalIr,
   DockerComposeInitError,
 } from './init/docker-compose.js';
+import {
+  applyConfigToProgram,
+  extractConfigBootstrapFlags,
+} from './cli-config.js';
+import { ArchradConfigError, describeLoadedConfig } from './config.js';
 
 async function writeTree(baseDir: string, files: Record<string, string>): Promise<void> {
   for (const [rel, content] of Object.entries(files)) {
@@ -122,6 +127,13 @@ program
     'Validate your architecture before you write code. Deterministic compiler + linter — FastAPI / Express (no LLM, no server).'
   )
   .version('0.3.0');
+
+program
+  .option(
+    '--config <path>',
+    'Path to archrad.yml / archrad.yaml (default: walks up from CWD)'
+  )
+  .option('--no-config', 'Ignore any discovered archrad.yml');
 
 program
   .command('init')
@@ -806,7 +818,29 @@ program
     }
   );
 
-program.parseAsync(process.argv).catch((e) => {
+// Resolve `--config` / `--no-config` out-of-band so the values can be
+// turned into subcommand option defaults *before* Commander's mandatory-
+// option check runs. The cleaned argv drops the bootstrap flags so they
+// are not re-processed as unknown options on subcommands.
+const bootstrap = extractConfigBootstrapFlags(process.argv.slice(2));
+
+try {
+  const result = applyConfigToProgram(program, {
+    configPath: bootstrap.configPath,
+    disabled: bootstrap.disabled,
+  });
+  const line = describeLoadedConfig(result.loaded);
+  if (line) console.error(line);
+} catch (e) {
+  if (e instanceof ArchradConfigError) {
+    console.error(`archrad: ${e.message}`);
+  } else {
+    console.error('archrad: could not load config:', e);
+  }
+  process.exit(1);
+}
+
+program.parseAsync([process.argv[0], process.argv[1], ...bootstrap.cleanedArgv]).catch((e) => {
   console.error(e);
   process.exit(1);
 });

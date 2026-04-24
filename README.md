@@ -50,6 +50,30 @@ ArchRAD is a blueprint compiler and governance layer. You define your architectu
 
 **Ingest + merge workflows:** **`docs/INGEST.md`**. **All commands / flags:** **`docs/CLI_REFERENCE.md`**. **Codegen (`export`):** **`docs/EXPORT.md`**.
 
+## Project config (`archrad.yml`)
+
+Drop an `archrad.yml` at the root of your repo and skip re-typing flags:
+
+```yaml
+# archrad.yml
+ir: ./archrad-graph.json
+target: python
+output: ./generated
+failOn: warning
+policies: ./policies
+```
+
+```bash
+archrad validate          # uses ir, failOn, policies
+archrad export            # uses ir, target, output
+archrad validate-drift    # uses ir, target, output
+```
+
+`archrad` walks upward from the CWD looking for `archrad.yml` (or
+`archrad.yaml`). Explicit CLI flags always override the config. Use
+`--no-config` to ignore any discovered file, or `--config <path>` to
+point at a non-standard location. Full schema: [docs/CONFIG.md](docs/CONFIG.md).
+
 ## CI integration
 
 ```bash

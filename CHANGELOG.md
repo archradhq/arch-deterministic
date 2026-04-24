@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`archrad.yml` / `archrad.yaml` project config** — walks up from CWD and feeds matching values as **defaults** to `validate`, `export`, `validate-drift`, and `init`. Explicit CLI flags always win. New global flags **`--config <path>`** and **`--no-config`**. Supported keys: **`ir`**, **`target`**, **`output`**, **`policies`**, **`failOn`**, **`failOnWarning`**, **`maxWarnings`**, **`skipLint`**, **`skipIrLint`**, **`hostPort`**, **`skipHostPortCheck`**, **`strictHostPort`**, **`strictExtra`**, **`report`**, **`findingsJsonOut`**, **`metricsFile`**. File-path values resolve relative to the config directory; unknown keys are rejected loudly. Library: **`src/config.ts`**, **`src/cli-config.ts`**. Docs: **`docs/CONFIG.md`**.
+
 ## [0.4.0] - 2026-04-19
 
 **Theme:** CI — GitHub Action, validate UX, SOC2 evidence hook.

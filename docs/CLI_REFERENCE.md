@@ -9,6 +9,18 @@ Canonical **flags** for **`@archrad/deterministic`**. Behavior is implemented in
 | Drift codes | **`DRIFT.md`**, **`RULE_CODES.md`** |
 | Deterministic export / codegen | **`EXPORT.md`** |
 | Policy packs | **`CUSTOM_RULES.md`**, **`src/policy-pack.ts`** |
+| Project config (**`archrad.yml`**) | **`CONFIG.md`** |
+
+---
+
+## Project config (`archrad.yml`)
+
+`archrad` walks up from the CWD looking for **`archrad.yml`** (or **`archrad.yaml`**) and, when found, uses its values as **defaults** for matching flags on `validate`, `export`, `validate-drift`, and `init`. Explicit CLI flags always win. See **`CONFIG.md`** for the full schema.
+
+| Global option | Description |
+|---------------|-------------|
+| **`--config <path>`** | Explicit path to a config file (bypasses upward discovery). |
+| **`--no-config`** | Ignore any discovered config. |
 
 ---
 
