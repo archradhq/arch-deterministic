@@ -5,8 +5,8 @@ current directory and walking up toward the filesystem root. When found,
 its values are used as **defaults** for matching CLI flags — explicit
 flags on the command line always win.
 
-This lets you run short commands like `archrad validate` or
-`archrad export` in a repo without re-typing `--ir`, `--target`, etc.
+This lets you run short commands like `archrad validate`, `archrad lint`,
+or `archrad export` in a repo without re-typing `--ir`, `--target`, etc.
 
 ## Location
 
@@ -80,7 +80,8 @@ failOn: warning
 Then, from anywhere in the repo:
 
 ```bash
-archrad validate
+archrad validate            # full: IR structural + lint
+archrad lint                # fast inner loop: lint only
 ```
 
 ### Full export + drift workflow
@@ -121,6 +122,7 @@ archrad --no-config validate --ir ./graph.json --fail-on error
   negated on the command line unless the command defines a `--no-*`
   variant. Use `--no-config` or `--config` to pick a different config
   file when you need to override.
-- Config-level defaults are currently scoped to `validate`, `export`,
-  `validate-drift`, and `init`. Other subcommands
-  (`yaml-to-ir`, `ingest`, `fragment`) continue to require explicit flags.
+- Config-level defaults are currently scoped to `validate`, `lint`,
+  `export`, `validate-drift`, and `init`. Other subcommands
+  (`yaml-to-ir`, `ingest`, `fragment`, `explain`) continue to require
+  explicit flags/arguments.

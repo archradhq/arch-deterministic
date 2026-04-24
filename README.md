@@ -42,6 +42,8 @@ ArchRAD is a blueprint compiler and governance layer. You define your architectu
 | Command | What it checks | Codes |
 |---------|---------------|-------|
 | `archrad validate` | Graph structure + architecture lint | `IR-STRUCT-*` `IR-LINT-*` |
+| `archrad lint` | Architecture lint only (fast inner-loop; skips structural) | `IR-LINT-*` |
+| `archrad explain <code>` | Canonical rule guidance without running a pass | — |
 | `archrad validate-drift` | IR vs generated code on disk | `DRIFT-*` |
 | `archrad ingest openapi` | Derive IR from OpenAPI (local path or https URL for `--spec`; `-H` for URL auth headers) | — |
 | `archrad ingest backstage` | Backstage `catalog-info.yaml` → IR (Component, Resource, API, System; Location file targets) | — |
@@ -73,6 +75,22 @@ archrad validate-drift    # uses ir, target, output
 `archrad.yaml`). Explicit CLI flags always override the config. Use
 `--no-config` to ignore any discovered file, or `--config <path>` to
 point at a non-standard location. Full schema: [docs/CONFIG.md](docs/CONFIG.md).
+
+## Fast inner loop: `archrad lint` + `archrad explain`
+
+```bash
+# Iterate on lint without re-checking IR structure every run:
+archrad lint --ir ./graph.json
+
+# Focus on a single rule while fixing it:
+archrad lint --ir ./graph.json --rule IR-LINT-MISSING-AUTH-010
+
+# Understand a rule code without running a pass:
+archrad explain IR-LINT-DIRECT-DB-ACCESS-002
+archrad explain --list                  # every known rule code
+```
+
+`archrad lint` is the fast inner loop; use `archrad validate` once before the CI gate to also enforce IR structural shape. With `archrad.yml` at repo root, both run with no flags.
 
 ## CI integration
 

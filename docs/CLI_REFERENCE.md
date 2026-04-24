@@ -50,6 +50,52 @@ archrad validate --ir ./graph.json --fail-on never --report violations.html --me
 
 ---
 
+## `archrad lint`
+
+Run **architecture lint only** (**`IR-LINT-*`** + PolicyPacks). Thin, fast inner-loop alternative to `archrad validate` that **skips IR structural pre-checks** — use `archrad validate` once your graph shape is stable, then iterate on lint with this command. Unparseable IR still surfaces blockers (never a silent pass).
+
+| Option | Description |
+|--------|-------------|
+| **`-i, --ir <path>`** | IR JSON file (required; honours **`archrad.yml`**). |
+| **`--json`** | Print findings as a JSON array on **stdout**. |
+| **`--policies <dir>`** | PolicyPack YAML/JSON directory; merged after built-in **`IR-LINT-*`**. |
+| **`--rule <code>`** | Only include findings matching this rule code (repeatable; case-insensitive). |
+| **`--fail-on-warning`** | Exit **1** if any warning. |
+| **`--max-warnings <n>`** | Exit **1** if warning count **>** `n`. |
+| **`--fail-on <mode>`** | **`error`** (default) \| **`warning`** \| **`never`** — GitHub Actions style; overrides `--fail-on-warning` / `--max-warnings` when set. |
+| **`--report <path>`** | Self-contained **HTML** report. |
+| **`--metrics-file <path>`** | Write finding counts as JSON. |
+| **`--findings-json-out <path>`** | Write findings array as JSON. |
+
+```bash
+archrad lint --ir ./graph.json                             # fast iteration
+archrad lint --ir ./graph.json --fail-on warning           # CI gate
+archrad lint --ir ./graph.json --rule IR-LINT-MISSING-AUTH-010   # focus on one rule
+```
+
+With an `archrad.yml` at repo root (see [`CONFIG.md`](CONFIG.md)), `archrad lint` needs **no flags** — `ir:`, `policies:`, `failOn:`, etc. are picked up automatically.
+
+---
+
+## `archrad explain <code>`
+
+Print canonical guidance for a rule code (**`IR-STRUCT-*`**, **`IR-LINT-*`**, **`DRIFT-*`**). Same text the linter surfaces in findings, pulled from the deterministic registry — use this to get an explanation without running a lint pass. Unknown codes print a "did you mean" hint.
+
+| Option | Description |
+|--------|-------------|
+| **`<code>`** (positional) | Rule code to explain, e.g. **`IR-LINT-DIRECT-DB-ACCESS-002`** (case-insensitive). |
+| **`--json`** | Machine-readable JSON (`{ code, title, remediation, docsUrl, layer }`). |
+| **`--list`** | List every known rule code grouped by layer. Combine with **`--json`** for a structured dump. |
+
+```bash
+archrad explain IR-LINT-DIRECT-DB-ACCESS-002
+archrad explain ir-lint-missing-auth-010 --json
+archrad explain --list                          # every known code
+archrad explain --list --json                   # structured dump
+```
+
+---
+
 ## `archrad export`
 
 Generate a **FastAPI** or **Express** project bundle (app code, OpenAPI, golden Docker/Makefile) from IR. Same pipeline as **`runDeterministicExport`** in the library.

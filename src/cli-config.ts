@@ -37,6 +37,16 @@ const COMMAND_CONFIG_MAP: CommandConfigMap = {
     metricsFile: 'metricsFile',
     findingsJsonOut: 'findingsJsonOut',
   },
+  lint: {
+    ir: 'ir',
+    policies: 'policies',
+    failOnWarning: 'failOnWarning',
+    maxWarnings: 'maxWarnings',
+    failOn: 'failOn',
+    report: 'report',
+    metricsFile: 'metricsFile',
+    findingsJsonOut: 'findingsJsonOut',
+  },
   export: {
     ir: 'ir',
     target: 'target',

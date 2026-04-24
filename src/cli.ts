@@ -50,6 +50,14 @@ import {
   extractConfigBootstrapFlags,
 } from './cli-config.js';
 import { ArchradConfigError, describeLoadedConfig } from './config.js';
+import {
+  explainRuleCode,
+  formatExplanationLines,
+  listAllExplanations,
+  normalizeRuleCode,
+  suggestRuleCodes,
+  type RuleLayer,
+} from './explain.js';
 
 async function writeTree(baseDir: string, files: Record<string, string>): Promise<void> {
   for (const [rel, content] of Object.entries(files)) {
@@ -308,6 +316,201 @@ program
       const policy = validateCommandExitPolicy(cmdOpts);
       if (shouldFailFromFindings(combined, policy)) {
         process.exitCode = 1;
+      }
+    }
+  );
+
+program
+  .command('lint')
+  .description(
+    'Run architecture lint only (IR-LINT-* + PolicyPacks) — fast inner-loop alternative to `archrad validate` that skips IR structural pre-checks. Same exit policy.'
+  )
+  .requiredOption('-i, --ir <path>', 'Path to IR JSON (graph with nodes/edges or full wrapper)')
+  .option('--json', 'Print findings as JSON array to stdout')
+  .option(
+    '--policies <dir>',
+    'Directory of PolicyPack YAML/JSON (*.yaml, *.yml, *.json); merged after IR-LINT-*'
+  )
+  .option(
+    '--rule <code>',
+    'Only include findings matching this rule code (repeatable; case-insensitive)',
+    (value: string, prev: string[]) => [...prev, value],
+    [] as string[]
+  )
+  .option('--fail-on-warning', 'Exit with error if any warning (CI gate)')
+  .option(
+    '--max-warnings <n>',
+    'Exit with error if warning count is greater than n (e.g. 0 allows no warnings)'
+  )
+  .addOption(
+    new Option(
+      '--fail-on <mode>',
+      'Exit policy: error | warning | never (GitHub Actions style; overrides --fail-on-warning when set)'
+    ).choices(['error', 'warning', 'never'] as const)
+  )
+  .option('--report <path>', 'Write a self-contained HTML report of all findings')
+  .option('--metrics-file <path>', 'Write finding counts as JSON (for CI / GitHub Actions outputs)')
+  .option(
+    '--findings-json-out <path>',
+    'Write findings array as JSON (same shape as --json stdout); still prints pretty to stderr unless --json'
+  )
+  .action(
+    async (cmdOpts: {
+      ir: string;
+      json?: boolean;
+      policies?: string;
+      rule?: string[];
+      failOnWarning?: boolean;
+      maxWarnings?: string;
+      failOn?: FailOnMode;
+      report?: string;
+      metricsFile?: string;
+      findingsJsonOut?: string;
+    }) => {
+      const irPath = resolve(cmdOpts.ir);
+      const ir = await readIrJsonFromPath(irPath);
+      if (ir == null) {
+        process.exitCode = 1;
+        return;
+      }
+
+      let lintOpts: ValidateIrLintOptions = {};
+      if (cmdOpts.policies) {
+        const loaded = await loadPoliciesOption(cmdOpts.policies);
+        if (loaded == null) {
+          process.exitCode = 1;
+          return;
+        }
+        lintOpts = loaded;
+      }
+
+      // validateIrLint returns structural blockers if the IR can't be parsed;
+      // otherwise IR-LINT-* + policy visitors. That's exactly the "lint-only"
+      // contract we want here: no redundant structural sweep, but never a
+      // silent pass on malformed IR.
+      const findingsRaw = validateIrLint(ir, lintOpts);
+
+      const ruleFilter = (cmdOpts.rule ?? [])
+        .map((r) => normalizeRuleCode(r))
+        .filter((r) => r.length > 0);
+      const findings = ruleFilter.length
+        ? findingsRaw.filter((f) => ruleFilter.includes(f.code.toUpperCase()))
+        : findingsRaw;
+      const combined = sortFindings(findings);
+
+      if (cmdOpts.metricsFile) {
+        const m = findingMetrics(combined);
+        await writeFile(resolve(cmdOpts.metricsFile), `${JSON.stringify(m, null, 2)}\n`, 'utf8');
+      }
+      if (cmdOpts.report) {
+        await writeFindingsHtmlReport(combined, resolve(cmdOpts.report));
+      }
+
+      const forJson = combined.map((f) => ({
+        ...f,
+        layer: f.layer ?? (f.code.startsWith('IR-LINT-') ? 'lint' : 'structural'),
+      }));
+
+      if (cmdOpts.findingsJsonOut) {
+        await writeFile(
+          resolve(cmdOpts.findingsJsonOut),
+          `${JSON.stringify(forJson, null, 2)}\n`,
+          'utf8'
+        );
+      }
+
+      if (cmdOpts.json) {
+        console.log(JSON.stringify(forJson, null, 2));
+      } else if (combined.length) {
+        printFindingsPretty(combined, 'archrad lint:');
+      } else if (ruleFilter.length) {
+        console.log(`archrad lint: no findings match rule filter [${ruleFilter.join(', ')}].`);
+      } else {
+        console.log('archrad lint: architecture lint passed (no findings).');
+      }
+
+      const policy = validateCommandExitPolicy(cmdOpts);
+      if (shouldFailFromFindings(combined, policy)) {
+        process.exitCode = 1;
+      }
+    }
+  );
+
+program
+  .command('explain')
+  .description(
+    'Show canonical guidance for a rule code (IR-STRUCT-*, IR-LINT-*, DRIFT-*). Use `archrad explain --list` to see every known code.'
+  )
+  .argument('[code]', 'Rule code to explain, e.g. IR-LINT-DIRECT-DB-ACCESS-002')
+  .option('--json', 'Print machine-readable explanation JSON')
+  .option('--list', 'List every known rule code grouped by layer')
+  .action(
+    (
+      code: string | undefined,
+      cmdOpts: { json?: boolean; list?: boolean }
+    ) => {
+      if (cmdOpts.list) {
+        const grouped = listAllExplanations();
+        if (cmdOpts.json) {
+          console.log(JSON.stringify(grouped, null, 2));
+          return;
+        }
+        const order: RuleLayer[] = ['structural', 'lint', 'drift', 'other'];
+        for (const layer of order) {
+          const entries = grouped[layer];
+          if (!entries.length) continue;
+          const heading =
+            layer === 'structural'
+              ? 'IR structural (IR-STRUCT-*):'
+              : layer === 'lint'
+                ? 'Architecture lint (IR-LINT-*):'
+                : layer === 'drift'
+                  ? 'Drift (DRIFT-*):'
+                  : 'Other:';
+          console.log(heading);
+          for (const e of entries) {
+            console.log(`  ${e.code} — ${e.title}`);
+          }
+          console.log('');
+        }
+        return;
+      }
+
+      if (!code) {
+        console.error(
+          'archrad explain: provide a rule code, e.g. `archrad explain IR-LINT-DIRECT-DB-ACCESS-002` (or run `archrad explain --list`).'
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      const explanation = explainRuleCode(code);
+      if (!explanation) {
+        const normalized = normalizeRuleCode(code);
+        const suggestions = suggestRuleCodes(code);
+        if (cmdOpts.json) {
+          console.error(
+            JSON.stringify({ ok: false, code: normalized, suggestions }, null, 2)
+          );
+        } else {
+          console.error(`archrad explain: unknown rule code "${normalized}".`);
+          if (suggestions.length) {
+            console.error('Did you mean:');
+            for (const s of suggestions) console.error(`  ${s}`);
+          } else {
+            console.error('Run `archrad explain --list` to see every known rule code.');
+          }
+        }
+        process.exitCode = 1;
+        return;
+      }
+
+      if (cmdOpts.json) {
+        console.log(JSON.stringify(explanation, null, 2));
+        return;
+      }
+      for (const line of formatExplanationLines(explanation)) {
+        console.log(line);
       }
     }
   );
