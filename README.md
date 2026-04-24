@@ -44,6 +44,7 @@ ArchRAD is a blueprint compiler and governance layer. You define your architectu
 | `archrad validate` | Graph structure + architecture lint | `IR-STRUCT-*` `IR-LINT-*` |
 | `archrad lint` | Architecture lint only (fast inner-loop; skips structural) | `IR-LINT-*` |
 | `archrad explain <code>` | Canonical rule guidance without running a pass | — |
+| `archrad policies-sha256 --dir <policies>` | Generate a `archrad-policy-pack.sha256` manifest for signed PolicyPacks | — |
 | `archrad validate-drift` | IR vs generated code on disk | `DRIFT-*` |
 | `archrad ingest openapi` | Derive IR from OpenAPI (local path or https URL for `--spec`; `-H` for URL auth headers) | — |
 | `archrad ingest backstage` | Backstage `catalog-info.yaml` → IR (Component, Resource, API, System; Location file targets) | — |

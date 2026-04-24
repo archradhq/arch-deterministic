@@ -34,6 +34,8 @@ output: ./generated           # default --output (init) and --out (export/drift)
 
 # Policy + exit behaviour
 policies: ./policies          # default --policies directory
+policiesRequireSigned: true   # default --policies-require-signed
+cosignPubkey: ./release.pub   # default --cosign-pubkey (implies signed)
 failOn: error                 # default --fail-on (error | warning | never)
 failOnWarning: false          # default --fail-on-warning
 maxWarnings: 0                # default --max-warnings

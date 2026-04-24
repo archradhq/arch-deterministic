@@ -72,6 +72,8 @@ export const ArchradConfigSchema = z
     report: z.string().optional(),
     findingsJsonOut: z.string().optional(),
     metricsFile: z.string().optional(),
+    policiesRequireSigned: z.boolean().optional(),
+    cosignPubkey: z.string().optional(),
   })
   .strict();
 
@@ -85,6 +87,7 @@ const PATH_KEYS: ReadonlySet<keyof ArchradConfig> = new Set([
   'report',
   'findingsJsonOut',
   'metricsFile',
+  'cosignPubkey',
 ]);
 
 export interface LoadedArchradConfig {
