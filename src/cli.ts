@@ -5,13 +5,24 @@
  */
 
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Command, Option } from 'commander';
 import { runDeterministicExport } from './exportPipeline.js';
 import { isLocalHostPortFree, normalizeGoldenHostPort } from './hostPort.js';
 import { validateIrStructural, hasIrStructuralErrors } from './ir-structural.js';
 import { validateIrLint, type ValidateIrLintOptions } from './ir-lint.js';
-import { loadPolicyPacksFromDirectory } from './policy-pack.js';
+import {
+  loadPolicyPacksFromDirectory,
+  type PolicyPackSigningOptions,
+} from './policy-pack.js';
+import {
+  POLICY_PACK_MANIFEST_NAME,
+  POLICY_PACK_SIGNATURE_NAME,
+  buildPolicyPackManifest,
+} from './policy-pack-sign.js';
+import { readdir } from 'node:fs/promises';
 import {
   findingMetrics,
   printFindingsPretty,
@@ -45,6 +56,19 @@ import {
   dockerComposeToCanonicalIr,
   DockerComposeInitError,
 } from './init/docker-compose.js';
+import {
+  applyConfigToProgram,
+  extractConfigBootstrapFlags,
+} from './cli-config.js';
+import { ArchradConfigError, describeLoadedConfig } from './config.js';
+import {
+  explainRuleCode,
+  formatExplanationLines,
+  listAllExplanations,
+  normalizeRuleCode,
+  suggestRuleCodes,
+  type RuleLayer,
+} from './explain.js';
 
 async function writeTree(baseDir: string, files: Record<string, string>): Promise<void> {
   for (const [rel, content] of Object.entries(files)) {
@@ -84,16 +108,36 @@ function parseMaxWarnings(v: string | undefined): number | undefined {
 
 /** Load `--policies` directory; on failure prints to stderr and returns null (caller should exit 1). */
 async function loadPoliciesOption(
-  policiesDir: string | undefined
+  policiesDir: string | undefined,
+  signing?: {
+    policiesRequireSigned?: boolean;
+    cosignPubkey?: string;
+  }
 ): Promise<ValidateIrLintOptions | null> {
   if (policiesDir == null || policiesDir === '') return {};
   const dir = resolve(policiesDir);
-  const loaded = await loadPolicyPacksFromDirectory(dir);
+  const signingOpts: PolicyPackSigningOptions | undefined =
+    signing?.policiesRequireSigned || signing?.cosignPubkey
+      ? {
+          requireSigned: signing.policiesRequireSigned === true,
+          cosignPublicKeyPath: signing.cosignPubkey
+            ? resolve(signing.cosignPubkey)
+            : undefined,
+        }
+      : undefined;
+  const loaded = await loadPolicyPacksFromDirectory(dir, signingOpts);
   if (!loaded.ok) {
     for (const e of loaded.errors) {
       console.error(`archrad: ${e}`);
     }
     return null;
+  }
+  if (loaded.signedBy && loaded.signedBy !== 'unsigned') {
+    const mode =
+      loaded.signedBy === 'cosign-verified'
+        ? 'cosign + sha256'
+        : 'sha256';
+    console.error(`archrad: policy pack verified (${mode}) — ${loaded.ruleCount} rule(s).`);
   }
   return { policyRuleVisitors: loaded.visitors };
 }
@@ -114,6 +158,24 @@ function validateCommandExitPolicy(opts: {
   return exitPolicyFromOpts(opts);
 }
 
+/**
+ * Read the package version from the shipped `package.json` so `--version`
+ * and `-V` never drift from the published tag. We resolve relative to the
+ * built file location (`dist/cli.js` → `../package.json`) using `import.meta.url`
+ * to stay ESM-friendly.
+ */
+function readPackageVersion(): string {
+  try {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const pkgPath = join(here, '..', 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as { version?: string };
+    if (pkg.version && typeof pkg.version === 'string') return pkg.version;
+  } catch {
+    // fall through to unknown
+  }
+  return '0.0.0-unknown';
+}
+
 const program = new Command();
 
 program
@@ -122,6 +184,14 @@ program
     'Validate your architecture before you write code. Deterministic compiler + linter — FastAPI / Express (no LLM, no server).'
   )
   .version('0.4.0');
+  .version(readPackageVersion());
+
+program
+  .option(
+    '--config <path>',
+    'Path to archrad.yml / archrad.yaml (default: walks up from CWD)'
+  )
+  .option('--no-config', 'Ignore any discovered archrad.yml');
 
 program
   .command('init')
@@ -207,6 +277,14 @@ program
     '--policies <dir>',
     'Directory of PolicyPack YAML/JSON (*.yaml, *.yml, *.json); merged after IR-LINT-*'
   )
+  .option(
+    '--policies-require-signed',
+    `Require a "${POLICY_PACK_MANIFEST_NAME}" manifest in --policies and verify every file against it (use \`archrad policies-sha256\` to generate)`
+  )
+  .option(
+    '--cosign-pubkey <path>',
+    `Verify "${POLICY_PACK_SIGNATURE_NAME}" against this cosign public key before checking the sha256 manifest (implies --policies-require-signed; requires cosign on PATH)`
+  )
   .option('--fail-on-warning', 'Exit with error if any warning (CI gate)')
   .option(
     '--max-warnings <n>',
@@ -230,6 +308,8 @@ program
       json?: boolean;
       skipLint?: boolean;
       policies?: string;
+      policiesRequireSigned?: boolean;
+      cosignPubkey?: string;
       failOnWarning?: boolean;
       maxWarnings?: string;
       failOn?: FailOnMode;
@@ -247,7 +327,10 @@ program
       const noLint = Boolean(cmdOpts.skipLint);
       let lintOpts: ValidateIrLintOptions = {};
       if (!noLint && cmdOpts.policies) {
-        const loaded = await loadPoliciesOption(cmdOpts.policies);
+        const loaded = await loadPoliciesOption(cmdOpts.policies, {
+          policiesRequireSigned: cmdOpts.policiesRequireSigned,
+          cosignPubkey: cmdOpts.cosignPubkey,
+        });
         if (loaded == null) {
           process.exitCode = 1;
           return;
@@ -299,6 +382,267 @@ program
       }
     }
   );
+
+program
+  .command('lint')
+  .description(
+    'Run architecture lint only (IR-LINT-* + PolicyPacks) — fast inner-loop alternative to `archrad validate` that skips IR structural pre-checks. Same exit policy.'
+  )
+  .requiredOption('-i, --ir <path>', 'Path to IR JSON (graph with nodes/edges or full wrapper)')
+  .option('--json', 'Print findings as JSON array to stdout')
+  .option(
+    '--policies <dir>',
+    'Directory of PolicyPack YAML/JSON (*.yaml, *.yml, *.json); merged after IR-LINT-*'
+  )
+  .option(
+    '--policies-require-signed',
+    `Require a "${POLICY_PACK_MANIFEST_NAME}" manifest in --policies and verify every file against it`
+  )
+  .option(
+    '--cosign-pubkey <path>',
+    `Verify "${POLICY_PACK_SIGNATURE_NAME}" with this cosign public key (implies --policies-require-signed)`
+  )
+  .option(
+    '--rule <code>',
+    'Only include findings matching this rule code (repeatable; case-insensitive)',
+    (value: string, prev: string[]) => [...prev, value],
+    [] as string[]
+  )
+  .option('--fail-on-warning', 'Exit with error if any warning (CI gate)')
+  .option(
+    '--max-warnings <n>',
+    'Exit with error if warning count is greater than n (e.g. 0 allows no warnings)'
+  )
+  .addOption(
+    new Option(
+      '--fail-on <mode>',
+      'Exit policy: error | warning | never (GitHub Actions style; overrides --fail-on-warning when set)'
+    ).choices(['error', 'warning', 'never'] as const)
+  )
+  .option('--report <path>', 'Write a self-contained HTML report of all findings')
+  .option('--metrics-file <path>', 'Write finding counts as JSON (for CI / GitHub Actions outputs)')
+  .option(
+    '--findings-json-out <path>',
+    'Write findings array as JSON (same shape as --json stdout); still prints pretty to stderr unless --json'
+  )
+  .action(
+    async (cmdOpts: {
+      ir: string;
+      json?: boolean;
+      policies?: string;
+      policiesRequireSigned?: boolean;
+      cosignPubkey?: string;
+      rule?: string[];
+      failOnWarning?: boolean;
+      maxWarnings?: string;
+      failOn?: FailOnMode;
+      report?: string;
+      metricsFile?: string;
+      findingsJsonOut?: string;
+    }) => {
+      const irPath = resolve(cmdOpts.ir);
+      const ir = await readIrJsonFromPath(irPath);
+      if (ir == null) {
+        process.exitCode = 1;
+        return;
+      }
+
+      let lintOpts: ValidateIrLintOptions = {};
+      if (cmdOpts.policies) {
+        const loaded = await loadPoliciesOption(cmdOpts.policies, {
+          policiesRequireSigned: cmdOpts.policiesRequireSigned,
+          cosignPubkey: cmdOpts.cosignPubkey,
+        });
+        if (loaded == null) {
+          process.exitCode = 1;
+          return;
+        }
+        lintOpts = loaded;
+      }
+
+      // validateIrLint returns structural blockers if the IR can't be parsed;
+      // otherwise IR-LINT-* + policy visitors. That's exactly the "lint-only"
+      // contract we want here: no redundant structural sweep, but never a
+      // silent pass on malformed IR.
+      const findingsRaw = validateIrLint(ir, lintOpts);
+
+      const ruleFilter = (cmdOpts.rule ?? [])
+        .map((r) => normalizeRuleCode(r))
+        .filter((r) => r.length > 0);
+      const findings = ruleFilter.length
+        ? findingsRaw.filter((f) => ruleFilter.includes(f.code.toUpperCase()))
+        : findingsRaw;
+      const combined = sortFindings(findings);
+
+      if (cmdOpts.metricsFile) {
+        const m = findingMetrics(combined);
+        await writeFile(resolve(cmdOpts.metricsFile), `${JSON.stringify(m, null, 2)}\n`, 'utf8');
+      }
+      if (cmdOpts.report) {
+        await writeFindingsHtmlReport(combined, resolve(cmdOpts.report));
+      }
+
+      const forJson = combined.map((f) => ({
+        ...f,
+        layer: f.layer ?? (f.code.startsWith('IR-LINT-') ? 'lint' : 'structural'),
+      }));
+
+      if (cmdOpts.findingsJsonOut) {
+        await writeFile(
+          resolve(cmdOpts.findingsJsonOut),
+          `${JSON.stringify(forJson, null, 2)}\n`,
+          'utf8'
+        );
+      }
+
+      if (cmdOpts.json) {
+        console.log(JSON.stringify(forJson, null, 2));
+      } else if (combined.length) {
+        printFindingsPretty(combined, 'archrad lint:');
+      } else if (ruleFilter.length) {
+        console.log(`archrad lint: no findings match rule filter [${ruleFilter.join(', ')}].`);
+      } else {
+        console.log('archrad lint: architecture lint passed (no findings).');
+      }
+
+      const policy = validateCommandExitPolicy(cmdOpts);
+      if (shouldFailFromFindings(combined, policy)) {
+        process.exitCode = 1;
+      }
+    }
+  );
+
+program
+  .command('explain')
+  .description(
+    'Show canonical guidance for a rule code (IR-STRUCT-*, IR-LINT-*, DRIFT-*). Use `archrad explain --list` to see every known code.'
+  )
+  .argument('[code]', 'Rule code to explain, e.g. IR-LINT-DIRECT-DB-ACCESS-002')
+  .option('--json', 'Print machine-readable explanation JSON')
+  .option('--list', 'List every known rule code grouped by layer')
+  .action(
+    (
+      code: string | undefined,
+      cmdOpts: { json?: boolean; list?: boolean }
+    ) => {
+      if (cmdOpts.list) {
+        const grouped = listAllExplanations();
+        if (cmdOpts.json) {
+          console.log(JSON.stringify(grouped, null, 2));
+          return;
+        }
+        const order: RuleLayer[] = ['structural', 'lint', 'drift', 'other'];
+        for (const layer of order) {
+          const entries = grouped[layer];
+          if (!entries.length) continue;
+          const heading =
+            layer === 'structural'
+              ? 'IR structural (IR-STRUCT-*):'
+              : layer === 'lint'
+                ? 'Architecture lint (IR-LINT-*):'
+                : layer === 'drift'
+                  ? 'Drift (DRIFT-*):'
+                  : 'Other:';
+          console.log(heading);
+          for (const e of entries) {
+            console.log(`  ${e.code} — ${e.title}`);
+          }
+          console.log('');
+        }
+        return;
+      }
+
+      if (!code) {
+        console.error(
+          'archrad explain: provide a rule code, e.g. `archrad explain IR-LINT-DIRECT-DB-ACCESS-002` (or run `archrad explain --list`).'
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      const explanation = explainRuleCode(code);
+      if (!explanation) {
+        const normalized = normalizeRuleCode(code);
+        const suggestions = suggestRuleCodes(code);
+        if (cmdOpts.json) {
+          console.error(
+            JSON.stringify({ ok: false, code: normalized, suggestions }, null, 2)
+          );
+        } else {
+          console.error(`archrad explain: unknown rule code "${normalized}".`);
+          if (suggestions.length) {
+            console.error('Did you mean:');
+            for (const s of suggestions) console.error(`  ${s}`);
+          } else {
+            console.error('Run `archrad explain --list` to see every known rule code.');
+          }
+        }
+        process.exitCode = 1;
+        return;
+      }
+
+      if (cmdOpts.json) {
+        console.log(JSON.stringify(explanation, null, 2));
+        return;
+      }
+      for (const line of formatExplanationLines(explanation)) {
+        console.log(line);
+      }
+    }
+  );
+
+program
+  .command('policies-sha256')
+  .description(
+    `Generate a deterministic "${POLICY_PACK_MANIFEST_NAME}" manifest for a PolicyPack directory. Pair with \`--policies-require-signed\` (and optionally \`cosign sign-blob\` + \`--cosign-pubkey\`) to enforce signed packs in CI.`
+  )
+  .requiredOption('-d, --dir <dir>', 'Policies directory containing *.yaml / *.yml / *.json')
+  .option(
+    '-o, --out <path>',
+    `Write manifest to this path (default: <dir>/${POLICY_PACK_MANIFEST_NAME}; use "-" for stdout)`
+  )
+  .action(async (cmdOpts: { dir: string; out?: string }) => {
+    const root = resolve(cmdOpts.dir);
+    let names: string[];
+    try {
+      names = await readdir(root);
+    } catch (e) {
+      const err = e as NodeJS.ErrnoException;
+      console.error(`archrad policies-sha256: cannot read ${root}: ${err.message}`);
+      process.exitCode = 1;
+      return;
+    }
+    const policyFiles = names.filter((n) => /\.(yaml|yml|json)$/i.test(n)).sort();
+    if (!policyFiles.length) {
+      console.error(`archrad policies-sha256: no policy files (*.yaml, *.yml, *.json) in ${root}`);
+      process.exitCode = 1;
+      return;
+    }
+    const sources: { name: string; content: string }[] = [];
+    for (const name of policyFiles) {
+      const text = await readFile(join(root, name), 'utf8');
+      sources.push({ name, content: text });
+    }
+    const manifest = buildPolicyPackManifest(sources);
+
+    if (cmdOpts.out === '-') {
+      process.stdout.write(manifest);
+      return;
+    }
+    const outPath = cmdOpts.out
+      ? resolve(cmdOpts.out)
+      : join(root, POLICY_PACK_MANIFEST_NAME);
+    await writeFile(outPath, manifest, 'utf8');
+    console.log(
+      `archrad policies-sha256: wrote ${policyFiles.length} entries to ${outPath}`
+    );
+    console.log(
+      `archrad policies-sha256: optionally sign with \`cosign sign-blob --yes --output-signature ${join(
+        root,
+        POLICY_PACK_SIGNATURE_NAME
+      )} ${outPath}\` for cosign verification.`
+    );
+  });
 
 program
   .command('yaml-to-ir')
@@ -559,6 +903,14 @@ program
     '--policies <dir>',
     'Directory of PolicyPack YAML/JSON (*.yaml, *.yml, *.json); merged after IR-LINT-* (skipped with --skip-ir-lint)'
   )
+  .option(
+    '--policies-require-signed',
+    `Require a "${POLICY_PACK_MANIFEST_NAME}" manifest in --policies and verify every file against it`
+  )
+  .option(
+    '--cosign-pubkey <path>',
+    `Verify "${POLICY_PACK_SIGNATURE_NAME}" with this cosign public key (implies --policies-require-signed)`
+  )
   .action(
     async (cmdOpts: {
       ir: string;
@@ -570,6 +922,8 @@ program
       skipIrStructuralValidation?: boolean;
       skipIrLint?: boolean;
       policies?: string;
+      policiesRequireSigned?: boolean;
+      cosignPubkey?: string;
       failOnWarning?: boolean;
       maxWarnings?: string;
     }) => {
@@ -608,7 +962,10 @@ program
     );
     let exportLintOpts: ValidateIrLintOptions = {};
     if (!cmdOpts.skipIrLint && cmdOpts.policies) {
-      const loaded = await loadPoliciesOption(cmdOpts.policies);
+      const loaded = await loadPoliciesOption(cmdOpts.policies, {
+        policiesRequireSigned: cmdOpts.policiesRequireSigned,
+        cosignPubkey: cmdOpts.cosignPubkey,
+      });
       if (loaded == null) {
         process.exitCode = 1;
         return;
@@ -689,6 +1046,14 @@ program
     '--policies <dir>',
     'Directory of PolicyPack YAML/JSON; merged after IR-LINT-* for the reference export'
   )
+  .option(
+    '--policies-require-signed',
+    `Require a "${POLICY_PACK_MANIFEST_NAME}" manifest in --policies and verify every file against it`
+  )
+  .option(
+    '--cosign-pubkey <path>',
+    `Verify "${POLICY_PACK_SIGNATURE_NAME}" with this cosign public key (implies --policies-require-signed)`
+  )
   .option('--strict-extra', 'Fail if output directory contains files not in the reference export')
   .option('--json', 'Print drift findings and export metadata as JSON')
   .action(
@@ -702,6 +1067,8 @@ program
       dangerSkipIrStructuralValidation?: boolean;
       skipIrLint?: boolean;
       policies?: string;
+      policiesRequireSigned?: boolean;
+      cosignPubkey?: string;
       strictExtra?: boolean;
       json?: boolean;
     }) => {
@@ -734,7 +1101,10 @@ program
 
       let driftLintOpts: { policyRuleVisitors?: ValidateIrLintOptions['policyRuleVisitors'] } = {};
       if (!cmdOpts.skipIrLint && cmdOpts.policies) {
-        const loaded = await loadPoliciesOption(cmdOpts.policies);
+        const loaded = await loadPoliciesOption(cmdOpts.policies, {
+          policiesRequireSigned: cmdOpts.policiesRequireSigned,
+          cosignPubkey: cmdOpts.cosignPubkey,
+        });
         if (loaded == null) {
           process.exitCode = 1;
           return;
@@ -806,7 +1176,29 @@ program
     }
   );
 
-program.parseAsync(process.argv).catch((e) => {
+// Resolve `--config` / `--no-config` out-of-band so the values can be
+// turned into subcommand option defaults *before* Commander's mandatory-
+// option check runs. The cleaned argv drops the bootstrap flags so they
+// are not re-processed as unknown options on subcommands.
+const bootstrap = extractConfigBootstrapFlags(process.argv.slice(2));
+
+try {
+  const result = applyConfigToProgram(program, {
+    configPath: bootstrap.configPath,
+    disabled: bootstrap.disabled,
+  });
+  const line = describeLoadedConfig(result.loaded);
+  if (line) console.error(line);
+} catch (e) {
+  if (e instanceof ArchradConfigError) {
+    console.error(`archrad: ${e.message}`);
+  } else {
+    console.error('archrad: could not load config:', e);
+  }
+  process.exit(1);
+}
+
+program.parseAsync([process.argv[0], process.argv[1], ...bootstrap.cleanedArgv]).catch((e) => {
   console.error(e);
   process.exit(1);
 });

@@ -9,6 +9,18 @@ Canonical **flags** for **`@archrad/deterministic`**. Behavior is implemented in
 | Drift codes | **`DRIFT.md`**, **`RULE_CODES.md`** |
 | Deterministic export / codegen | **`EXPORT.md`** |
 | Policy packs | **`CUSTOM_RULES.md`**, **`src/policy-pack.ts`** |
+| Project config (**`archrad.yml`**) | **`CONFIG.md`** |
+
+---
+
+## Project config (`archrad.yml`)
+
+`archrad` walks up from the CWD looking for **`archrad.yml`** (or **`archrad.yaml`**) and, when found, uses its values as **defaults** for matching flags on `validate`, `export`, `validate-drift`, and `init`. Explicit CLI flags always win. See **`CONFIG.md`** for the full schema.
+
+| Global option | Description |
+|---------------|-------------|
+| **`--config <path>`** | Explicit path to a config file (bypasses upward discovery). |
+| **`--no-config`** | Ignore any discovered config. |
 
 ---
 
@@ -22,6 +34,8 @@ Structural validation (**`IR-STRUCT-*`**) plus architecture lint (**`IR-LINT-*`*
 | **`--json`** | Print findings as a JSON array on **stdout** (CI / automation). |
 | **`--skip-lint`** | Skip **`IR-LINT-*`**; only structural findings. |
 | **`--policies <dir>`** | PolicyPack YAML/JSON directory; merged after built-in **`IR-LINT-*`** (unless **`--skip-lint`**). |
+| **`--policies-require-signed`** | Require a signed PolicyPack manifest (`archrad-policy-pack.sha256`). See [Signed PolicyPacks](#signed-policypacks). |
+| **`--cosign-pubkey <path>`** | Verify the manifest's cosign signature. Implies `--policies-require-signed`. |
 | **`--fail-on-warning`** | Exit **1** if any warning (or structural error). |
 | **`--max-warnings <n>`** | Exit **1** if warning count **>** `n`. |
 | **`--fail-on <mode>`** | **`error`** (default) \| **`warning`** \| **`never`** — GitHub Actions style; when set, overrides **`--fail-on-warning`** / **`--max-warnings`**. **`never`** always exits **0**. |
@@ -34,6 +48,88 @@ archrad validate --ir ./graph.json
 archrad validate --ir ./graph.json --json
 archrad validate --ir ./graph.json --skip-lint
 archrad validate --ir ./graph.json --fail-on never --report violations.html --metrics-file metrics.json
+```
+
+---
+
+## `archrad lint`
+
+Run **architecture lint only** (**`IR-LINT-*`** + PolicyPacks). Thin, fast inner-loop alternative to `archrad validate` that **skips IR structural pre-checks** — use `archrad validate` once your graph shape is stable, then iterate on lint with this command. Unparseable IR still surfaces blockers (never a silent pass).
+
+| Option | Description |
+|--------|-------------|
+| **`-i, --ir <path>`** | IR JSON file (required; honours **`archrad.yml`**). |
+| **`--json`** | Print findings as a JSON array on **stdout**. |
+| **`--policies <dir>`** | PolicyPack YAML/JSON directory; merged after built-in **`IR-LINT-*`**. |
+| **`--rule <code>`** | Only include findings matching this rule code (repeatable; case-insensitive). |
+| **`--fail-on-warning`** | Exit **1** if any warning. |
+| **`--max-warnings <n>`** | Exit **1** if warning count **>** `n`. |
+| **`--fail-on <mode>`** | **`error`** (default) \| **`warning`** \| **`never`** — GitHub Actions style; overrides `--fail-on-warning` / `--max-warnings` when set. |
+| **`--report <path>`** | Self-contained **HTML** report. |
+| **`--metrics-file <path>`** | Write finding counts as JSON. |
+| **`--findings-json-out <path>`** | Write findings array as JSON. |
+
+```bash
+archrad lint --ir ./graph.json                             # fast iteration
+archrad lint --ir ./graph.json --fail-on warning           # CI gate
+archrad lint --ir ./graph.json --rule IR-LINT-MISSING-AUTH-010   # focus on one rule
+```
+
+With an `archrad.yml` at repo root (see [`CONFIG.md`](CONFIG.md)), `archrad lint` needs **no flags** — `ir:`, `policies:`, `failOn:`, etc. are picked up automatically.
+
+### Signed PolicyPacks
+
+`archrad lint`, `archrad validate`, `archrad export`, and `archrad validate-drift` all accept:
+
+| Option | Description |
+|--------|-------------|
+| **`--policies-require-signed`** | Require an `archrad-policy-pack.sha256` manifest next to the policy files; every file must hash-match. |
+| **`--cosign-pubkey <path>`** | Also verify `archrad-policy-pack.sha256.sig` with the given cosign public key before checking the manifest. Implies `--policies-require-signed`. Requires `cosign` on `PATH`. |
+
+Generate the manifest with [`archrad policies-sha256`](#archrad-policies-sha256).
+
+---
+
+## `archrad explain <code>`
+
+Print canonical guidance for a rule code (**`IR-STRUCT-*`**, **`IR-LINT-*`**, **`DRIFT-*`**). Same text the linter surfaces in findings, pulled from the deterministic registry — use this to get an explanation without running a lint pass. Unknown codes print a "did you mean" hint.
+
+| Option | Description |
+|--------|-------------|
+| **`<code>`** (positional) | Rule code to explain, e.g. **`IR-LINT-DIRECT-DB-ACCESS-002`** (case-insensitive). |
+| **`--json`** | Machine-readable JSON (`{ code, title, remediation, docsUrl, layer }`). |
+| **`--list`** | List every known rule code grouped by layer. Combine with **`--json`** for a structured dump. |
+
+```bash
+archrad explain IR-LINT-DIRECT-DB-ACCESS-002
+archrad explain ir-lint-missing-auth-010 --json
+archrad explain --list                          # every known code
+archrad explain --list --json                   # structured dump
+```
+
+---
+
+## `archrad policies-sha256`
+
+Generate a deterministic `archrad-policy-pack.sha256` manifest for a PolicyPack directory. Manifest format mirrors `sha256sum`: `<64-char-hex>  <filename>`, one line per policy file, sorted by filename.
+
+| Option | Description |
+|--------|-------------|
+| **`-d, --dir <dir>`** | Policies directory containing `*.yaml` / `*.yml` / `*.json` (required). |
+| **`-o, --out <path>`** | Write manifest to this path (default: `<dir>/archrad-policy-pack.sha256`). Use **`-`** for stdout. |
+
+```bash
+# Generate a manifest in the policies directory:
+archrad policies-sha256 --dir ./policies
+
+# Optional cosign signature for air-gapped / enterprise CI:
+cosign sign-blob --yes \
+  --output-signature ./policies/archrad-policy-pack.sha256.sig \
+  ./policies/archrad-policy-pack.sha256
+
+# Enforce in CI:
+archrad validate --ir ./graph.json --policies ./policies \
+  --policies-require-signed --cosign-pubkey ./release.pub
 ```
 
 ---

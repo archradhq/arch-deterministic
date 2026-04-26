@@ -9,6 +9,14 @@ import yaml from 'js-yaml';
 import type { ParsedLintGraph } from './lint-graph.js';
 import { edgeEndpoints, nodeType } from './lint-graph.js';
 import type { IrStructuralFinding } from './ir-structural.js';
+import {
+  POLICY_PACK_MANIFEST_NAME,
+  POLICY_PACK_SIGNATURE_NAME,
+  discoverPolicyPackManifest,
+  verifyCosignSignature,
+  verifyPolicyPackManifest,
+  type CosignVerifyOptions,
+} from './policy-pack-sign.js';
 
 export type PolicySeverity = 'error' | 'warning' | 'info';
 
@@ -49,8 +57,38 @@ export type PolicyPackDocumentV1 = {
 };
 
 export type LoadPolicyPacksResult =
-  | { ok: true; visitors: ReadonlyArray<(g: ParsedLintGraph) => IrStructuralFinding[]>; ruleCount: number }
+  | {
+      ok: true;
+      visitors: ReadonlyArray<(g: ParsedLintGraph) => IrStructuralFinding[]>;
+      ruleCount: number;
+      /**
+       * Describes the signing state of the loaded pack, when known:
+       *  - `unsigned` — no manifest was provided/discovered.
+       *  - `sha256-verified` — files matched a sha256 manifest.
+       *  - `cosign-verified` — the manifest itself was verified with cosign,
+       *    and the files matched it.
+       */
+      signedBy?: 'unsigned' | 'sha256-verified' | 'cosign-verified';
+    }
   | { ok: false; errors: string[] };
+
+/** Signing / verification constraints that the CLI threads through. */
+export type PolicyPackSigningOptions = {
+  /**
+   * When `true`, a sha256 manifest MUST be present (either in the directory
+   * or provided inline) and every file must hash-match. Defaults to `false`:
+   * unsigned packs continue to load with `signedBy: 'unsigned'`.
+   */
+  requireSigned?: boolean;
+  /**
+   * Absolute path to a cosign public key. When set, the manifest's detached
+   * `.sig` is verified with `cosign verify-blob` before contents are checked.
+   * Implies `requireSigned: true`.
+   */
+  cosignPublicKeyPath?: string;
+  /** Escape hatch for tests — override the cosign binary path. */
+  cosignBinary?: string;
+};
 
 function isNonEmptyRecord(x: unknown): x is Record<string, unknown> {
   return x != null && typeof x === 'object' && !Array.isArray(x);
@@ -168,20 +206,60 @@ export type PolicyPackFileSource = {
   content: string;
 };
 
+/** Optional signing verification context passed to the in-memory loader. */
+export type PolicyPackManifestInput = {
+  /** Raw sha256 manifest text, as produced by `archrad policies-sha256`. */
+  manifestText: string;
+  /** When present, verifies this cosign signature over the manifest text. */
+  signature?: {
+    manifestPath: string;
+    signaturePath: string;
+    publicKeyPath: string;
+    cosignBinary?: string;
+  };
+};
+
 /**
  * Load policy packs from in-memory file sources (same semantics as {@link loadPolicyPacksFromDirectory}).
  * Use for ArchRad Cloud, tests, and API bodies — no filesystem required.
+ *
+ * When `manifest` is provided, the sha256 digest of every source is verified
+ * against it. Unexpected files or missing files produce `ok: false` errors.
  */
-export function loadPolicyPacksFromFiles(sources: ReadonlyArray<PolicyPackFileSource>): LoadPolicyPacksResult {
+export function loadPolicyPacksFromFiles(
+  sources: ReadonlyArray<PolicyPackFileSource>,
+  options?: { manifest?: PolicyPackManifestInput }
+): LoadPolicyPacksResult {
   const errors: string[] = [];
   const visitors: Array<(g: ParsedLintGraph) => IrStructuralFinding[]> = [];
   const seenIds = new Set<string>();
   let ruleCount = 0;
+  let signedBy: 'unsigned' | 'sha256-verified' | 'cosign-verified' = 'unsigned';
 
   const sorted = [...sources].sort((a, b) => a.name.localeCompare(b.name));
 
   if (sorted.length === 0) {
     return { ok: false, errors: ['no policy sources provided'] };
+  }
+
+  if (options?.manifest) {
+    const m = options.manifest;
+    if (m.signature) {
+      const sigResult = verifyCosignSignature({
+        manifestPath: m.signature.manifestPath,
+        signaturePath: m.signature.signaturePath,
+        publicKeyPath: m.signature.publicKeyPath,
+        cosignBinary: m.signature.cosignBinary,
+      } satisfies CosignVerifyOptions);
+      if (!sigResult.ok) {
+        return { ok: false, errors: [sigResult.error] };
+      }
+    }
+    const verification = verifyPolicyPackManifest(sorted, m.manifestText);
+    if (!verification.ok) {
+      return { ok: false, errors: verification.errors };
+    }
+    signedBy = m.signature ? 'cosign-verified' : 'sha256-verified';
   }
 
   for (const src of sorted) {
@@ -205,7 +283,7 @@ export function loadPolicyPacksFromFiles(sources: ReadonlyArray<PolicyPackFileSo
   if (errors.length > 0) {
     return { ok: false, errors };
   }
-  return { ok: true, visitors, ruleCount };
+  return { ok: true, visitors, ruleCount, signedBy };
 }
 
 function parseDocument(text: string, filename: string): PolicyPackDocumentV1 {
@@ -237,8 +315,15 @@ function parseDocument(text: string, filename: string): PolicyPackDocumentV1 {
 /**
  * Load and compile all policy YAML/JSON files in a directory into lint visitors.
  * Filenames: `*.yaml`, `*.yml`, `*.json` (other files ignored).
+ *
+ * When `signing` is provided, discovers an `archrad-policy-pack.sha256`
+ * manifest (and optional `archrad-policy-pack.sha256.sig`) in the directory
+ * and enforces the caller's signing requirements before returning visitors.
  */
-export async function loadPolicyPacksFromDirectory(dir: string): Promise<LoadPolicyPacksResult> {
+export async function loadPolicyPacksFromDirectory(
+  dir: string,
+  signing?: PolicyPackSigningOptions
+): Promise<LoadPolicyPacksResult> {
   const root = resolve(dir);
   const errors: string[] = [];
 
@@ -272,5 +357,42 @@ export async function loadPolicyPacksFromDirectory(dir: string): Promise<LoadPol
     return { ok: false, errors };
   }
 
-  return loadPolicyPacksFromFiles(sources);
+  // Passing a cosign key implies require-signed.
+  const requireSigned = Boolean(signing?.requireSigned || signing?.cosignPublicKeyPath);
+  let manifest: PolicyPackManifestInput | undefined;
+
+  if (requireSigned) {
+    const discovered = await discoverPolicyPackManifest(root);
+    if (discovered.manifestText == null) {
+      return {
+        ok: false,
+        errors: [
+          `policy-pack signing required but manifest "${POLICY_PACK_MANIFEST_NAME}" not found in ${root}. Run \`archrad policies-sha256 ${dir}\` to generate one.`,
+        ],
+      };
+    }
+    if (signing?.cosignPublicKeyPath) {
+      if (!discovered.signatureExists) {
+        return {
+          ok: false,
+          errors: [
+            `cosign verification requested but "${POLICY_PACK_SIGNATURE_NAME}" not found in ${root}.`,
+          ],
+        };
+      }
+      manifest = {
+        manifestText: discovered.manifestText,
+        signature: {
+          manifestPath: discovered.manifestPath,
+          signaturePath: discovered.signaturePath,
+          publicKeyPath: signing.cosignPublicKeyPath,
+          cosignBinary: signing.cosignBinary,
+        },
+      };
+    } else {
+      manifest = { manifestText: discovered.manifestText };
+    }
+  }
+
+  return loadPolicyPacksFromFiles(sources, manifest ? { manifest } : undefined);
 }
