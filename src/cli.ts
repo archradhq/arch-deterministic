@@ -183,7 +183,6 @@ program
   .description(
     'Validate your architecture before you write code. Deterministic compiler + linter — FastAPI / Express (no LLM, no server).'
   )
-  .version('0.4.0');
   .version(readPackageVersion());
 
 program
