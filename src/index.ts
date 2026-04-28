@@ -146,3 +146,5 @@ export {
   OpenApiIngestError,
   type OpenApiHttpNode,
 } from './openapi-to-ir.js';
+
+export { getStaticRuleGuidance, listStaticRuleCodes } from './static-rule-guidance.js';
