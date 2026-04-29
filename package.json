@@ -1,6 +1,7 @@
 {
   "name": "@archrad/deterministic",
-  "version": "0.5.0",
+  "version": "0.4.1",
+  "mcpName": "io.github.archradhq/deterministic",
   "description": "A deterministic compiler and linter for system architecture. Validate your architecture before you write code. OSS: structural validation + basic architecture lint (rule-based); FastAPI/Express export; OpenAPI document-shape; golden Docker/Makefile — no LLM.",
   "keywords": [
     "archrad",
@@ -59,6 +60,7 @@
     "CONTRIBUTING.md",
     "SECURITY.md",
     "CHANGELOG.md",
+    "server.json",
     "biome.json"
   ],
   "scripts": {

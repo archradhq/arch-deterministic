@@ -28,8 +28,7 @@ import {
   MCP_TOOL_ARCHRAD_VALIDATE_DRIFT,
   MCP_TOOL_ARCHRAD_VALIDATE_IR,
 } from './mcp-server-tools-patch.js';
-
-const VERSION = '0.3.0';
+import { readPackageVersion } from './package-version.js';
 
 /** Hard cap for `irPath` reads (see docs/MCP.md). */
 const MAX_IR_FILE_BYTES = 25 * 1024 * 1024;
@@ -82,7 +81,7 @@ async function loadIrFromArgs(args: {
 async function main() {
   const server = new McpServer({
     name: 'archrad-deterministic',
-    version: VERSION,
+    version: readPackageVersion(import.meta.url),
   });
 
   server.registerTool(

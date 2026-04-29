@@ -5,9 +5,7 @@
  */
 
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { Command, Option } from 'commander';
 import { runDeterministicExport } from './exportPipeline.js';
 import { isLocalHostPortFree, normalizeGoldenHostPort } from './hostPort.js';
@@ -69,6 +67,7 @@ import {
   suggestRuleCodes,
   type RuleLayer,
 } from './explain.js';
+import { readPackageVersion } from './package-version.js';
 
 async function writeTree(baseDir: string, files: Record<string, string>): Promise<void> {
   for (const [rel, content] of Object.entries(files)) {
@@ -158,24 +157,6 @@ function validateCommandExitPolicy(opts: {
   return exitPolicyFromOpts(opts);
 }
 
-/**
- * Read the package version from the shipped `package.json` so `--version`
- * and `-V` never drift from the published tag. We resolve relative to the
- * built file location (`dist/cli.js` → `../package.json`) using `import.meta.url`
- * to stay ESM-friendly.
- */
-function readPackageVersion(): string {
-  try {
-    const here = dirname(fileURLToPath(import.meta.url));
-    const pkgPath = join(here, '..', 'package.json');
-    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as { version?: string };
-    if (pkg.version && typeof pkg.version === 'string') return pkg.version;
-  } catch {
-    // fall through to unknown
-  }
-  return '0.0.0-unknown';
-}
-
 const program = new Command();
 
 program
@@ -183,7 +164,7 @@ program
   .description(
     'Validate your architecture before you write code. Deterministic compiler + linter — FastAPI / Express (no LLM, no server).'
   )
-  .version(readPackageVersion());
+  .version(readPackageVersion(import.meta.url));
 
 program
   .option(

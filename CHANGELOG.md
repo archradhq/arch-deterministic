@@ -7,8 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.5.0]
-
 ### Added
 
 - **`archrad.yml` / `archrad.yaml` project config** — walks up from CWD and feeds matching values as **defaults** to `validate`, `lint`, `export`, `validate-drift`, and `init`. Explicit CLI flags always win. New global flags **`--config <path>`** and **`--no-config`**. Supported keys: **`ir`**, **`target`**, **`output`**, **`policies`**, **`policiesRequireSigned`**, **`cosignPubkey`**, **`failOn`**, **`failOnWarning`**, **`maxWarnings`**, **`skipLint`**, **`skipIrLint`**, **`hostPort`**, **`skipHostPortCheck`**, **`strictHostPort`**, **`strictExtra`**, **`report`**, **`findingsJsonOut`**, **`metricsFile`**. File-path values resolve relative to the config directory; unknown keys are rejected loudly. Library: **`src/config.ts`**, **`src/cli-config.ts`**. Docs: **`docs/CONFIG.md`**.
@@ -21,6 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`archrad --version`** now reads the version from the shipped `package.json` (was hardcoded to `0.3.0` and drifted from the published tag).
 - `LoadPolicyPacksResult.ok` now includes a `signedBy` field (`'unsigned' | 'sha256-verified' | 'cosign-verified'`) so library callers can surface signing provenance in Cloud and CI summaries.
+
+## [0.4.1] - 2026-04-29
+
+**Theme:** MCP Registry — npm ownership marker + publisher manifest.
+
+### Added
+
+- **`mcpName`** in **`package.json`** (`io.github.archradhq/deterministic`) for [MCP Registry](https://modelcontextprotocol.io/) npm package verification.
+- **`server.json`** — manifest for the official **`mcp-publisher`** CLI (stdio transport, **`@archrad/deterministic`** on npm).
+
+### Changed
+
+- **`archrad-mcp`** reports **`serverInfo.version`** from the shipped **`package.json`** (was a stale hardcoded literal).
 
 ## [0.4.0] - 2026-04-19
 
@@ -195,7 +206,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documented **codegen vs validation** for retry/timeout IR fields and **InkByte vs OSS** scope in README and structural/semantic doc.
 - README positioning: **deterministic compiler and linter for system architecture**; validation layers table (OSS vs Cloud); **`validate-drift`**, drift GIF / trust-loop recording docs, library **`runValidateDrift`** example.
 
-[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/archradhq/arch-deterministic/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/archradhq/arch-deterministic/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/archradhq/arch-deterministic/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/archradhq/arch-deterministic/compare/v0.1.6...v0.2.0
