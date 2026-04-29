@@ -80,7 +80,23 @@ export {
   type PolicyNodeSelectorV1,
   type PolicyEdgeMatchV1,
   type PolicySeverity,
+  type PolicyPackSigningOptions,
+  type PolicyPackManifestInput,
 } from './policy-pack.js';
+export {
+  POLICY_PACK_MANIFEST_NAME,
+  POLICY_PACK_SIGNATURE_NAME,
+  buildPolicyPackManifest,
+  parsePolicyPackManifest,
+  sha256Hex,
+  verifyPolicyPackManifest,
+  verifyCosignSignature,
+  discoverPolicyPackManifest,
+  type PolicyPackManifestEntry,
+  type PolicyPackManifestVerification,
+  type CosignVerificationResult,
+  type CosignVerifyOptions,
+} from './policy-pack-sign.js';
 export { runArchitectureLinting, LINT_RULE_REGISTRY } from './lint-rules.js';
 export {
   buildParsedLintGraph,
@@ -130,3 +146,5 @@ export {
   OpenApiIngestError,
   type OpenApiHttpNode,
 } from './openapi-to-ir.js';
+
+export { getStaticRuleGuidance, listStaticRuleCodes } from './static-rule-guidance.js';

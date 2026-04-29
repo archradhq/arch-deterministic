@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: sh -c "npm install && node --watch app/index.js"
+    environment:
+      - PORT=8080
+      - NODE_ENV=development
