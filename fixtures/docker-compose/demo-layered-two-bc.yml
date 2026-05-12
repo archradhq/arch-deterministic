@@ -1,0 +1,55 @@
+# Clean layered stack for `archrad init --from` + `archrad validate` (no IR-LINT-* warnings).
+#
+# - Single HTTP entry: `edge-gateway` (labels → auth + /health)
+# - No direct gateway→DB: domain services own DATABASE_URL only
+# - Graph depth from HTTP entry: gateway → service → DB (2 hops) — under IR-LINT-SYNC-CHAIN-001 threshold
+#
+# Add a BFF container between gateway and service if you want three tiers; expect IR-LINT-SYNC-CHAIN-001
+# unless you mark some edges async or shorten the sync path.
+
+services:
+  edge-gateway:
+    image: nginx:alpine
+    depends_on:
+      - client-service
+      - payments-service
+    ports:
+      - "8080:80"
+    labels:
+      archrad.auth: bearer
+      archrad.health_url: /health
+      archrad.http.method: GET
+
+  client-service:
+    image: archrad-demo/client-service:latest
+    environment:
+      DATABASE_URL: postgres://demo:demo@clients-db:5432/clients
+      NODE_ENV: production
+
+  clients-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+      POSTGRES_DB: clients
+    volumes:
+      - clients-data:/var/lib/postgresql/data
+
+  payments-service:
+    image: archrad-demo/payments-service:latest
+    environment:
+      DATABASE_URL: postgres://demo:demo@payments-db:5432/payments
+      NODE_ENV: production
+
+  payments-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+      POSTGRES_DB: payments
+    volumes:
+      - payments-data:/var/lib/postgresql/data
+
+volumes:
+  clients-data:
+  payments-data:
