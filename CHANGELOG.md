@@ -20,6 +20,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`archrad --version`** now reads the version from the shipped `package.json` (was hardcoded to `0.3.0` and drifted from the published tag).
 - `LoadPolicyPacksResult.ok` now includes a `signedBy` field (`'unsigned' | 'sha256-verified' | 'cosign-verified'`) so library callers can surface signing provenance in Cloud and CI summaries.
 
+## [0.4.2] - 2026-05-07
+
+**Theme:** Docker Compose `init` — one edge per service pair (no spurious duplicate-edge lint).
+
+### Fixed
+
+- **`archrad init --from` (Docker Compose):** When a service both **`depends_on`** another service and declares a connection URL (e.g. **`DATABASE_URL`**) to that same service, the importer now emits **one** edge per **`(from, to)`** — connection env is processed first, then **`depends_on`** skips an already-linked pair. Avoids **`IR-LINT-DUPLICATE-EDGE-006`** on typical Compose files.
+
+### Added
+
+- **Fixture** — `fixtures/docker-compose/demo-layered-two-bc.yml` for layered two–bounded-context smoke + lint tests.
+
 ## [0.4.1] - 2026-04-29
 
 **Theme:** MCP Registry — npm ownership marker + publisher manifest.

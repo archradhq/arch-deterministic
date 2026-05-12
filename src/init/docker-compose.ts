@@ -94,6 +94,64 @@ function parseEnvMap(serviceDef: Record<string, unknown>): Record<string, string
   return out;
 }
 
+function parseLabels(serviceDef: Record<string, unknown>): Record<string, string> {
+  const raw = serviceDef.labels;
+  if (raw == null) return {};
+  const out: Record<string, string> = {};
+  if (Array.isArray(raw)) {
+    for (const line of raw) {
+      if (typeof line !== 'string') continue;
+      const eq = line.indexOf('=');
+      if (eq === -1) continue;
+      out[line.slice(0, eq).trim()] = line.slice(eq + 1).trim();
+    }
+    return out;
+  }
+  if (typeof raw === 'object' && !Array.isArray(raw)) {
+    for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+      if (v == null) continue;
+      out[String(k)] = typeof v === 'string' ? v : String(v);
+    }
+  }
+  return out;
+}
+
+function labelGet(labels: Record<string, string>, key: string): string | undefined {
+  if (labels[key] != null && String(labels[key]).trim() !== '') return String(labels[key]).trim();
+  const lower = key.toLowerCase();
+  for (const [k, v] of Object.entries(labels)) {
+    if (k.toLowerCase() === lower && String(v).trim() !== '') return String(v).trim();
+  }
+  return undefined;
+}
+
+/**
+ * Optional hints merged into each node's `config` for architecture lint after `archrad init --from` Compose.
+ * Convention (service `labels:`):
+ * - `archrad.auth` — e.g. `bearer` (satisfies IR-LINT-MISSING-AUTH-010 on HTTP entries)
+ * - `archrad.auth_required: "false"` — explicit public entry (same rule opt-out)
+ * - `archrad.health_url` or `archrad.health.url` — e.g. `/health` (helps IR-LINT-NO-HEALTHCHECK-003)
+ * - `archrad.http.method` — optional, e.g. `GET`
+ */
+export function archradLintHintsFromLabels(labels: Record<string, string>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  const auth = labelGet(labels, 'archrad.auth');
+  if (auth !== undefined) out.auth = auth;
+
+  const pub = labelGet(labels, 'archrad.auth_required');
+  if (pub !== undefined && pub.toLowerCase() === 'false') out.authRequired = false;
+
+  const healthUrl = labelGet(labels, 'archrad.health_url') ?? labelGet(labels, 'archrad.health.url');
+  if (healthUrl !== undefined) {
+    out.url = healthUrl.startsWith('/') ? healthUrl : `/${healthUrl}`;
+  }
+
+  const method = labelGet(labels, 'archrad.http.method');
+  if (method !== undefined) out.method = method;
+
+  return out;
+}
+
 /** Extract hostname from common DB/cache/messaging URLs for cross-service edges. */
 export function connectionUrlHost(raw: string): string | null {
   const t = raw.trim();
@@ -206,12 +264,13 @@ export function dockerComposeToCanonicalIr(
   const verboseLines: string[] = [];
   const nodes: Record<string, unknown>[] = [];
   const edgeList: { from: string; to: string; reason: string }[] = [];
-  const seenEdge = new Set<string>();
+  /** One canonical edge per (from → to); duplicate IR edges trigger IR-LINT-DUPLICATE-EDGE-006. */
+  const linkedPair = new Set<string>();
 
   const pushEdge = (from: string, to: string, reason: string) => {
-    const key = `${from}\0${to}\0${reason}`;
-    if (seenEdge.has(key)) return;
-    seenEdge.add(key);
+    const pairKey = `${from}\0${to}`;
+    if (linkedPair.has(pairKey)) return;
+    linkedPair.add(pairKey);
     edgeList.push({ from, to, reason });
   };
 
@@ -241,11 +300,13 @@ export function dockerComposeToCanonicalIr(
           ? networks.map((x) => String(x))
           : Object.keys(networks as object);
 
+    const lintHints = archradLintHintsFromLabels(parseLabels(serviceDef));
     nodes.push({
       id,
       type: nodeType,
       name: serviceName,
       config: {
+        ...lintHints,
         compose: {
           image,
           ...(Object.keys(env).length ? { envKeys: Object.keys(env).sort() } : {}),
@@ -254,16 +315,8 @@ export function dockerComposeToCanonicalIr(
       },
     });
 
-    const deps = normalizeDependsOn(serviceDef.depends_on);
-    for (const depName of deps) {
-      const toId = idByServiceName.get(depName);
-      if (!toId) {
-        warnings.push(`depends_on: unknown service "${depName}" (from "${serviceName}")`);
-        continue;
-      }
-      pushEdge(id, toId, 'depends_on');
-    }
-
+    // Connection URLs first so `DATABASE_URL`→DB wins when `depends_on` also lists the same DB
+    // (Compose commonly sets both; they are one logical link in IR.)
     for (const key of CONNECTION_ENV_KEYS) {
       const val = env[key];
       if (!val) continue;
@@ -279,6 +332,16 @@ export function dockerComposeToCanonicalIr(
       }
       if (!targetId) continue;
       pushEdge(id, targetId, `${key}`);
+    }
+
+    const deps = normalizeDependsOn(serviceDef.depends_on);
+    for (const depName of deps) {
+      const toId = idByServiceName.get(depName);
+      if (!toId) {
+        warnings.push(`depends_on: unknown service "${depName}" (from "${serviceName}")`);
+        continue;
+      }
+      pushEdge(id, toId, 'depends_on');
     }
   }
 
