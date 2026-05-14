@@ -47,7 +47,10 @@ export async function runDeterministicExport(
 
   let irLintFindings: IrStructuralFinding[] = [];
   if (!skipLint) {
-    const lintPass = validateIrLint(actualIR, { policyRuleVisitors: opts.policyRuleVisitors });
+    const lintPass = validateIrLint(actualIR, {
+      lintProfile: opts.lintProfile,
+      policyRuleVisitors: opts.policyRuleVisitors,
+    });
     if (skipIr) {
       // Dangerous mode: full structural pass is off, but parse/normalize failures still return IR-STRUCT-* from
       // validateIrLint — fold those into irStructuralFindings so InkByte / CLI consumers block and log like normal.

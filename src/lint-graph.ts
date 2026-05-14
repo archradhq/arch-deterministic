@@ -35,6 +35,7 @@ export function looksLikeHealthUrl(url: string): boolean {
   const u = url.toLowerCase();
   return (
     /(^|\/)health(z)?(\/|$|\?)/.test(u) ||
+    /(^|\/)healthy(\/|$|\?)/.test(u) ||
     /(^|\/)healthcheck(\/|$|\?)/.test(u) ||
     /(^|\/)ping(\/|$|\?)/.test(u) ||
     /(^|\/)status(\/|$|\?)/.test(u) ||

@@ -3,10 +3,37 @@ import { validateIrLint } from '../ir-lint.js';
 import { validateIrStructural, hasIrStructuralErrors } from '../ir-structural.js';
 import {
   archradLintHintsFromLabels,
+  composeDependsOnDefaultServiceKey,
+  composeHealthcheckToLintHints,
+  composePlainEnvHostname,
   connectionUrlHost,
+  enumerateTraefikHttpBackendRefs,
   dockerComposeToCanonicalIr,
   inferTypeFromImage,
+  normalizedComposeRepositoryPath,
 } from './docker-compose.js';
+
+describe('composeDependsOnDefaultServiceKey', () => {
+  it('extracts ${VAR:-service} compose default dependency target', () => {
+    expect(composeDependsOnDefaultServiceKey('${_APP_DB_HOST:-mongodb}')).toBe('mongodb');
+    expect(composeDependsOnDefaultServiceKey('  ${_FOO:-redis} ')).toBe('redis');
+  });
+
+  it('returns null when the entry is not a compose :-default pattern', () => {
+    expect(composeDependsOnDefaultServiceKey('mongodb')).toBe(null);
+    expect(composeDependsOnDefaultServiceKey('${_APP_EMPTY}')).toBe(null);
+  });
+});
+
+describe('normalizedComposeRepositoryPath', () => {
+  it('strips tag only on the final repo segment', () => {
+    expect(normalizedComposeRepositoryPath('mcr.microsoft.com/mssql/server:2019-latest')).toBe(
+      'mcr.microsoft.com/mssql/server',
+    );
+    expect(normalizedComposeRepositoryPath('registry:5000/acme/cache:prod')).toBe('registry:5000/acme/cache');
+    expect(normalizedComposeRepositoryPath('postgres@sha256:abcd')).toBe('postgres');
+  });
+});
 
 describe('inferTypeFromImage', () => {
   it('maps known stacks', () => {
@@ -16,6 +43,10 @@ describe('inferTypeFromImage', () => {
     expect(inferTypeFromImage('nginx:alpine').type).toBe('gateway');
     expect(inferTypeFromImage('confluentinc/cp-kafka:7').type).toBe('queue');
     expect(inferTypeFromImage('minio/minio').type).toBe('storage');
+    expect(inferTypeFromImage('quay.io/keycloak/keycloak:24').type).toBe('keycloak');
+    expect(inferTypeFromImage('mcr.microsoft.com/mssql/server:2019-latest').type).toBe('postgres');
+    expect(inferTypeFromImage('maildev/maildev').type).toBe('smtp');
+    expect(inferTypeFromImage('coredns/coredns:2').type).toBe('dns');
   });
 
   it('warns on unknown image', () => {
@@ -33,7 +64,91 @@ describe('connectionUrlHost', () => {
   });
 });
 
+
+describe('composePlainEnvHostname', () => {
+  it('parses Compose service DNS names and host:port', () => {
+    expect(composePlainEnvHostname('postgres')).toBe('postgres');
+    expect(composePlainEnvHostname('"redis"')).toBe('redis');
+    expect(composePlainEnvHostname('db.internal:5432')).toBe('db.internal');
+  });
+
+  it('rejects JDBC/HTTP URLs and ${VAR} templates', () => {
+    expect(composePlainEnvHostname('postgres://db:5432/app')).toBe(null);
+    expect(composePlainEnvHostname('${_PGHOST}')).toBe(null);
+  });
+});
+
+describe('composeHealthcheckToLintHints', () => {
+  it('parses CMD-SHELL + curl blobs for /health', () => {
+    const h = composeHealthcheckToLintHints({
+      test: ['CMD-SHELL', 'curl -fsS http://localhost:8080/health || exit 1'],
+    });
+    expect(h.url).toBe('/health');
+    expect(h.method).toBe('GET');
+  });
+
+  it('parses wget /healthy (Mastodon-style)', () => {
+    expect(
+      composeHealthcheckToLintHints({
+        test: 'wget -qO- http://127.0.0.1:4000/healthy || exit 1',
+      }).url,
+    ).toBe('/healthy');
+  });
+
+  it('returns empty hints when there is no HTTP probe tooling', () => {
+    expect(composeHealthcheckToLintHints({ test: 'echo OK' }).url).toBeUndefined();
+  });
+});
+
+describe('enumerateTraefikHttpBackendRefs', () => {
+  it('reads loadbalancer service segment and routers.*.service value', () => {
+    const s = enumerateTraefikHttpBackendRefs({
+      'traefik.http.services.api_svc.loadbalancer.server.port': '8080',
+      'traefik.http.routers.web.service': 'api_svc',
+    });
+    expect([...s].sort()).toEqual(['api_svc']);
+  });
+});
+
 describe('dockerComposeToCanonicalIr', () => {
+  it('resolves Traefik router/service labels into traefikIngress edges', () => {
+    const yaml = `
+services:
+  traefik:
+    image: traefik:v3
+    labels:
+      - traefik.http.services.api_svc.loadbalancer.server.port=8080
+      - traefik.http.routers.web.service=api_svc
+  api-svc:
+    image: nginx:alpine
+`;
+    const { ir } = dockerComposeToCanonicalIr(yaml);
+    const edges = (ir.graph as { edges: { from: string; to: string; metadata?: Record<string, unknown> }[] }).edges;
+    expect(
+      edges.some((e) => e.metadata?.relation === 'traefikIngress' && e.metadata?.traefikBackend === 'api_svc'),
+    ).toBe(true);
+  });
+
+  it('expands interpolateFrom for depends_on hyphen-default (${DB_HOST-db})', () => {
+    const yaml = `
+services:
+  api:
+    image: mycompany/api:latest
+    depends_on:
+      - \${DB_HOST-db}
+  db:
+    image: postgres:15
+`;
+    const { ir } = dockerComposeToCanonicalIr(yaml, { interpolateFrom: {} });
+    const g = ir.graph as {
+      nodes: { id: string; name?: string }[];
+      edges: { from: string; to: string }[];
+    };
+    const apiId = g.nodes.find((n) => n.name === 'api')!.id;
+    const dbId = g.nodes.find((n) => n.name === 'db')!.id;
+    expect(g.edges.some((e) => e.from === apiId && e.to === dbId)).toBe(true);
+  });
+
   it('collapses depends_on and DATABASE_URL to one edge (same service pair)', () => {
     const yaml = `
 services:
@@ -66,6 +181,46 @@ services:
     expect(e.metadata?.env).toBe('DATABASE_URL');
   });
 
+  it('does not classify multi-engine database matrix services as HTTP gateways', () => {
+    const yaml = `
+services:
+  mysql:
+    image: mysql:8
+    ports: ["3306:3306"]
+  postgres:
+    image: postgres:15
+    ports: ["5432:5432"]
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    ports: ["1433:1433"]
+`;
+    const { ir } = dockerComposeToCanonicalIr(yaml);
+    const lint = validateIrLint(ir);
+    expect(lint.some((f) => f.code === 'IR-LINT-MISSING-AUTH-010')).toBe(false);
+    expect(lint.some((f) => f.code === 'IR-LINT-MULTIPLE-HTTP-ENTRIES-009')).toBe(false);
+    expect(lint.some((f) => f.code === 'IR-LINT-NO-HEALTHCHECK-003')).toBe(false);
+    const nodes = (ir.graph as { nodes: { id: string; type: string }[] }).nodes;
+    expect(nodes.find((n) => n.id === 'mssql')?.type).toBe('postgres');
+  });
+
+  it('maps depends_on ${_VAR:-mongodb} literals to mongodb edges (Compose default syntax)', () => {
+    const yaml = `
+services:
+  worker-migrations:
+    image: demo/worker:latest
+    depends_on:
+      - \${_FOO:-mongodb}
+  mongodb:
+    image: mongo:8
+`;
+    const { ir, report } = dockerComposeToCanonicalIr(yaml);
+    expect(report.warnings.every((w) => !w.includes('unknown service'))).toBe(true);
+    expect(report.edges).toBeGreaterThanOrEqual(1);
+    const g = ir.graph as { edges: { from: string; to: string }[] };
+    const hit = g.edges.some((e) => e.from === 'worker_migrations' && e.to === 'mongodb');
+    expect(hit).toBe(true);
+  });
+
   it('does not trigger IR-LINT-DUPLICATE-EDGE-006 when depends_on and DATABASE_URL share the same pair', () => {
     const yaml = `
 services:
@@ -84,8 +239,63 @@ services:
     expect(dup).toEqual([]);
   });
 
+  it('maps POSTGRES_HOST / REDIS_HOST to edges without full URLs', () => {
+    const yaml = `
+services:
+  web:
+    image: mastodon:dev
+    ports: ["3000:3000"]
+    environment:
+      POSTGRES_HOST: db
+      REDIS_HOST: redis
+  db:
+    image: postgres:15
+  redis:
+    image: redis:7
+`;
+    const { ir, report } = dockerComposeToCanonicalIr(yaml);
+    expect(report.edges).toBeGreaterThanOrEqual(2);
+    const g = ir.graph as { edges: { from: string; to: string; metadata?: Record<string, unknown> }[] };
+    const hasDb = g.edges.some(
+      (e) => e.from === 'web' && e.to === 'db' && e.metadata?.env === 'POSTGRES_HOST',
+    );
+    const hasRedis = g.edges.some(
+      (e) => e.from === 'web' && e.to === 'redis' && e.metadata?.env === 'REDIS_HOST',
+    );
+    expect(hasDb).toBe(true);
+    expect(hasRedis).toBe(true);
+  });
+
+  it('uses compose healthcheck curl/wget to seed config.url for NO-HEALTHCHECK rule', () => {
+    const yaml = `
+services:
+  web:
+    image: mastodon:dev
+    ports: ["3000:3000"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/healthy || exit 1"]
+`;
+    const { ir } = dockerComposeToCanonicalIr(yaml);
+    const web = (ir.graph as { nodes: { id: string; config?: Record<string, unknown> }[] }).nodes.find(
+      (n) => n.id === 'web',
+    );
+    expect(web?.config?.url).toBe('/healthy');
+    expect(validateIrLint(ir).some((f) => f.code === 'IR-LINT-NO-HEALTHCHECK-003')).toBe(false);
+  });
+
   it('rejects empty services', () => {
     expect(() => dockerComposeToCanonicalIr('services: {}')).toThrow(/No services found/);
+  });
+
+  it('accepts multi-document YAML when the first document is empty (leading ---)', () => {
+    const yaml = `---
+---
+services:
+  web:
+    image: nginx:alpine
+`;
+    const { report } = dockerComposeToCanonicalIr(yaml);
+    expect(report.services).toBe(1);
   });
 
   it('archradLintHintsFromLabels maps documented compose labels to IR config', () => {

@@ -67,7 +67,7 @@ export {
   type MaterializeResult,
 } from './ir-normalize.js';
 
-export { validateIrLint, type ValidateIrLintOptions } from './ir-lint.js';
+export { validateIrLint, type LintProfileId, type ValidateIrLintOptions } from './ir-lint.js';
 
 export {
   loadPolicyPacksFromDirectory,
@@ -97,7 +97,12 @@ export {
   type CosignVerificationResult,
   type CosignVerifyOptions,
 } from './policy-pack-sign.js';
-export { runArchitectureLinting, LINT_RULE_REGISTRY } from './lint-rules.js';
+export {
+  runArchitectureLinting,
+  LINT_RULE_REGISTRY,
+  MONOLITH_RELAXED_PROFILE_OMIT_CODES,
+  type RunArchitectureLintingOptions,
+} from './lint-rules.js';
 export {
   buildParsedLintGraph,
   isParsedLintGraph,
@@ -105,7 +110,14 @@ export {
   type BuildParsedLintGraphResult,
 } from './lint-graph.js';
 
-export { isHttpLikeType, isHttpEndpointType, isDbLikeType, isQueueLikeNodeType, isAuthLikeNodeType } from './graphPredicates.js';
+export {
+  isHttpLikeType,
+  isHttpEndpointType,
+  isDbLikeType,
+  isQueueLikeNodeType,
+  isAuthLikeNodeType,
+  isInfraLeafSinkLintType,
+} from './graphPredicates.js';
 
 export {
   sortFindings,
@@ -125,10 +137,21 @@ export {
 } from './yamlToIr.js';
 
 export {
+  composeInterpolationBindings,
+  expandComposeVars,
+  parseDotEnvText,
+} from './init/compose-vars.js';
+
+export {
   dockerComposeToCanonicalIr,
   DockerComposeInitError,
+  type DockerComposeInitOptions,
   inferTypeFromImage,
+  enumerateTraefikHttpBackendRefs,
   connectionUrlHost,
+  composeDependsOnDefaultServiceKey,
+  composePlainEnvHostname,
+  composeHealthcheckToLintHints,
 } from './init/docker-compose.js';
 
 export {

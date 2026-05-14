@@ -318,6 +318,29 @@ describe('validateIrLint', () => {
     expect(validateIrLint(ir).some((x) => x.code === 'IR-LINT-DEAD-NODE-011')).toBe(false);
   });
 
+  it('IR-LINT-DEAD-NODE-011 does not fire on infra leaf sinks (cache, dns)', () => {
+    const redis = {
+      graph: {
+        nodes: [
+          { id: 'svc', type: 'service', name: 'svc' },
+          { id: 'redis', type: 'cache', name: 'Redis' },
+        ],
+        edges: [{ from: 'svc', to: 'redis' }],
+      },
+    };
+    expect(validateIrLint(redis).some((x) => x.code === 'IR-LINT-DEAD-NODE-011')).toBe(false);
+    const dns = {
+      graph: {
+        nodes: [
+          { id: 'svc', type: 'service', name: 'svc' },
+          { id: 'coredns', type: 'dns', name: 'CoreDNS' },
+        ],
+        edges: [{ from: 'svc', to: 'coredns' }],
+      },
+    };
+    expect(validateIrLint(dns).some((x) => x.code === 'IR-LINT-DEAD-NODE-011')).toBe(false);
+  });
+
   it('IR-LINT-DEAD-NODE-011 does not fire on truly isolated nodes (caught by ISOLATED-NODE-005)', () => {
     const ir = {
       graph: {
@@ -338,6 +361,40 @@ describe('validateIrLint', () => {
     expect(structural.filter((x) => x.severity === 'error')).toHaveLength(0);
     const f = validateIrLint(ir);
     expect(f.some((x) => x.code === 'IR-LINT-DIRECT-DB-ACCESS-002')).toBe(true);
+  });
+
+  it('lintProfile monolith-relaxed drops layered-microservice-centric stock IR-LINT rules', () => {
+    const relaxedDb = validateIrLint(readFixture('demo-direct-db-violation.json'), {
+      lintProfile: 'monolith-relaxed',
+    });
+    expect(relaxedDb.some((x) => x.code === 'IR-LINT-DIRECT-DB-ACCESS-002')).toBe(false);
+
+    const multiHttp = {
+      graph: {
+        nodes: [
+          { id: 'a', type: 'http', name: 'A', config: { url: '/a', method: 'GET' } },
+          { id: 'b', type: 'http', name: 'B', config: { url: '/b', method: 'GET' } },
+        ],
+        edges: [],
+      },
+    };
+    expect(
+      validateIrLint(multiHttp, { lintProfile: 'monolith-relaxed' }).some(
+        (x) => x.code === 'IR-LINT-MULTIPLE-HTTP-ENTRIES-009',
+      ),
+    ).toBe(false);
+
+    const missingAuth = {
+      graph: {
+        nodes: [{ id: 'api', type: 'http', name: 'API', config: { url: '/orders', method: 'GET' } }],
+        edges: [],
+      },
+    };
+    expect(
+      validateIrLint(missingAuth, { lintProfile: 'monolith-relaxed' }).some(
+        (x) => x.code === 'IR-LINT-MISSING-AUTH-010',
+      ),
+    ).toBe(false);
   });
 
   it('demo-direct-db-layered.json passes architecture lint (README GIF)', () => {

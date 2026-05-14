@@ -54,6 +54,7 @@ import {
   dockerComposeToCanonicalIr,
   DockerComposeInitError,
 } from './init/docker-compose.js';
+import { parseDotEnvText } from './init/compose-vars.js';
 import {
   applyConfigToProgram,
   extractConfigBootstrapFlags,
@@ -103,6 +104,14 @@ function parseMaxWarnings(v: string | undefined): number | undefined {
   if (v == null || v === '') return undefined;
   const n = parseInt(v, 10);
   return Number.isFinite(n) ? n : undefined;
+}
+
+/** Choices for **` --ir-lint-profile **` — **` monolith-relaxed`** drops layered-microservice-centric IR-LINT rules. */
+const IR_LINT_PROFILE_CHOICES = ['default', 'monolith-relaxed'] as const;
+
+function validateIrLintOptionsFromCli(lintProfile: string | undefined): ValidateIrLintOptions {
+  if (lintProfile === 'monolith-relaxed') return { lintProfile: 'monolith-relaxed' };
+  return {};
 }
 
 /** Load `--policies` directory; on failure prints to stderr and returns null (caller should exit 1). */
@@ -181,10 +190,27 @@ program
     'Source file: docker-compose.yml, docker-compose.yaml, or compose.yml'
   )
   .option('-o, --output <path>', 'Write IR JSON (default: archrad-graph.json)')
+  .option(
+    '--compose-env-file <path>',
+    'Dotenv fragment merged into Compose ${VAR} expansion (later files override earlier)',
+    (v: string, prev: string[]) => [...prev, resolve(v)],
+    [] as string[]
+  )
+  .option(
+    '--compose-merge-process-env',
+    'After --compose-env-file, merge process.env; explicit dotenv keys still win'
+  )
   .option('--dry-run', 'Print IR JSON to stdout; do not write a file')
   .option('--verbose', 'Print mapping decisions to stderr')
   .action(
-    async (cmdOpts: { from: string; output?: string; dryRun?: boolean; verbose?: boolean }) => {
+    async (cmdOpts: {
+      from: string;
+      output?: string;
+      dryRun?: boolean;
+      verbose?: boolean;
+      composeEnvFile?: string[];
+      composeMergeProcessEnv?: boolean;
+    }) => {
       const fromPath = resolve(cmdOpts.from);
       let text: string;
       try {
@@ -200,11 +226,36 @@ program
         return;
       }
 
+      let interpolateFrom: Record<string, string> | undefined;
+      const envPaths = cmdOpts.composeEnvFile ?? [];
+      if (envPaths.length > 0) {
+        interpolateFrom = {};
+        for (const envPath of envPaths) {
+          try {
+            const blob = await readFile(envPath, 'utf8');
+            Object.assign(interpolateFrom, parseDotEnvText(blob));
+          } catch (e) {
+            const err = e as NodeJS.ErrnoException;
+            if (err?.code === 'ENOENT') {
+              console.error(`archrad init: --compose-env-file not found: ${envPath}`);
+            } else {
+              console.error(`archrad init: could not read --compose-env-file (${err?.message ?? String(e)})`);
+            }
+            process.exitCode = 1;
+            return;
+          }
+        }
+      }
+
       let ir: Record<string, unknown>;
       let report: { services: number; edges: number; warnings: string[] };
       let verboseLines: string[];
       try {
-        const r = dockerComposeToCanonicalIr(text, { fileLabel: fromPath });
+        const r = dockerComposeToCanonicalIr(text, {
+          fileLabel: fromPath,
+          interpolateFrom,
+          interpolateFromProcessEnv: Boolean(cmdOpts.composeMergeProcessEnv),
+        });
         ir = r.ir;
         report = r.report;
         verboseLines = r.verboseLines;
@@ -282,11 +333,18 @@ program
     '--findings-json-out <path>',
     'Write findings array as JSON (same shape as --json stdout); still prints pretty to stderr unless --json'
   )
+  .addOption(
+    new Option(
+      '--ir-lint-profile <name>',
+      'Built-in lint profile — monolith-relaxed omits IR-LINT-DIRECT-DB-ACCESS-002, IR-LINT-MISSING-AUTH-010, IR-LINT-MULTIPLE-HTTP-ENTRIES-009'
+    ).choices([...IR_LINT_PROFILE_CHOICES])
+  )
   .action(
     async (cmdOpts: {
       ir: string;
       json?: boolean;
       skipLint?: boolean;
+      irLintProfile?: string;
       policies?: string;
       policiesRequireSigned?: boolean;
       cosignPubkey?: string;
@@ -305,7 +363,7 @@ program
       }
 
       const noLint = Boolean(cmdOpts.skipLint);
-      let lintOpts: ValidateIrLintOptions = {};
+      let lintOpts: ValidateIrLintOptions = validateIrLintOptionsFromCli(cmdOpts.irLintProfile);
       if (!noLint && cmdOpts.policies) {
         const loaded = await loadPoliciesOption(cmdOpts.policies, {
           policiesRequireSigned: cmdOpts.policiesRequireSigned,
@@ -315,7 +373,7 @@ program
           process.exitCode = 1;
           return;
         }
-        lintOpts = loaded;
+        lintOpts = { ...lintOpts, ...loaded };
       }
       const structural = validateIrStructural(ir);
       const lint =
@@ -405,10 +463,17 @@ program
     '--findings-json-out <path>',
     'Write findings array as JSON (same shape as --json stdout); still prints pretty to stderr unless --json'
   )
+  .addOption(
+    new Option(
+      '--ir-lint-profile <name>',
+      'Built-in lint profile — monolith-relaxed omits select layered-microservice IR-LINT-* rules'
+    ).choices([...IR_LINT_PROFILE_CHOICES])
+  )
   .action(
     async (cmdOpts: {
       ir: string;
       json?: boolean;
+      irLintProfile?: string;
       policies?: string;
       policiesRequireSigned?: boolean;
       cosignPubkey?: string;
@@ -427,7 +492,7 @@ program
         return;
       }
 
-      let lintOpts: ValidateIrLintOptions = {};
+      let lintOpts: ValidateIrLintOptions = validateIrLintOptionsFromCli(cmdOpts.irLintProfile);
       if (cmdOpts.policies) {
         const loaded = await loadPoliciesOption(cmdOpts.policies, {
           policiesRequireSigned: cmdOpts.policiesRequireSigned,
@@ -437,7 +502,7 @@ program
           process.exitCode = 1;
           return;
         }
-        lintOpts = loaded;
+        lintOpts = { ...lintOpts, ...loaded };
       }
 
       // validateIrLint returns structural blockers if the IR can't be parsed;
@@ -891,6 +956,12 @@ program
     '--cosign-pubkey <path>',
     `Verify "${POLICY_PACK_SIGNATURE_NAME}" with this cosign public key (implies --policies-require-signed)`
   )
+  .addOption(
+    new Option(
+      '--ir-lint-profile <name>',
+      'Lint profile during export — monolith-relaxed omits select layered-microservice IR-LINT-* rules'
+    ).choices([...IR_LINT_PROFILE_CHOICES])
+  )
   .action(
     async (cmdOpts: {
       ir: string;
@@ -906,6 +977,7 @@ program
       cosignPubkey?: string;
       failOnWarning?: boolean;
       maxWarnings?: string;
+      irLintProfile?: string;
     }) => {
     const irPath = resolve(cmdOpts.ir);
     const outDir = resolve(cmdOpts.out);
@@ -940,7 +1012,7 @@ program
     const skipStruct = Boolean(
       exportOpts.dangerSkipIrStructuralValidation || exportOpts.skipIrStructuralValidation
     );
-    let exportLintOpts: ValidateIrLintOptions = {};
+    let exportLintOpts: ValidateIrLintOptions = validateIrLintOptionsFromCli(cmdOpts.irLintProfile);
     if (!cmdOpts.skipIrLint && cmdOpts.policies) {
       const loaded = await loadPoliciesOption(cmdOpts.policies, {
         policiesRequireSigned: cmdOpts.policiesRequireSigned,
@@ -950,7 +1022,7 @@ program
         process.exitCode = 1;
         return;
       }
-      exportLintOpts = loaded;
+      exportLintOpts = { ...exportLintOpts, ...loaded };
     }
     try {
       const { files, openApiStructuralWarnings, irStructuralFindings, irLintFindings } =
@@ -1036,6 +1108,12 @@ program
   )
   .option('--strict-extra', 'Fail if output directory contains files not in the reference export')
   .option('--json', 'Print drift findings and export metadata as JSON')
+  .addOption(
+    new Option(
+      '--ir-lint-profile <name>',
+      'Lint profile for reference export — monolith-relaxed omits select layered-microservice IR-LINT-* rules'
+    ).choices([...IR_LINT_PROFILE_CHOICES])
+  )
   .action(
     async (cmdOpts: {
       ir: string;
@@ -1051,6 +1129,7 @@ program
       cosignPubkey?: string;
       strictExtra?: boolean;
       json?: boolean;
+      irLintProfile?: string;
     }) => {
       const irPath = resolve(cmdOpts.ir);
       const outDir = resolve(cmdOpts.out);
@@ -1079,7 +1158,7 @@ program
         cmdOpts.dangerSkipIrStructuralValidation || cmdOpts.skipIrStructuralValidation
       );
 
-      let driftLintOpts: { policyRuleVisitors?: ValidateIrLintOptions['policyRuleVisitors'] } = {};
+      let driftLintOpts: ValidateIrLintOptions = validateIrLintOptionsFromCli(cmdOpts.irLintProfile);
       if (!cmdOpts.skipIrLint && cmdOpts.policies) {
         const loaded = await loadPoliciesOption(cmdOpts.policies, {
           policiesRequireSigned: cmdOpts.policiesRequireSigned,
@@ -1089,7 +1168,7 @@ program
           process.exitCode = 1;
           return;
         }
-        driftLintOpts = loaded;
+        driftLintOpts = { ...driftLintOpts, ...loaded };
       }
 
       try {
@@ -1098,7 +1177,8 @@ program
           skipIrStructuralValidation: skipStruct,
           skipIrLint: cmdOpts.skipIrLint,
           strictExtra: cmdOpts.strictExtra,
-          ...driftLintOpts,
+          lintProfile: driftLintOpts.lintProfile,
+          policyRuleVisitors: driftLintOpts.policyRuleVisitors,
         });
 
         const combined = sortFindings([

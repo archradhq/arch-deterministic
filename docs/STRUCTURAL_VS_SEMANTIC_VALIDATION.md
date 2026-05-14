@@ -52,6 +52,8 @@ Findings use **`severity`**: `error` (blocks export) or `warning` / `info` when 
 
 **CI:** `archrad validate --fail-on-warning` or `--max-warnings N`. Not org-specific policy — that stays in Cloud. **Custom deterministic visitors** on the same graph (e.g. **`ORG-*`** codes): see **[CUSTOM_RULES.md](./CUSTOM_RULES.md)**.
 
+**Docker Compose (`archrad init --from`):** infers **`depends_on`**, full JDBC/Redis URLs (**`DATABASE_URL`**, …), plain **`POSTGRES_HOST`** / **`_APP_DB_HOST`** hostnames when they match **`services:`** keys, and (when Compose **`healthcheck`** uses **`curl`** or **`wget`**) merges **`config.url`** hints used by **`IR-LINT-NO-HEALTHCHECK-003`**.
+
 ## Semantic (ArchRad Cloud)
 
 **Question:** Is this architecture **appropriate** for security, compliance, scale, and org policy?

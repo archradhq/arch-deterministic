@@ -151,6 +151,7 @@ export async function runValidateDrift(
     skipIrStructuralValidation?: boolean;
     skipIrLint?: boolean;
     strictExtra?: boolean;
+    lintProfile?: ValidateIrLintOptions['lintProfile'];
     policyRuleVisitors?: ValidateIrLintOptions['policyRuleVisitors'];
   } = {}
 ): Promise<ValidateDriftResult> {
@@ -159,6 +160,7 @@ export async function runValidateDrift(
     hostPort,
     skipIrStructuralValidation: Boolean(opts.skipIrStructuralValidation),
     skipIrLint: Boolean(opts.skipIrLint),
+    lintProfile: opts.lintProfile,
     policyRuleVisitors: opts.policyRuleVisitors,
   });
 
@@ -216,6 +218,7 @@ export async function runDriftCheckAgainstFiles(
     skipIrStructuralValidation?: boolean;
     skipIrLint?: boolean;
     strictExtra?: boolean;
+    lintProfile?: ValidateIrLintOptions['lintProfile'];
     policyRuleVisitors?: ValidateIrLintOptions['policyRuleVisitors'];
   } = {}
 ): Promise<DriftCheckFilesResult> {
@@ -224,6 +227,7 @@ export async function runDriftCheckAgainstFiles(
     hostPort,
     skipIrStructuralValidation: Boolean(opts.skipIrStructuralValidation),
     skipIrLint: Boolean(opts.skipIrLint),
+    lintProfile: opts.lintProfile,
     policyRuleVisitors: opts.policyRuleVisitors,
   });
   const { files } = exportResult;

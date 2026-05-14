@@ -68,3 +68,15 @@ export function isQueueLikeNodeType(t: string): boolean {
     /kafka|sns|sqs|amqp|mqtt|nats|rabbitmq|pulsar/.test(s)
   );
 }
+
+/**
+ * Node types that are commonly **incoming-only** sinks in architecture graphs (Compose init, blueprints).
+ * Used by IR-LINT-DEAD-NODE-011 so Redis/CoreDNS/OpenSearch blobs are not "dead integration" warnings.
+ */
+export function isInfraLeafSinkLintType(t: string): boolean {
+  const s = String(t ?? '')
+    .trim()
+    .toLowerCase();
+  if (!s) return false;
+  return s === 'cache' || s === 'dns' || s === 'search' || s === 'storage' || s === 'smtp';
+}

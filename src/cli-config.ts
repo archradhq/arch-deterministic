@@ -38,6 +38,7 @@ const COMMAND_CONFIG_MAP: CommandConfigMap = {
     report: 'report',
     metricsFile: 'metricsFile',
     findingsJsonOut: 'findingsJsonOut',
+    irLintProfile: 'irLintProfile',
   },
   lint: {
     ir: 'ir',
@@ -50,6 +51,7 @@ const COMMAND_CONFIG_MAP: CommandConfigMap = {
     report: 'report',
     metricsFile: 'metricsFile',
     findingsJsonOut: 'findingsJsonOut',
+    irLintProfile: 'irLintProfile',
   },
   export: {
     ir: 'ir',
@@ -65,6 +67,7 @@ const COMMAND_CONFIG_MAP: CommandConfigMap = {
     cosignPubkey: 'cosignPubkey',
     failOnWarning: 'failOnWarning',
     maxWarnings: 'maxWarnings',
+    irLintProfile: 'irLintProfile',
   },
   'validate-drift': {
     ir: 'ir',
@@ -77,6 +80,7 @@ const COMMAND_CONFIG_MAP: CommandConfigMap = {
     policiesRequireSigned: 'policiesRequireSigned',
     cosignPubkey: 'cosignPubkey',
     strictExtra: 'strictExtra',
+    irLintProfile: 'irLintProfile',
   },
 };
 

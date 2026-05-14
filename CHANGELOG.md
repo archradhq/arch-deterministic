@@ -20,6 +20,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`archrad --version`** now reads the version from the shipped `package.json` (was hardcoded to `0.3.0` and drifted from the published tag).
 - `LoadPolicyPacksResult.ok` now includes a `signedBy` field (`'unsigned' | 'sha256-verified' | 'cosign-verified'`) so library callers can surface signing provenance in Cloud and CI summaries.
 
+## [0.5.0] - 2026-05-13
+
+**Theme:** Docker Compose interpolation, Traefik ingress edges, monolith lint profile.
+
+### Added
+
+- **Compose `${VAR}` expansion** — `parseDotEnvText`, `composeInterpolationBindings`, `expandComposeVars` (`$$`, `${VAR}`, `${VAR:-def}`, `${VAR-def}`); `dockerComposeToCanonicalIr` accepts `interpolateFrom` and `interpolateFromProcessEnv`; expansion applies to service `environment`, `labels`, and `depends_on`. **`archrad init`:** `--compose-env-file` (repeatable), `--compose-merge-process-env`.
+- **Traefik → IR edges** — Infers gateway/backend links from `traefik.http.services.*.loadbalancer.*` and `traefik.http.routers.*.service` labels; edge metadata `relation: traefikIngress`, `traefikBackend`. Exports `enumerateTraefikHttpBackendRefs`, `DockerComposeInitOptions`.
+- **`monolith-relaxed` lint profile** — Suppresses `IR-LINT-DIRECT-DB-ACCESS-002`, `IR-LINT-MISSING-AUTH-010`, `IR-LINT-MULTIPLE-HTTP-ENTRIES-009` for Rails/Django-style graphs. **`--ir-lint-profile`** on `validate`, `lint`, `export`, `validate-drift`; **`archrad.yml`** key **`irLintProfile`**; `runDeterministicExport` / drift pass `lintProfile` through `validateIrLint`.
+
+### Fixed
+
+- **`expandComposeVars`** — Left-to-right pass replaces global `$$`/regex ordering bugs so Compose-style `$${VAR}` yields a literal `$` plus expanded `${VAR}`. After consuming `$$`, the cursor sits on `{`; the importer now parses `${…}` in that position instead of emitting raw `{…}`.
+
 ## [0.4.2] - 2026-05-07
 
 **Theme:** Docker Compose `init` — one edge per service pair (no spurious duplicate-edge lint).

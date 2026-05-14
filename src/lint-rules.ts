@@ -14,7 +14,11 @@ import {
   buildSyncAdjacencyForLint,
   edgeRepresentsAsyncBoundary,
 } from './lint-graph.js';
-import { isAuthLikeNodeType, isQueueLikeNodeType } from './graphPredicates.js';
+import {
+  isAuthLikeNodeType,
+  isInfraLeafSinkLintType,
+  isQueueLikeNodeType,
+} from './graphPredicates.js';
 
 const LAYER: IrStructuralFinding['layer'] = 'lint';
 
@@ -311,6 +315,8 @@ export function ruleHttpMissingAuth(g: ParsedLintGraph): IrStructuralFinding[] {
   for (const [id, n] of nodeById) {
     if (!isHttpLikeType(nodeType(n))) continue;
     if ((inDegree.get(id) ?? 0) > 0) continue; // not an entry node
+    /** IdP / SSO containers surface HTTP login flows; they must not satisfy "missing auth" as API gateways. */
+    if (isAuthLikeNodeType(nodeType(n))) continue;
 
     const cfg = (n.config ?? {}) as Record<string, unknown>;
 
@@ -349,7 +355,8 @@ export function ruleHttpMissingAuth(g: ParsedLintGraph): IrStructuralFinding[] {
 /**
  * IR-LINT-DEAD-NODE-011 — non-sink node with incoming edges but no outgoing edges.
  *
- * Datastore-like and queue-like nodes are valid sinks and are excluded.
+ * Datastore-like, queue-like, common infra sinks (cache, DNS, SMTP, blob search/store), and
+ * HTTP-face nodes are valid sinks/leaves at this abstraction and are excluded.
  * Nodes with no incident edges at all are already caught by IR-LINT-ISOLATED-NODE-005.
  * This rule targets nodes that receive data but forward it nowhere — likely a missing
  * edge, an incomplete integration step, or a stale component.
@@ -362,7 +369,14 @@ export function ruleDeadNode(g: ParsedLintGraph): IrStructuralFinding[] {
     const inn = g.inDegree.get(id) ?? 0;
     if (out > 0 || inn === 0) continue; // has outgoing, or truly isolated (caught elsewhere)
     const t = nodeType(n);
-    if (isDbLikeType(t) || isQueueLikeNodeType(t) || isHttpLikeType(t)) continue; // valid sinks
+    if (
+      isDbLikeType(t) ||
+      isQueueLikeNodeType(t) ||
+      isHttpLikeType(t) ||
+      isInfraLeafSinkLintType(t)
+    ) {
+      continue;
+    }
     findings.push({
       code: 'IR-LINT-DEAD-NODE-011',
       severity: 'warning',
@@ -377,6 +391,18 @@ export function ruleDeadNode(g: ParsedLintGraph): IrStructuralFinding[] {
 
   return findings;
 }
+
+/** Omit findings matching these codes (built-in **`IR-LINT-*`** only). */
+export type RunArchitectureLintingOptions = {
+  omitFindingCodes?: ReadonlySet<string>;
+};
+
+/** Suppress layered-microservice-centric rules irrelevant to typical monolith backends. */
+export const MONOLITH_RELAXED_PROFILE_OMIT_CODES: ReadonlySet<string> = new Set([
+  'IR-LINT-DIRECT-DB-ACCESS-002',
+  'IR-LINT-MISSING-AUTH-010',
+  'IR-LINT-MULTIPLE-HTTP-ENTRIES-009',
+]);
 
 /**
  * Ordered registry: add a new rule by implementing `(g) => findings` and appending here.
@@ -395,7 +421,17 @@ export const LINT_RULE_REGISTRY: ReadonlyArray<(g: ParsedLintGraph) => IrStructu
   ruleDeadNode,
 ];
 
-/** Run all registered architecture lint visitors (same as legacy `validateIrLint` behavior). */
-export function runArchitectureLinting(g: ParsedLintGraph): IrStructuralFinding[] {
-  return LINT_RULE_REGISTRY.flatMap((rule) => rule(g));
+/** Run all registered architecture lint visitors. */
+export function runArchitectureLinting(
+  g: ParsedLintGraph,
+  options?: RunArchitectureLintingOptions,
+): IrStructuralFinding[] {
+  const omit = options?.omitFindingCodes ?? new Set<string>();
+  const out: IrStructuralFinding[] = [];
+  for (const rule of LINT_RULE_REGISTRY) {
+    for (const f of rule(g)) {
+      if (!omit.has(f.code)) out.push(f);
+    }
+  }
+  return out;
 }

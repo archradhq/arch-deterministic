@@ -19,6 +19,7 @@
  *   hostPort: 8080                # default --host-port
  *   skipLint: false               # validate: --skip-lint
  *   skipIrLint: false             # export / drift: --skip-ir-lint
+ *   irLintProfile: default       # validate / lint / export / drift — monolith-relaxed omits layered-service rules
  *   strictExtra: false            # drift: --strict-extra
  *   strictHostPort: false         # export: --strict-host-port
  *   skipHostPortCheck: false      # export / drift: --skip-host-port-check
@@ -59,6 +60,7 @@ export const ArchradConfigSchema = z
     // Lint toggles
     skipLint: z.boolean().optional(),
     skipIrLint: z.boolean().optional(),
+    irLintProfile: z.enum(['default', 'monolith-relaxed']).optional(),
 
     // Export/drift specifics
     hostPort: z
