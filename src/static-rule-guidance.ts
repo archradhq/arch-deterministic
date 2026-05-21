@@ -194,6 +194,42 @@ const GUIDANCE: Record<string, { title: string; remediation: string }> = {
     remediation:
       'Fix IR structural/lint errors blocking export, or verify `--target` and IR content so the exporter emits files.',
   },
+  'IR-DRIFT-IMPL-000': {
+    title: 'Authored IR could not be interpreted for implementation drift comparison',
+    remediation:
+      'Resolve IR structural issues so the graph can be loaded (see IR-STRUCT-* findings from `archrad validate` without `--codebase`). Drift rules need a parseable IR and a successful `buildParsedLintGraph` context.',
+  },
+  'IR-DRIFT-IMPL-001': {
+    title:
+      'Authored IR declares HTTP-like entry nodes but reconstruction detected no implementation artifacts',
+    remediation:
+      'Verify `--codebase` points to the correct service root. If the API exists but was not detected, check `--codebase-language`, exclusion patterns, and framework coverage in the release notes. If the service is unimplemented, update or remove the HTTP-like nodes in the authored IR.',
+  },
+  'IR-DRIFT-IMPL-002': {
+    title: 'HTTP routes exist in the scanned codebase but the authored IR has no HTTP-like nodes',
+    remediation:
+      'Add HTTP-like node(s) to the authored IR for each detected entry surface. Run `archrad reconstruct --from <path> --output reconstructed.json` for a starting point, then merge into your design IR.',
+  },
+  'IR-DRIFT-IMPL-003': {
+    title: 'Direct database connection in code not present in authored IR edges',
+    remediation:
+      'CRITICAL: Either add the database edges to the authored IR (if the connection is legitimate), or remove the direct DB access from code and route it through the documented service layer. This finding indicates a design–implementation discrepancy that must be resolved before shipping.',
+  },
+  'IR-DRIFT-IMPL-004': {
+    title: 'HTTP entry point in code not declared in authored IR',
+    remediation:
+      'Add an HTTP-like node to the authored IR for each undocumented entry point. Undocumented entry points bypass architectural review gates for auth, rate limits, and observability. Run `archrad reconstruct` to get a starting IR.',
+  },
+  'IR-DRIFT-IMPL-005': {
+    title: 'Service-to-service call in code not present as an edge in authored IR',
+    remediation:
+      'Add the downstream service node and a directed edge to the authored IR. Run `archrad reconstruct --from <path>` to enumerate detected outbound calls, then merge the missing edges into your design IR.',
+  },
+  'IR-DRIFT-IMPL-006': {
+    title: 'Auth middleware present in code but no auth node in authored IR',
+    remediation:
+      'Add an auth/middleware node and a connecting edge to the authored IR so the documented architecture reflects the actual security posture. This is an informational finding — the code is doing the right thing, but the IR underrepresents it.',
+  },
 };
 
 export function listStaticRuleCodes(): string[] {

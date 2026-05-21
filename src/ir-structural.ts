@@ -8,8 +8,8 @@ import { materializeNormalizedGraph } from './ir-normalize.js';
 
 export type IrStructuralSeverity = 'error' | 'warning' | 'info';
 
-/** IR shape/refs (IR-STRUCT-*) vs deterministic architecture heuristics (IR-LINT-*) */
-export type IrFindingLayer = 'structural' | 'lint';
+/** IR shape/refs (IR-STRUCT-*) vs deterministic architecture heuristics (IR-LINT-*) vs implementation drift (IR-DRIFT-IMPL-*) */
+export type IrFindingLayer = 'structural' | 'lint' | 'impl-drift';
 
 export type IrStructuralFinding = {
   code: string;

@@ -2,7 +2,7 @@
  * Spawns built `dist/cli.js` (npm test runs `npm run build` first).
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, unlinkSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -101,6 +101,55 @@ describe('archrad validate exit codes', () => {
     } finally {
       try {
         unlinkSync(j);
+      } catch {
+        /* ignore */
+      }
+    }
+  });
+
+  it('--impl-drift-fail-on is independent of main --fail-on when --codebase warns', () => {
+    const codebase = mkdtempSync(join(tmpdir(), 'archrad-impl-drift-exit-'));
+    const irPath = join(codebase, 'ir.json');
+    writeFileSync(irPath, JSON.stringify({ graph: { nodes: [{ id: 'a', type: 'service', name: 'S' }], edges: [] } }), 'utf8');
+    writeFileSync(join(codebase, 'package.json'), '{ "name": "svc" }\n', 'utf8');
+    writeFileSync(
+      join(codebase, 'app.js'),
+      "const axios = require('axios');\naxios.get('http://downstream/example');\n",
+      'utf8'
+    );
+    try {
+      const status = runValidate([
+        'validate',
+        '--ir',
+        irPath,
+        '--skip-lint',
+        '--codebase',
+        codebase,
+        '--fail-on',
+        'warning',
+        '--impl-drift-fail-on',
+        'never',
+      ]);
+      expect(status).not.toBeNull();
+      expect(status).toBe(0);
+    } finally {
+      try {
+        unlinkSync(join(codebase, 'app.js'));
+      } catch {
+        /* ignore */
+      }
+      try {
+        unlinkSync(join(codebase, 'package.json'));
+      } catch {
+        /* ignore */
+      }
+      try {
+        unlinkSync(irPath);
+      } catch {
+        /* ignore */
+      }
+      try {
+        rmSync(codebase, { recursive: true, force: true });
       } catch {
         /* ignore */
       }

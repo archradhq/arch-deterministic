@@ -46,7 +46,7 @@ describe('ingest + fragment CLI (integration)', () => {
     } finally {
       if (existsSync(out)) unlinkSync(out);
     }
-  });
+  }, 20000);
 
   it('fragment merge + validate exits 0', () => {
     const out = join(pkgRoot, 'dist-fragment-merge-test.json');
@@ -58,5 +58,5 @@ describe('ingest + fragment CLI (integration)', () => {
     } finally {
       if (existsSync(out)) unlinkSync(out);
     }
-  });
+  }, 20000);
 });

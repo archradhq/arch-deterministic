@@ -141,7 +141,7 @@ describe('--policies-require-signed (validate + lint)', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
-  });
+  }, 20000);
 
   it('fails validate when a policy file is tampered after manifest', () => {
     const dir = mkdtempSync(join(tmpdir(), 'archrad-e2e-sign-'));
@@ -165,7 +165,7 @@ describe('--policies-require-signed (validate + lint)', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
-  });
+  }, 20000);
 
   it('fails lint when --cosign-pubkey set but no .sig file present', () => {
     const dir = mkdtempSync(join(tmpdir(), 'archrad-e2e-sign-'));

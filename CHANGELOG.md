@@ -5,6 +5,50 @@ All notable changes to **`@archrad/deterministic`** are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-05-18
+
+**Theme:** Implementation governance — source-code → IR reconstruction and IR-DRIFT-IMPL-* drift rules.
+
+### Added
+
+- **`archrad reconstruct`** — new CLI command that walks a real codebase and emits a canonical IR graph. Detects HTTP entry points, database connections, auth middleware, service-to-service calls, and healthcheck routes. Flags: `--from <path>` (required), `--output <path>` (default: `reconstructed-ir.json`), `--language <auto|nodejs|python|csharp>`, `--exclude <pattern>` (repeatable), `--dry-run`, `--verbose`.
+- **`archrad validate --codebase <path>`** — extends the existing validate pipeline with implementation drift analysis. When `--codebase` is provided: (1) runs standard IR-STRUCT-* and IR-LINT-* validation on the authored IR; (2) reconstructs IR from the codebase; (3) compares authored vs reconstructed and emits IR-DRIFT-IMPL-* findings. Additional flags: `--codebase-language <auto|nodejs|python|csharp>`, `--codebase-exclude <pattern>` (repeatable), `--impl-drift-fail-on <error|warning|never>` (default: `error`). **`--fail-on` / `--fail-on-warning` / `--max-warnings` apply only to IR-STRUCT-* and IR-LINT-* (plus merged PolicyPacks); IR-DRIFT-IMPL-* exit behavior is controlled solely by `--impl-drift-fail-on`.**
+- **IR-DRIFT-IMPL-* finding category** — seven rules for implementation drift:
+  - **`IR-DRIFT-IMPL-000`** (warning) — Authored IR could not be parsed for drift comparison (fix structural/graph shape first).
+  - **`IR-DRIFT-IMPL-001`** (warning) — HTTP-like nodes in the authored IR; reconstruction detected **zero** artifacts in the codebase scan (possible wrong `--codebase` root or undetected framework).
+  - **`IR-DRIFT-IMPL-002`** (warning) — HTTP or health routes detected in code but authored IR defines **no** HTTP-like node types.
+  - **`IR-DRIFT-IMPL-003`** (error) — **Critical.** Direct database connection in code not present as an edge in the authored IR. Catches the "dummy IR" attack pattern.
+  - **`IR-DRIFT-IMPL-004`** (error) — HTTP entry point in code not present in authored IR.
+  - **`IR-DRIFT-IMPL-005`** (warning) — Service-to-service call in code not present as an edge in authored IR.
+  - **`IR-DRIFT-IMPL-006`** (info) — Auth middleware present in code but no auth node in authored IR.
+- **Language analyzers** (`src/reconstruct/`) — file-scanning analyzers for Node.js/TypeScript (Express, Fastify, NestJS, Passport, pg, Prisma, TypeORM, Sequelize, Mongoose, Redis, axios, gRPC), Python (Flask, FastAPI, Django, DRF, SQLAlchemy, psycopg2, PyMongo, redis-py), and C# (ASP.NET Core minimal API, controller attributes, EF Core, Dapper, StackExchange.Redis, Auth0, Okta, Keycloak). No subprocess spawning — all analysis is done via file scanning.
+- **`archrad explain IR-DRIFT-IMPL-{000..006}`** — canonical guidance for each new rule code.
+- **`IrFindingLayer`** extended to include `'impl-drift'`; `RuleLayer` in `explain.ts` includes `'impl-drift'`; `layerForCode()` routes `IR-DRIFT-IMPL-*` → `'impl-drift'`.
+- **New public API exports:** `reconstructIrFromCodebase`, `compareImplementationDrift`, and types `ReconstructOptions`, `ReconstructResult`, `DetectedArtifact`, `ArtifactKind`, `Language`.
+- **`archrad.yml` codebase keys** — `codebase`, `codebaseLanguage`, `codebaseExclude`, and `implDriftFailOn` default `validate --codebase` and `reconstruct` flags.
+
+### Changed
+
+- **`IR-DRIFT-IMPL-002` / `004`** — deduplicated findings when HTTP routes in code have no matching HTTP nodes in the authored IR (`004` error covers that case; `002` remains for health-only gaps).
+- **`IR-DRIFT-IMPL-005`** — outbound service dependencies must be documented via `metadata.relation` / `protocol` or remote-style target types; internal gateway→service layering alone no longer suppresses the rule.
+- **Reconstruction quality** — artifact `line` numbers, corrected DB classifications (SQL Server, Cassandra), and health URL taken from the first detected health route path.
+
+### Fixed
+
+- **Dependabot / `npm audit`** — bumped transitive `hono`, `fast-uri`, `ip-address`, and `postcss` in `package-lock.json`.
+- **`uuid`** — Express export template and golden fixtures use `^11.1.1` (GHSA buffer-bounds advisory).
+- **CodeQL** — policy-pack manifest parsing avoids polynomial backtracking; `generate-corpus.mjs` uses `crypto.randomInt` instead of `Math.random`.
+
+### Scope limits (documented)
+
+Reconstruction is **best-effort signal, not certainty**:
+1. Dynamic patterns (eval, reflection, metaprogramming) are not detected.
+2. Runtime configuration determining service topology cannot be statically analyzed.
+3. Cross-language services in the same codebase reduce accuracy.
+4. Heavy framework abstractions may obscure routes or connections.
+
+IR-DRIFT-IMPL-* findings should be treated as "review required", not absolute truth.
+
 ## [Unreleased]
 
 ### Added

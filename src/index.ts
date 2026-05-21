@@ -171,3 +171,15 @@ export {
 } from './openapi-to-ir.js';
 
 export { getStaticRuleGuidance, listStaticRuleCodes } from './static-rule-guidance.js';
+
+export { reconstructIrFromCodebase } from './reconstruct/reconstruct.js';
+
+export {
+  type ReconstructOptions,
+  type ReconstructResult,
+  type DetectedArtifact,
+  type ArtifactKind,
+  type Language,
+} from './reconstruct/types.js';
+
+export { compareImplementationDrift } from './ir-drift-impl.js';

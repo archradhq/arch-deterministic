@@ -146,6 +146,27 @@ describe('config — parsing', () => {
     writeFileSync(p, 'maxWarnings: -1\n', 'utf8');
     expect(() => readArchradConfigFileSync(p)).toThrow(/invalid config/);
   });
+
+  it('parses implementation drift keys', () => {
+    const p = join(root, 'archrad.yml');
+    writeFileSync(
+      p,
+      [
+        'codebase: ./src',
+        'codebaseLanguage: python',
+        'codebaseExclude:',
+        '  - vendor',
+        '  - legacy',
+        'implDriftFailOn: never',
+      ].join('\n'),
+      'utf8',
+    );
+    const loaded = readArchradConfigFileSync(p);
+    expect(loaded.config.codebase).toBe('./src');
+    expect(loaded.config.codebaseLanguage).toBe('python');
+    expect(loaded.config.codebaseExclude).toEqual(['vendor', 'legacy']);
+    expect(loaded.config.implDriftFailOn).toBe('never');
+  });
 });
 
 describe('config — loadArchradConfigSync', () => {
@@ -204,6 +225,9 @@ describe('config — helpers', () => {
     );
     expect(coerceConfigValueForCli('policies', './policies', configDir)).toBe(
       resolve(configDir, 'policies')
+    );
+    expect(coerceConfigValueForCli('codebase', './src', configDir)).toBe(
+      resolve(configDir, 'src')
     );
   });
 

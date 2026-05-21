@@ -53,6 +53,111 @@ ArchRAD is a blueprint compiler and governance layer. You define your architectu
 
 **Ingest + merge workflows:** **`docs/INGEST.md`**. **All commands / flags:** **`docs/CLI_REFERENCE.md`**. **Codegen (`export`):** **`docs/EXPORT.md`**.
 
+---
+
+## Implementation governance (`archrad reconstruct` + `--codebase`)
+
+> "The IR looks clean — but is that what was actually shipped?"
+
+The validation pipeline above checks your **authored IR** (the design contract). The `--codebase` flag bridges the gap to the **real codebase** by reconstructing an IR from source code and comparing them.
+
+### The "dummy IR" attack — and how to catch it
+
+A developer can author a compliant IR (passes all IR-STRUCT-* and IR-LINT-* rules) while the actual code bypasses the documented architecture. The most dangerous pattern: an IR that shows a clean service layer but code that directly queries the database.
+
+```bash
+# Catch discrepancies between the authored design and the shipped code
+archrad validate --ir authored-ir.json --codebase ./src --report findings.html
+```
+
+When `--codebase` is provided, the pipeline runs three stages:
+1. IR-STRUCT-* structural validation on the authored IR
+2. IR-LINT-* architecture lint on the authored IR
+3. IR-DRIFT-IMPL-* comparison of authored IR vs reconstructed codebase IR
+
+### IR-DRIFT-IMPL-* rules
+
+Implementation drift uses a **separate exit threshold**: **`--fail-on`**, **`--fail-on-warning`**, and **`--max-warnings`** apply only to IR-STRUCT-*, IR-LINT-*, and merged PolicyPack findings. **IR-DRIFT-IMPL-*** are gated solely by **`--impl-drift-fail-on`** (default: drift severities **`error`** fail the command).
+
+| Code | Severity | What it catches |
+|------|----------|----------------|
+| `IR-DRIFT-IMPL-000` | warning | Authored IR could not be parsed for drift comparison (fix structural issues first) |
+| `IR-DRIFT-IMPL-001` | warning | IR declares HTTP-like entry nodes but reconstruction detected **zero** artifacts in `--codebase` |
+| `IR-DRIFT-IMPL-002` | warning | HTTP / health routes in code but authored IR has **no** HTTP-like nodes |
+| `IR-DRIFT-IMPL-003` | **error** | Direct DB connection in code, no DB edge in authored IR |
+| `IR-DRIFT-IMPL-004` | **error** | HTTP route in code not present in authored IR |
+| `IR-DRIFT-IMPL-005` | warning | Service-to-service call in code, no edge in authored IR |
+| `IR-DRIFT-IMPL-006` | info | Auth middleware in code, no auth node in authored IR |
+
+`IR-DRIFT-IMPL-003` is the critical one. An error there means the authored IR hides a direct DB dependency.
+
+### Reconstruct standalone
+
+```bash
+# Just reconstruct — write the IR without comparing
+archrad reconstruct --from ./src --output reconstructed-ir.json
+
+# Force language detection
+archrad reconstruct --from ./src --language python --output py-ir.json
+
+# Print to stdout (dry-run)
+archrad reconstruct --from ./src --dry-run
+
+# Show every detected artifact
+archrad reconstruct --from ./src --verbose
+```
+
+### Supported languages
+
+| Language | Detected patterns |
+|----------|-------------------|
+| **Node.js / TypeScript** | Express, Fastify, NestJS routes; pg, Prisma, TypeORM, Sequelize, Mongoose, Redis; Passport, express-jwt, NestJS guards, Auth0, Okta, Keycloak, Cognito; axios, got, node-fetch, gRPC |
+| **Python** | Flask, FastAPI, Django URLs, DRF @action; SQLAlchemy, psycopg2, asyncpg, PyMongo, motor, redis-py; login_required, jwt_required, FastAPI OAuth2; requests, httpx, aiohttp, gRPC |
+| **C#** | Minimal API MapGet/MapPost; ASP.NET Core [HttpGet]/[ApiController]; EF Core DbContext, Npgsql, Dapper; [Authorize], AddAuthentication, JWT bearer; HttpClient, gRPC, RestSharp |
+
+### Honest scope limits
+
+Reconstruction is **best-effort signal, not certainty**:
+
+1. **Dynamic patterns** — `eval`, reflection, metaprogramming, and generated code are not detected.
+2. **Runtime config** — topology decisions made at runtime (feature flags, config-driven routing) cannot be statically analyzed.
+3. **Cross-language services** — a single codebase containing multiple language runtimes reduces accuracy.
+4. **Heavy abstractions** — macro-based or annotation-processor-heavy frameworks may obscure routes or connections.
+
+Treat IR-DRIFT-IMPL-* findings as **"review required"**, not absolute truth. The reconstructed IR is signal, not certainty.
+
+### Worked example — catching a "dummy IR"
+
+Authored IR (`authored.json`) shows clean layered architecture:
+```json
+{ "graph": { "nodes": [
+  { "id": "api", "type": "gateway", "name": "API" },
+  { "id": "svc", "type": "service", "name": "Order Service" },
+  { "id": "db", "type": "postgres", "name": "Orders DB" }
+], "edges": [
+  { "from": "api", "to": "svc" },
+  { "from": "svc", "to": "db" }
+]}}
+```
+
+But `src/api/routes.ts` contains:
+```typescript
+import { Pool } from 'pg';
+const db = new Pool({ connectionString: process.env.DATABASE_URL });
+// direct DB query in the route handler — bypasses the service layer
+app.get('/orders', async (req, res) => res.json(await db.query('SELECT * FROM orders')));
+```
+
+Running `archrad validate --ir authored.json --codebase ./src`:
+```
+❌ IR-DRIFT-IMPL-003: Direct database connection(s) detected in code (pg (PostgreSQL) → postgres) but no DB edges exist in the authored IR
+   Fix: Either add the missing DB edges to the authored IR, or confirm the codebase points to the correct service.
+   Suggestion: This discrepancy is a governance red flag: the authored IR could be masking a direct DB dependency.
+   Impact: CRITICAL — this pattern is exploited in "dummy IR" attacks where clean design docs conceal direct database access in shipped code.
+```
+
+The IR said no direct DB access. The code said otherwise. `IR-DRIFT-IMPL-003` caught the gap.
+
 ## Project config (`archrad.yml`)
 
 Drop an `archrad.yml` at the root of your repo and skip re-typing flags:

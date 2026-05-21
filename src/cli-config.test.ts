@@ -28,7 +28,48 @@ function makeProgram(): Command {
     )
     .option('--report <path>', 'HTML report path')
     .option('--metrics-file <path>', 'Metrics JSON path')
-    .option('--findings-json-out <path>', 'Findings JSON path');
+    .option('--findings-json-out <path>', 'Findings JSON path')
+    .option('--codebase <path>', 'Codebase root for impl drift')
+    .addOption(
+      new Option('--codebase-language <lang>', 'Language for codebase scan').choices([
+        'auto',
+        'nodejs',
+        'python',
+        'csharp',
+      ] as const)
+    )
+    .option(
+      '--codebase-exclude <pattern>',
+      'Exclude path fragment',
+      (v: string, prev: string[]) => [...prev, v],
+      [] as string[]
+    )
+    .addOption(
+      new Option('--impl-drift-fail-on <mode>', 'Impl drift exit policy').choices([
+        'error',
+        'warning',
+        'never',
+      ] as const)
+    );
+
+  program
+    .command('reconstruct')
+    .requiredOption('-f, --from <path>', 'Codebase root')
+    .option('-o, --output <path>', 'Output IR JSON path')
+    .addOption(
+      new Option('--language <lang>', 'Language override').choices([
+        'auto',
+        'nodejs',
+        'python',
+        'csharp',
+      ] as const)
+    )
+    .option(
+      '--exclude <pattern>',
+      'Exclude path fragment',
+      (v: string, prev: string[]) => [...prev, v],
+      [] as string[]
+    );
 
   program
     .command('export')
@@ -223,6 +264,62 @@ describe('applyConfigToProgram', () => {
     expect(ranWith.strictExtra).toBe(true);
     expect(ranWith.skipIrLint).toBe(true);
     expect(ranWith.target).toBe('node');
+  });
+
+  it('maps codebase keys to validate and reconstruct commands', async () => {
+    writeFileSync(
+      join(root, 'archrad.yml'),
+      [
+        'ir: ./g.json',
+        'codebase: ./src',
+        'codebaseLanguage: python',
+        'codebaseExclude:',
+        '  - vendor',
+        'implDriftFailOn: never',
+        'output: ./reconstructed.json',
+      ].join('\n'),
+      'utf8',
+    );
+    const prog = makeProgram();
+    const result = applyConfigToProgram(prog, {
+      startDir: root,
+      configPath: join(root, 'archrad.yml'),
+    });
+    expect(result.applied.validate).toEqual(
+      expect.arrayContaining([
+        'codebase',
+        'codebaseLanguage',
+        'codebaseExclude',
+        'implDriftFailOn',
+      ]),
+    );
+    expect(result.applied.reconstruct).toEqual(
+      expect.arrayContaining(['from', 'language', 'exclude', 'output']),
+    );
+
+    let validateOpts: any = null;
+    const validate = prog.commands.find((c) => c.name() === 'validate')!;
+    validate.action((opts) => {
+      validateOpts = opts;
+    });
+
+    let reconstructOpts: any = null;
+    const reconstruct = prog.commands.find((c) => c.name() === 'reconstruct')!;
+    reconstruct.action((opts) => {
+      reconstructOpts = opts;
+    });
+
+    await prog.parseAsync(['node', 'archrad', 'validate']);
+    expect(validateOpts.codebase).toBe(resolve(root, 'src'));
+    expect(validateOpts.codebaseLanguage).toBe('python');
+    expect(validateOpts.codebaseExclude).toEqual(['vendor']);
+    expect(validateOpts.implDriftFailOn).toBe('never');
+
+    await prog.parseAsync(['node', 'archrad', 'reconstruct']);
+    expect(reconstructOpts.from).toBe(resolve(root, 'src'));
+    expect(reconstructOpts.language).toBe('python');
+    expect(reconstructOpts.exclude).toEqual(['vendor']);
+    expect(reconstructOpts.output).toBe(resolve(root, 'reconstructed.json'));
   });
 
   it('ignores config keys for commands that do not map them', () => {

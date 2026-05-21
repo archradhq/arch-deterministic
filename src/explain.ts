@@ -11,7 +11,7 @@ import {
   listStaticRuleCodes,
 } from './static-rule-guidance.js';
 
-export type RuleLayer = 'structural' | 'lint' | 'drift' | 'other';
+export type RuleLayer = 'structural' | 'lint' | 'drift' | 'impl-drift' | 'other';
 
 export type RuleExplanation = {
   code: string;
@@ -26,6 +26,7 @@ export type RuleExplanation = {
 export function layerForCode(code: string): RuleLayer {
   if (code.startsWith('IR-STRUCT-')) return 'structural';
   if (code.startsWith('IR-LINT-')) return 'lint';
+  if (code.startsWith('IR-DRIFT-IMPL-')) return 'impl-drift';
   if (code.startsWith('DRIFT-')) return 'drift';
   return 'other';
 }
@@ -110,6 +111,7 @@ export function listAllExplanations(): Record<RuleLayer, RuleExplanation[]> {
     structural: [],
     lint: [],
     drift: [],
+    'impl-drift': [],
     other: [],
   };
   for (const code of listStaticRuleCodes()) {

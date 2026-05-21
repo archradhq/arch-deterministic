@@ -39,6 +39,16 @@ const COMMAND_CONFIG_MAP: CommandConfigMap = {
     metricsFile: 'metricsFile',
     findingsJsonOut: 'findingsJsonOut',
     irLintProfile: 'irLintProfile',
+    codebase: 'codebase',
+    codebaseLanguage: 'codebaseLanguage',
+    codebaseExclude: 'codebaseExclude',
+    implDriftFailOn: 'implDriftFailOn',
+  },
+  reconstruct: {
+    codebase: 'from',
+    codebaseLanguage: 'language',
+    codebaseExclude: 'exclude',
+    output: 'output',
   },
   lint: {
     ir: 'ir',

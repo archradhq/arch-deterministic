@@ -26,6 +26,11 @@
  *   report: ./archrad-report.html # validate: --report
  *   findingsJsonOut: ./archrad-findings.json
  *   metricsFile: ./archrad-metrics.json
+ *   codebase: ./src                 # validate: --codebase; reconstruct: --from
+ *   codebaseLanguage: auto         # validate: --codebase-language; reconstruct: --language
+ *   codebaseExclude:               # validate: --codebase-exclude; reconstruct: --exclude
+ *     - vendor
+ *   implDriftFailOn: error         # validate: --impl-drift-fail-on (IR-DRIFT-IMPL-* only)
  *
  * File-path values are resolved relative to the directory that contains the
  * config file, so `archrad validate` behaves consistently regardless of which
@@ -76,6 +81,12 @@ export const ArchradConfigSchema = z
     metricsFile: z.string().optional(),
     policiesRequireSigned: z.boolean().optional(),
     cosignPubkey: z.string().optional(),
+
+    // Implementation drift (validate --codebase / reconstruct)
+    codebase: z.string().optional(),
+    codebaseLanguage: z.enum(['auto', 'nodejs', 'python', 'csharp']).optional(),
+    codebaseExclude: z.array(z.string()).optional(),
+    implDriftFailOn: FailOnModeSchema.optional(),
   })
   .strict();
 
@@ -90,6 +101,7 @@ const PATH_KEYS: ReadonlySet<keyof ArchradConfig> = new Set([
   'findingsJsonOut',
   'metricsFile',
   'cosignPubkey',
+  'codebase',
 ]);
 
 export interface LoadedArchradConfig {

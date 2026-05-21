@@ -54,6 +54,14 @@ strictExtra: false            # drift: --strict-extra
 report: ./archrad-report.html
 findingsJsonOut: ./archrad-findings.json
 metricsFile: ./archrad-metrics.json
+
+# Implementation drift (validate --codebase / reconstruct)
+codebase: ./src                 # validate: --codebase; reconstruct: --from
+codebaseLanguage: auto          # validate: --codebase-language; reconstruct: --language
+codebaseExclude:                # repeatable path fragments to skip
+  - vendor
+  - legacy
+implDriftFailOn: error          # validate: --impl-drift-fail-on (IR-DRIFT-IMPL-* only)
 ```
 
 All file-path values are resolved **relative to the directory that
@@ -102,6 +110,22 @@ hostPort: 8080
 archrad validate          # uses ir, failOn, policies
 archrad export            # uses ir, target, output, hostPort, policies
 archrad validate-drift    # uses ir, target, output, hostPort
+```
+
+### Implementation governance (codebase drift)
+
+```yaml
+# archrad.yml
+ir: ./archrad-graph.json
+codebase: ./src
+codebaseLanguage: auto
+implDriftFailOn: error
+failOn: warning          # applies to IR-STRUCT-* / IR-LINT-* only
+```
+
+```bash
+archrad validate          # structural + lint + IR-DRIFT-IMPL-* vs ./src
+archrad reconstruct       # uses codebase → --from, output → --output
 ```
 
 ### Overriding on the command line

@@ -9,7 +9,7 @@ import { dirname, join, resolve } from 'node:path';
 import { Command, Option } from 'commander';
 import { runDeterministicExport } from './exportPipeline.js';
 import { isLocalHostPortFree, normalizeGoldenHostPort } from './hostPort.js';
-import { validateIrStructural, hasIrStructuralErrors } from './ir-structural.js';
+import { validateIrStructural, hasIrStructuralErrors, type IrStructuralFinding } from './ir-structural.js';
 import { validateIrLint, type ValidateIrLintOptions } from './ir-lint.js';
 import {
   loadPolicyPacksFromDirectory,
@@ -69,6 +69,7 @@ import {
   type RuleLayer,
 } from './explain.js';
 import { readPackageVersion } from './package-version.js';
+import type { ReconstructResult } from './reconstruct/types.js';
 
 async function writeTree(baseDir: string, files: Record<string, string>): Promise<void> {
   for (const [rel, content] of Object.entries(files)) {
@@ -339,6 +340,28 @@ program
       'Built-in lint profile — monolith-relaxed omits IR-LINT-DIRECT-DB-ACCESS-002, IR-LINT-MISSING-AUTH-010, IR-LINT-MULTIPLE-HTTP-ENTRIES-009'
     ).choices([...IR_LINT_PROFILE_CHOICES])
   )
+  .option(
+    '--codebase <path>',
+    'Path to source-code root for implementation drift analysis (IR-DRIFT-IMPL-*). Reconstructs IR from code and compares with --ir.'
+  )
+  .addOption(
+    new Option(
+      '--codebase-language <lang>',
+      'Force language detection for --codebase (default: auto-detect from root markers)'
+    ).choices(['auto', 'nodejs', 'python', 'csharp'])
+  )
+  .option(
+    '--codebase-exclude <pattern>',
+    'Extra path fragment to exclude from --codebase scanning (repeatable)',
+    (v: string, prev: string[]) => [...prev, v],
+    [] as string[]
+  )
+  .addOption(
+    new Option(
+      '--impl-drift-fail-on <mode>',
+      'Exit-policy threshold for IR-DRIFT-IMPL-* findings only (default: error)'
+    ).choices(['error', 'warning', 'never'])
+  )
   .action(
     async (cmdOpts: {
       ir: string;
@@ -354,6 +377,10 @@ program
       report?: string;
       metricsFile?: string;
       findingsJsonOut?: string;
+      codebase?: string;
+      codebaseLanguage?: string;
+      codebaseExclude?: string[];
+      implDriftFailOn?: string;
     }) => {
       const irPath = resolve(cmdOpts.ir);
       const ir = await readIrJsonFromPath(irPath);
@@ -380,7 +407,35 @@ program
         noLint || hasIrStructuralErrors(structural)
           ? []
           : validateIrLint(ir, lintOpts);
-      const combined = sortFindings([...structural, ...lint]);
+
+      // Implementation drift — only when --codebase is supplied
+      let implDrift: IrStructuralFinding[] = [];
+      if (cmdOpts.codebase) {
+        try {
+          const { reconstructIrFromCodebase } = await import('./reconstruct/reconstruct.js');
+          const { compareImplementationDrift } = await import('./ir-drift-impl.js');
+          const lang = cmdOpts.codebaseLanguage;
+          const reconstructed = await reconstructIrFromCodebase({
+            from: resolve(cmdOpts.codebase),
+            language:
+              lang && lang !== 'auto'
+                ? (lang as 'nodejs' | 'python' | 'csharp')
+                : 'auto',
+            exclude: cmdOpts.codebaseExclude,
+          });
+          for (const w of reconstructed.warnings) {
+            console.error(`archrad: reconstruct: ${w}`);
+          }
+          implDrift = compareImplementationDrift(ir, reconstructed);
+        } catch (e) {
+          console.error(`archrad: --codebase reconstruction failed: ${e instanceof Error ? e.message : String(e)}`);
+          process.exitCode = 1;
+          return;
+        }
+      }
+
+      const coreFindings = sortFindings([...structural, ...lint]);
+      const combined = sortFindings([...coreFindings, ...implDrift]);
 
       if (cmdOpts.metricsFile) {
         const m = findingMetrics(combined);
@@ -392,7 +447,13 @@ program
 
       const forJson = combined.map((f) => ({
         ...f,
-        layer: f.layer ?? (f.code.startsWith('IR-LINT-') ? 'lint' : 'structural'),
+        layer:
+          f.layer ??
+          (f.code.startsWith('IR-LINT-')
+            ? 'lint'
+            : f.code.startsWith('IR-DRIFT-IMPL-')
+              ? 'impl-drift'
+              : 'structural'),
       }));
 
       if (cmdOpts.findingsJsonOut) {
@@ -415,8 +476,19 @@ program
       }
 
       const policy = validateCommandExitPolicy(cmdOpts);
-      if (shouldFailFromFindings(combined, policy)) {
+      // IR-DRIFT-IMPL-* use `--impl-drift-fail-on` only; do not fold them into the main `--fail-on` gate.
+      if (shouldFailFromFindings(coreFindings, policy)) {
         process.exitCode = 1;
+        return;
+      }
+
+      // Separate exit-policy gate for impl-drift findings
+      if (implDrift.length > 0) {
+        const driftFailOn = (cmdOpts.implDriftFailOn ?? 'error') as FailOnMode;
+        const driftPolicy = validationExitPolicyFromFailOn(driftFailOn);
+        if (shouldFailFromFindings(implDrift, driftPolicy)) {
+          process.exitCode = 1;
+        }
       }
     }
   );
@@ -1233,6 +1305,86 @@ program
         console.error('archrad:', e?.message || String(e));
         process.exitCode = 1;
       }
+    }
+  );
+
+program
+  .command('reconstruct')
+  .description(
+    'Reconstruct an IR graph from a real codebase and write it as JSON. ' +
+    'Use with `archrad validate --codebase` to surface IR-DRIFT-IMPL-* discrepancies.'
+  )
+  .requiredOption('-f, --from <path>', 'Path to codebase root directory')
+  .option('-o, --output <path>', 'Write reconstructed IR JSON (default: reconstructed-ir.json)')
+  .addOption(
+    new Option(
+      '--language <lang>',
+      'Force language detection (default: auto-detect from root markers)'
+    ).choices(['auto', 'nodejs', 'python', 'csharp'])
+  )
+  .option(
+    '--exclude <pattern>',
+    'Extra path fragment to exclude from scanning (repeatable)',
+    (v: string, prev: string[]) => [...prev, v],
+    [] as string[]
+  )
+  .option('--dry-run', 'Print reconstructed IR JSON to stdout; do not write a file')
+  .option('--verbose', 'Print detected artifacts to stderr')
+  .action(
+    async (cmdOpts: {
+      from: string;
+      output?: string;
+      language?: string;
+      exclude?: string[];
+      dryRun?: boolean;
+      verbose?: boolean;
+    }) => {
+      const lang = cmdOpts.language;
+      let result: ReconstructResult;
+      try {
+        const { reconstructIrFromCodebase } = await import('./reconstruct/reconstruct.js');
+        result = await reconstructIrFromCodebase({
+          from: resolve(cmdOpts.from),
+          language:
+            lang && lang !== 'auto'
+              ? (lang as 'nodejs' | 'python' | 'csharp')
+              : 'auto',
+          exclude: cmdOpts.exclude,
+        });
+      } catch (e) {
+        console.error(`archrad reconstruct: ${e instanceof Error ? e.message : String(e)}`);
+        process.exitCode = 1;
+        return;
+      }
+
+      for (const w of result.warnings) {
+        console.error(`archrad reconstruct: warning: ${w}`);
+      }
+
+      if (cmdOpts.verbose) {
+        console.error(`archrad reconstruct: language: ${result.language}`);
+        console.error(`archrad reconstruct: ${result.artifacts.length} artifact(s) detected:`);
+        for (const a of result.artifacts) {
+          console.error(`  [${a.kind}] ${a.detail}  (${a.file})`);
+        }
+      }
+
+      const json = `${JSON.stringify(result.ir, null, 2)}\n`;
+
+      if (cmdOpts.dryRun) {
+        process.stdout.write(json);
+        return;
+      }
+
+      const outPath = resolve(cmdOpts.output ?? 'reconstructed-ir.json');
+      await mkdir(dirname(outPath), { recursive: true });
+      await writeFile(outPath, json, 'utf8');
+      const g = result.ir.graph as { nodes?: unknown[]; edges?: unknown[] };
+      const nCount = Array.isArray(g?.nodes) ? g.nodes.length : 0;
+      const eCount = Array.isArray(g?.edges) ? g.edges.length : 0;
+      console.log(
+        `archrad reconstruct: wrote ${outPath} (${nCount} node(s), ${eCount} edge(s), language: ${result.language})`
+      );
     }
   );
 

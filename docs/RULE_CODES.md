@@ -1,4 +1,4 @@
-# Built-in finding codes (IR-STRUCT, IR-LINT, DRIFT)
+# Built-in finding codes (IR-STRUCT, IR-LINT, DRIFT, IR-DRIFT-IMPL)
 
 **Canonical OSS reference** — ships in **`@archrad/deterministic`**.  
 **MCP** **`archrad_suggest_fix`** returns **`title`**, **`remediation`**, and a **`docsUrl`** pointing at the matching section below. **PolicyPack / org** rules use custom ids (e.g. `ORG-*`) — not listed here.
@@ -202,6 +202,48 @@ Node missing non-empty id. **Remediation:** Assign a stable string **`id`** to e
 ## IR-STRUCT-NODES_NOT_ARRAY
 
 **`nodes`** is not an array. **Remediation:** Set **`nodes`** to an array of node objects.
+
+---
+
+## IR-DRIFT-IMPL-000
+
+Authored IR could not be interpreted for implementation drift comparison. **Remediation:** Resolve IR structural issues so the graph can be loaded (see IR-STRUCT-* findings from `archrad validate` without `--codebase`). Drift rules need a parseable IR and a successful lint-graph context.
+
+---
+
+## IR-DRIFT-IMPL-001
+
+Authored IR declares HTTP-like entry nodes but reconstruction detected no implementation artifacts in `--codebase`. **Remediation:** Verify `--codebase` points to the correct service root. If the API exists but was not detected, check `--codebase-language`, exclusion patterns, and framework coverage. If the service is unimplemented, update or remove the HTTP-like nodes in the authored IR.
+
+---
+
+## IR-DRIFT-IMPL-002
+
+Health or readiness routes exist in the scanned codebase but the authored IR has no HTTP-like nodes (and no separate HTTP entry points triggered IR-DRIFT-IMPL-004). **Remediation:** Add HTTP-like node(s) to the authored IR for each detected entry surface. Run `archrad reconstruct --from <path> --output reconstructed.json` for a starting point, then merge into your design IR.
+
+---
+
+## IR-DRIFT-IMPL-003
+
+Direct database connection in code not present in authored IR edges. **Remediation:** CRITICAL — either add the database edges to the authored IR (if the connection is legitimate), or remove the direct DB access from code and route it through the documented service layer. This finding indicates a design–implementation discrepancy that must be resolved before shipping.
+
+---
+
+## IR-DRIFT-IMPL-004
+
+HTTP entry point in code not declared in the authored IR. **Remediation:** Add an HTTP-like node to the authored IR for each undocumented entry point. Undocumented entry points bypass architectural review gates for auth, rate limits, and observability. Run `archrad reconstruct` to get a starting IR.
+
+---
+
+## IR-DRIFT-IMPL-005
+
+Service-to-service call in code not present as an edge in the authored IR. **Remediation:** Add the downstream service node and a directed edge to the authored IR (prefer `metadata.relation: serviceCall` and `metadata.protocol: http|grpc`). Internal gateway→domain layering edges alone do not satisfy this rule. Run `archrad reconstruct --from <path>` to enumerate detected outbound calls, then merge the missing edges into your design IR.
+
+---
+
+## IR-DRIFT-IMPL-006
+
+Auth middleware present in code but no auth node in the authored IR. **Remediation:** Add an auth/middleware node and a connecting edge to the authored IR so the documented architecture reflects the actual security posture. Informational — the code may already enforce auth; the IR underrepresents it.
 
 ---
 

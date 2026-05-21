@@ -7,6 +7,7 @@ Canonical **flags** for **`@archrad/deterministic`**. Behavior is implemented in
 | IR shape | **`IR_CONTRACT.md`** |
 | Ingest + merge | **`INGEST.md`** |
 | Drift codes | **`DRIFT.md`**, **`RULE_CODES.md`** |
+| Implementation drift | **`RULE_CODES.md`** (IR-DRIFT-IMPL-*), README § Implementation governance |
 | Deterministic export / codegen | **`EXPORT.md`** |
 | Policy packs | **`CUSTOM_RULES.md`**, **`src/policy-pack.ts`** |
 | Project config (**`archrad.yml`**) | **`CONFIG.md`** |
@@ -15,7 +16,7 @@ Canonical **flags** for **`@archrad/deterministic`**. Behavior is implemented in
 
 ## Project config (`archrad.yml`)
 
-`archrad` walks up from the CWD looking for **`archrad.yml`** (or **`archrad.yaml`**) and, when found, uses its values as **defaults** for matching flags on `validate`, `export`, `validate-drift`, and `init`. Explicit CLI flags always win. See **`CONFIG.md`** for the full schema.
+`archrad` walks up from the CWD looking for **`archrad.yml`** (or **`archrad.yaml`**) and, when found, uses its values as **defaults** for matching flags on `validate`, `lint`, `export`, `validate-drift`, `reconstruct`, and `init`. Explicit CLI flags always win. See **`CONFIG.md`** for the full schema.
 
 | Global option | Description |
 |---------------|-------------|
@@ -38,7 +39,11 @@ Structural validation (**`IR-STRUCT-*`**) plus architecture lint (**`IR-LINT-*`*
 | **`--cosign-pubkey <path>`** | Verify the manifest's cosign signature. Implies `--policies-require-signed`. |
 | **`--fail-on-warning`** | Exit **1** if any warning (or structural error). |
 | **`--max-warnings <n>`** | Exit **1** if warning count **>** `n`. |
-| **`--fail-on <mode>`** | **`error`** (default) \| **`warning`** \| **`never`** — GitHub Actions style; when set, overrides **`--fail-on-warning`** / **`--max-warnings`**. **`never`** always exits **0**. |
+| **`--fail-on <mode>`** | **`error`** (default) \| **`warning`** \| **`never`** — GitHub Actions style; when set, overrides **`--fail-on-warning`** / **`--max-warnings`**. **`never`** always exits **0**. Applies **only** to IR-STRUCT-*, IR-LINT-*, and merged PolicyPack findings — **not** to IR-DRIFT-IMPL-*. |
+| **`--codebase <path>`** | Source root for reconstruction; emits **IR-DRIFT-IMPL-*** by comparing authored IR to heuristic signals from scanned files. |
+| **`--codebase-language <lang>`** | **`auto`** \| **`nodejs`** \| **`python`** \| **`csharp`** — override language detection for **`--codebase`**. |
+| **`--codebase-exclude <pattern>`** | Extra path fragment excluded from **`--codebase`** scans (repeatable). |
+| **`--impl-drift-fail-on <mode>`** | **`error`** (default) \| **`warning`** \| **`never`** — exit policy **only** for **IR-DRIFT-IMPL-*** (independent from **`--fail-on`** above). |
 | **`--report <path>`** | Write a self-contained **HTML** report of all findings. |
 | **`--metrics-file <path>`** | Write **`findingsCount`**, **`errorCount`**, **`warningCount`**, **`infoCount`** as JSON (for CI outputs). |
 | **`--findings-json-out <path>`** | Write the findings array as JSON (same shape as **`--json`** on stdout); still prints pretty logs unless **`--json`**. |
@@ -47,7 +52,31 @@ Structural validation (**`IR-STRUCT-*`**) plus architecture lint (**`IR-LINT-*`*
 archrad validate --ir ./graph.json
 archrad validate --ir ./graph.json --json
 archrad validate --ir ./graph.json --skip-lint
+archrad validate --ir ./graph.json --codebase ./src --report findings.html
 archrad validate --ir ./graph.json --fail-on never --report violations.html --metrics-file metrics.json
+```
+
+With **`codebase:`** in **`archrad.yml`**, `archrad validate` runs implementation drift automatically (see **`CONFIG.md`**).
+
+---
+
+## `archrad reconstruct`
+
+Reconstruct an IR graph from a real codebase (best-effort file scanning; no subprocess). Use standalone to inspect detected artifacts, or pair with **`archrad validate --codebase`** for IR-DRIFT-IMPL-* governance.
+
+| Option | Description |
+|--------|-------------|
+| **`-f, --from <path>`** | Codebase root directory (required; default from **`codebase:`** in config when set). |
+| **`-o, --output <path>`** | Write reconstructed IR JSON (default: **`reconstructed-ir.json`**; honours **`output:`** in config). |
+| **`--language <lang>`** | **`auto`** \| **`nodejs`** \| **`python`** \| **`csharp`** — override auto-detection (config key: **`codebaseLanguage`**). |
+| **`--exclude <pattern>`** | Extra path fragment to exclude from scanning (repeatable; config key: **`codebaseExclude`**). |
+| **`--dry-run`** | Print reconstructed IR JSON to **stdout**; do not write a file. |
+| **`--verbose`** | Print detected artifacts to **stderr**. |
+
+```bash
+archrad reconstruct --from ./src --output reconstructed-ir.json
+archrad reconstruct --from ./src --language python --dry-run
+archrad reconstruct --from ./src --verbose --exclude vendor
 ```
 
 ---
@@ -92,7 +121,7 @@ Generate the manifest with [`archrad policies-sha256`](#archrad-policies-sha256)
 
 ## `archrad explain <code>`
 
-Print canonical guidance for a rule code (**`IR-STRUCT-*`**, **`IR-LINT-*`**, **`DRIFT-*`**). Same text the linter surfaces in findings, pulled from the deterministic registry — use this to get an explanation without running a lint pass. Unknown codes print a "did you mean" hint.
+Print canonical guidance for a rule code (**`IR-STRUCT-*`**, **`IR-LINT-*`**, **`DRIFT-*`**, **`IR-DRIFT-IMPL-*`**). Same text the linter surfaces in findings, pulled from the deterministic registry — use this to get an explanation without running a lint pass. Unknown codes print a "did you mean" hint.
 
 | Option | Description |
 |--------|-------------|
