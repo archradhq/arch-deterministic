@@ -74,16 +74,21 @@ export function parsePolicyPackManifest(text: string): PolicyPackManifestEntry[]
     const raw = lines[i];
     const line = raw.trim();
     if (!line || line.startsWith('#')) continue;
-    // `sha256sum` separates with two spaces; we tolerate one or more.
-    const m = /^([a-f0-9]{64})\s+(.+)$/i.exec(line);
-    if (!m) {
+    // sha256sum format: 64 hex chars, whitespace, filename — parsed without backtracking regex.
+    if (line.length < 66) {
       throw new Error(`policy-pack manifest: invalid line ${i + 1}: ${raw}`);
     }
-    const filename = m[2].trim();
+    const sha256 = line.slice(0, 64);
+    if (!/^[a-f0-9]{64}$/i.test(sha256)) {
+      throw new Error(`policy-pack manifest: invalid line ${i + 1}: ${raw}`);
+    }
+    let sep = 64;
+    while (sep < line.length && line[sep] === ' ') sep++;
+    const filename = line.slice(sep).trim();
     if (!filename) {
       throw new Error(`policy-pack manifest: empty filename on line ${i + 1}`);
     }
-    entries.push({ sha256: m[1].toLowerCase(), filename });
+    entries.push({ sha256: sha256.toLowerCase(), filename });
   }
   if (entries.length === 0) {
     throw new Error('policy-pack manifest: empty manifest (no entries)');

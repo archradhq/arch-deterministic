@@ -383,7 +383,7 @@ export default async function generateNodeExpressFiles(actualIR: any, opts: any 
     dependencies: {
       express: '^4.18.0',
       'body-parser': '^1.20.0',
-      uuid: '^9.0.1',
+      uuid: '^11.1.1',
       cors: '^2.8.5',
       ajv: '^8.12.0',
     },

@@ -13,6 +13,7 @@
 
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
+import { randomInt } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { normalizeIrGraph, validateIrLint, validateIrStructural } from '../dist/index.js';
@@ -184,12 +185,19 @@ const AUTH_NAMES = [
 ];
 
 function pick(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
+  return arr[randomInt(arr.length)];
 }
 
 function pickN(arr, n) {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, Math.min(n, arr.length));
+  const copy = [...arr];
+  const out = [];
+  const count = Math.min(n, copy.length);
+  for (let i = 0; i < count; i++) {
+    const idx = randomInt(copy.length);
+    out.push(copy[idx]);
+    copy.splice(idx, 1);
+  }
+  return out;
 }
 
 function pickHttpLike() {
@@ -332,7 +340,7 @@ function genCleanAuthConfig() {
 
 function genHighFanout() {
   const http = pickHttpLike();
-  const count = 5 + Math.floor(Math.random() * 4);
+  const count = 5 + randomInt(4);
   const services = pickN(SERVICE_NAMES, count);
   const nodes = [
     { id: http.id, type: http.type, name: http.name, config: httpCleanConfig() },
@@ -351,7 +359,7 @@ function genHighFanout() {
 
 function genSyncChain() {
   const http = pickHttpLike();
-  const depth = 3 + Math.floor(Math.random() * 3);
+  const depth = 3 + randomInt(3);
   const services = pickN(SERVICE_NAMES, depth);
   const [dbId, dbName, dbType] = pick(DB_NAMES);
   const nodes = [
@@ -532,7 +540,7 @@ function genMultiViolation() {
 function genCleanGraph() {
   const http = pickHttpLike();
   const [authId, authName, authType] = pick(AUTH_NAMES);
-  const services = pickN(SERVICE_NAMES, 2 + Math.floor(Math.random() * 3));
+  const services = pickN(SERVICE_NAMES, 2 + randomInt(3));
   const [dbId, dbName, dbType] = pick(DB_NAMES);
   const healthPath = pick(['/health', '/healthz', '/ping', '/status']);
   const nodes = [
