@@ -1,0 +1,85 @@
+{
+  "graph": {
+    "metadata": {
+      "name": "openapi-basic",
+      "status": "draft",
+      "provenance": {
+        "source": "scan",
+        "extractors": [
+          "compose",
+          "openapi",
+          "manifest",
+          "code"
+        ],
+        "fileCount": 1
+      }
+    },
+    "nodes": [
+      {
+        "id": "openapi_get_health",
+        "type": "http",
+        "kind": "http",
+        "name": "Health check",
+        "config": {
+          "url": "/health",
+          "route": "/health",
+          "method": "GET",
+          "openApiIngest": true,
+          "authRequired": false,
+          "provenance": [
+            {
+              "inferred_from": "openapi.yaml:1",
+              "confidence": "medium",
+              "extractor": "openapi"
+            }
+          ]
+        }
+      },
+      {
+        "id": "openapi_get_orders",
+        "type": "http",
+        "kind": "http",
+        "name": "List orders",
+        "config": {
+          "url": "/orders",
+          "route": "/orders",
+          "method": "GET",
+          "openApiIngest": true,
+          "security": [
+            "BearerAuth"
+          ],
+          "provenance": [
+            {
+              "inferred_from": "openapi.yaml:1",
+              "confidence": "medium",
+              "extractor": "openapi"
+            }
+          ]
+        }
+      },
+      {
+        "id": "openapi_post_orders",
+        "type": "http",
+        "kind": "http",
+        "name": "Create order",
+        "config": {
+          "url": "/orders",
+          "route": "/orders",
+          "method": "POST",
+          "openApiIngest": true,
+          "security": [
+            "BearerAuth"
+          ],
+          "provenance": [
+            {
+              "inferred_from": "openapi.yaml:1",
+              "confidence": "medium",
+              "extractor": "openapi"
+            }
+          ]
+        }
+      }
+    ],
+    "edges": []
+  }
+}

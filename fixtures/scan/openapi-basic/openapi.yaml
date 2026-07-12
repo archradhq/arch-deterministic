@@ -1,0 +1,30 @@
+openapi: 3.0.0
+info:
+  title: orders-api
+  version: 1.0.0
+security:
+  - BearerAuth: []
+paths:
+  /orders:
+    get:
+      summary: List orders
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create order
+      responses:
+        "201":
+          description: Created
+  /health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: OK
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer

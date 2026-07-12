@@ -1,0 +1,132 @@
+{
+  "graph": {
+    "metadata": {
+      "name": "compose-basic",
+      "status": "draft",
+      "provenance": {
+        "source": "scan",
+        "extractors": [
+          "compose",
+          "openapi",
+          "manifest",
+          "code"
+        ],
+        "fileCount": 1
+      }
+    },
+    "nodes": [
+      {
+        "id": "cache_redis",
+        "type": "cache",
+        "name": "redis",
+        "config": {
+          "compose": {
+            "image": "redis:7-alpine"
+          },
+          "provenance": [
+            {
+              "inferred_from": "docker-compose.yml:16",
+              "confidence": "high",
+              "extractor": "compose"
+            }
+          ]
+        }
+      },
+      {
+        "id": "gateway_api",
+        "type": "gateway",
+        "name": "api",
+        "config": {
+          "compose": {
+            "image": "mycompany/api:latest",
+            "envKeys": [
+              "DATABASE_URL"
+            ]
+          },
+          "provenance": [
+            {
+              "inferred_from": "docker-compose.yml:3",
+              "confidence": "high",
+              "extractor": "compose"
+            }
+          ]
+        }
+      },
+      {
+        "id": "gateway_nginx",
+        "type": "gateway",
+        "name": "nginx",
+        "config": {
+          "compose": {
+            "image": "nginx:alpine"
+          },
+          "provenance": [
+            {
+              "inferred_from": "docker-compose.yml:19",
+              "confidence": "high",
+              "extractor": "compose"
+            }
+          ]
+        }
+      },
+      {
+        "id": "postgres",
+        "type": "postgres",
+        "name": "postgres",
+        "config": {
+          "compose": {
+            "image": "postgres:15"
+          },
+          "provenance": [
+            {
+              "inferred_from": "docker-compose.yml:13",
+              "confidence": "high",
+              "extractor": "compose"
+            }
+          ]
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_api_redis_1",
+        "from": "gateway_api",
+        "to": "cache_redis",
+        "metadata": {
+          "protocol": "tcp",
+          "async": false,
+          "relation": "depends_on"
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "docker-compose.yml:3",
+              "confidence": "high",
+              "extractor": "compose"
+            }
+          ]
+        }
+      },
+      {
+        "id": "e_api_postgres_0",
+        "from": "gateway_api",
+        "to": "postgres",
+        "metadata": {
+          "protocol": "tcp",
+          "async": false,
+          "relation": "connectionUrl",
+          "env": "DATABASE_URL"
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "docker-compose.yml:3",
+              "confidence": "high",
+              "extractor": "compose"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

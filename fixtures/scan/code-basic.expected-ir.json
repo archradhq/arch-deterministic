@@ -1,0 +1,71 @@
+{
+  "graph": {
+    "metadata": {
+      "name": "code-basic",
+      "status": "draft",
+      "provenance": {
+        "source": "scan",
+        "extractors": [
+          "compose",
+          "openapi",
+          "manifest",
+          "code"
+        ],
+        "fileCount": 2
+      }
+    },
+    "nodes": [
+      {
+        "id": "gateway_code_basic",
+        "type": "gateway",
+        "name": "code-basic",
+        "config": {
+          "source": "reconstructed",
+          "url": "/health",
+          "provenance": [
+            {
+              "inferred_from": "src/index.ts:21",
+              "confidence": "low",
+              "extractor": "code"
+            }
+          ]
+        }
+      },
+      {
+        "id": "postgres_database",
+        "type": "postgres",
+        "name": "database",
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "src/index.ts:5",
+              "confidence": "low",
+              "extractor": "code"
+            }
+          ]
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_svc_code_basic_db_postgres_code_basic_0",
+        "from": "gateway_code_basic",
+        "to": "postgres_database",
+        "metadata": {
+          "relation": "dbConnection",
+          "protocol": "tcp",
+          "async": false
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "src/index.ts:21",
+              "confidence": "low",
+              "extractor": "code"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

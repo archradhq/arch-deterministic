@@ -1,0 +1,105 @@
+{
+  "graph": {
+    "metadata": {
+      "name": "manifest-basic",
+      "status": "draft",
+      "provenance": {
+        "source": "scan",
+        "extractors": [
+          "compose",
+          "openapi",
+          "manifest",
+          "code"
+        ],
+        "fileCount": 1
+      }
+    },
+    "nodes": [
+      {
+        "id": "cache_redis",
+        "type": "cache",
+        "name": "redis",
+        "config": {
+          "inferredFromLibrary": "ioredis",
+          "provenance": [
+            {
+              "inferred_from": "package.json:7",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      },
+      {
+        "id": "postgres",
+        "type": "postgres",
+        "name": "postgres",
+        "config": {
+          "inferredFromLibrary": "pg",
+          "provenance": [
+            {
+              "inferred_from": "package.json:6",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      },
+      {
+        "id": "service_orders_service",
+        "type": "service",
+        "name": "orders-service",
+        "config": {
+          "manifest": "package.json",
+          "provenance": [
+            {
+              "inferred_from": "package.json:1",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_service_orders_service_cache_redis",
+        "from": "service_orders_service",
+        "to": "cache_redis",
+        "metadata": {
+          "relation": "cacheConnection",
+          "protocol": "tcp",
+          "async": false
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "package.json:7",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      },
+      {
+        "id": "e_service_orders_service_postgres",
+        "from": "service_orders_service",
+        "to": "postgres",
+        "metadata": {
+          "relation": "dbConnection",
+          "protocol": "tcp",
+          "async": false
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "package.json:6",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

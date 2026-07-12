@@ -1388,6 +1388,86 @@ program
     }
   );
 
+program
+  .command('scan')
+  .description(
+    'Scan a repository and emit a DRAFT IR from structural signals (topology, ' +
+    'interface, manifest, code). Every node/edge carries provenance + confidence; ' +
+    'review and approve the draft — never author from scratch.'
+  )
+  .argument('[path]', 'Repository root to scan', '.')
+  .option('-o, --out <path>', 'Write draft IR JSON to file (default: print to stdout)')
+  .option(
+    '--extractors <list>',
+    'Comma-separated extractors to enable (default: all)',
+  )
+  .option(
+    '--exclude <pattern>',
+    'Path fragment to exclude from scanning (repeatable)',
+    (v: string, prev: string[]) => [...prev, v],
+    [] as string[]
+  )
+  .option('--dry-run', 'Print draft IR JSON to stdout; do not write a file')
+  .option('--verbose', 'Print per-extractor and warning details to stderr')
+  .action(
+    async (
+      path: string,
+      cmdOpts: {
+        out?: string;
+        extractors?: string;
+        exclude?: string[];
+        dryRun?: boolean;
+        verbose?: boolean;
+      },
+    ) => {
+      const extractors = cmdOpts.extractors
+        ? cmdOpts.extractors.split(',').map((s) => s.trim()).filter(Boolean)
+        : undefined;
+
+      let result;
+      try {
+        const { scanCodebase } = await import('./scan/scan.js');
+        result = await scanCodebase({
+          from: resolve(path ?? '.'),
+          extractors,
+          exclude: cmdOpts.exclude,
+        });
+      } catch (e) {
+        const { ScanError } = await import('./scan/types.js');
+        console.error(
+          `archrad scan: ${e instanceof ScanError || e instanceof Error ? e.message : String(e)}`,
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      for (const w of result.warnings) {
+        console.error(`archrad scan: warning: ${w}`);
+      }
+      if (cmdOpts.verbose) {
+        console.error(`archrad scan: extractors: ${result.extractorsRun.join(', ') || 'none'}`);
+        console.error(`archrad scan: files scanned: ${result.fileCount}`);
+      }
+
+      const json = canonicalIrToJsonString(result.ir);
+
+      if (cmdOpts.dryRun || !cmdOpts.out) {
+        process.stdout.write(json);
+        return;
+      }
+
+      const outPath = resolve(cmdOpts.out);
+      await mkdir(dirname(outPath), { recursive: true });
+      await writeFile(outPath, json, 'utf8');
+      const g = result.ir.graph as { nodes?: unknown[]; edges?: unknown[] };
+      const nCount = Array.isArray(g?.nodes) ? g.nodes.length : 0;
+      const eCount = Array.isArray(g?.edges) ? g.edges.length : 0;
+      console.log(
+        `archrad scan: wrote ${outPath} (${nCount} node(s), ${eCount} edge(s), status: draft)`,
+      );
+    }
+  );
+
 // Resolve `--config` / `--no-config` out-of-band so the values can be
 // turned into subcommand option defaults *before* Commander's mandatory-
 // option check runs. The cleaned argv drops the bootstrap flags so they

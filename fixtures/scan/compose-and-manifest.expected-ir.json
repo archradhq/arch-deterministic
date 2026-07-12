@@ -1,0 +1,174 @@
+{
+  "graph": {
+    "metadata": {
+      "name": "compose-and-manifest",
+      "status": "draft",
+      "provenance": {
+        "source": "scan",
+        "extractors": [
+          "compose",
+          "openapi",
+          "manifest",
+          "code"
+        ],
+        "fileCount": 2
+      }
+    },
+    "nodes": [
+      {
+        "id": "cache_redis",
+        "type": "cache",
+        "name": "redis",
+        "config": {
+          "compose": {
+            "image": "redis:7-alpine"
+          },
+          "provenance": [
+            {
+              "inferred_from": "docker-compose.yml:14",
+              "confidence": "high",
+              "extractor": "compose"
+            },
+            {
+              "inferred_from": "package.json:6",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      },
+      {
+        "id": "gateway_api",
+        "type": "gateway",
+        "name": "api",
+        "config": {
+          "compose": {
+            "image": "mycompany/api:latest"
+          },
+          "provenance": [
+            {
+              "inferred_from": "docker-compose.yml:3",
+              "confidence": "high",
+              "extractor": "compose"
+            }
+          ]
+        }
+      },
+      {
+        "id": "postgres",
+        "type": "postgres",
+        "name": "postgres",
+        "config": {
+          "compose": {
+            "image": "postgres:15"
+          },
+          "provenance": [
+            {
+              "inferred_from": "docker-compose.yml:11",
+              "confidence": "high",
+              "extractor": "compose"
+            },
+            {
+              "inferred_from": "package.json:5",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      },
+      {
+        "id": "service_api",
+        "type": "service",
+        "name": "api",
+        "config": {
+          "manifest": "package.json",
+          "provenance": [
+            {
+              "inferred_from": "package.json:1",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_api_redis_1",
+        "from": "gateway_api",
+        "to": "cache_redis",
+        "metadata": {
+          "protocol": "tcp",
+          "async": false,
+          "relation": "depends_on"
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "docker-compose.yml:3",
+              "confidence": "high",
+              "extractor": "compose"
+            }
+          ]
+        }
+      },
+      {
+        "id": "e_api_postgres_0",
+        "from": "gateway_api",
+        "to": "postgres",
+        "metadata": {
+          "protocol": "tcp",
+          "async": false,
+          "relation": "depends_on"
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "docker-compose.yml:3",
+              "confidence": "high",
+              "extractor": "compose"
+            }
+          ]
+        }
+      },
+      {
+        "id": "e_service_api_cache_redis",
+        "from": "service_api",
+        "to": "cache_redis",
+        "metadata": {
+          "relation": "cacheConnection",
+          "protocol": "tcp",
+          "async": false
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "package.json:6",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      },
+      {
+        "id": "e_service_api_postgres",
+        "from": "service_api",
+        "to": "postgres",
+        "metadata": {
+          "relation": "dbConnection",
+          "protocol": "tcp",
+          "async": false
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "package.json:5",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
