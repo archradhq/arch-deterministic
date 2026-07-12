@@ -1,12 +1,12 @@
 /**
  * Node.js / TypeScript source-code pattern analyzer.
- * Detects HTTP routes, DB connections, auth middleware, and service calls
- * using regex scanning — no subprocess or external dependency required.
+ * Detects HTTP routes, DB connections, auth middleware, external calls,
+ * workers, and service entry points using regex scanning.
  */
 
 import type { DetectedArtifact } from './types.js';
 import type { ScannedFile } from './file-walker.js';
-import { lineFromMatch, matchAll, testHit } from './scan-utils.js';
+import { lineAt, lineFromMatch, matchAll, testHit } from './scan-utils.js';
 
 // ---- helpers ----------------------------------------------------------------
 
@@ -25,6 +25,25 @@ function pushRouteArtifact(
   });
 }
 
+/** Extract just the hostname from a full URL string. */
+function hostnameFromUrl(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    // Fallback: strip protocol and path
+    return url.replace(/^https?:\/\//, '').split(/[/:?#]/)[0] ?? url;
+  }
+}
+
+/** Convert a hostname like "api.stripe.com" to a short service label "stripe". */
+function labelFromHostname(hostname: string): string {
+  // Strip www. / api. / auth. prefixes
+  const stripped = hostname.replace(/^(?:www|api|auth|cdn|static|assets|s3|storage)\./i, '');
+  // Take first two parts: "stripe.com" → "stripe", "auth0.com" → "auth0"
+  const parts = stripped.split('.');
+  return (parts[0] ?? stripped).toLowerCase().replace(/[^a-z0-9-]/g, '-');
+}
+
 // ---- HTTP route patterns ----------------------------------------------------
 
 const HEALTH_PATH_RE = /^(\/health(?:z|check)?|\/healthy|\/ready|\/live|\/ping|\/status|\/alive)\b/i;
@@ -41,101 +60,145 @@ const FASTIFY_ROUTE_RE =
 const NEST_CONTROLLER_RE = /@Controller\s*\(\s*['"`]?([^'"`)\n]*?)['"`]?\s*\)/gi;
 const NEST_VERB_RE = /@(Get|Post|Put|Patch|Delete|All|Head|Options)\s*\(\s*['"`]?([^'"`)\n]*?)['"`]?\s*\)/gi;
 
+// ---- App entry detection ----------------------------------------------------
+
+/** File calls app.listen() / server.listen() / fastify.listen() — marks HTTP server entry point. */
+const APP_LISTEN_RE =
+  /(?:app|server|fastify|koa|httpServer)\s*\.\s*(?:listen|start)\s*\(/i;
+
+// ---- Worker / queue patterns ------------------------------------------------
+
+const BULLMQ_WORKER_RE = /new\s+Worker\s*\(\s*['"`]([^'"`]+)['"`]/gi;
+const AGENDA_DEF_RE = /agenda\.define\s*\(\s*['"`]([^'"`]+)['"`]/gi;
+const NODE_CRON_RE = /(?:cron\.schedule|schedule\.scheduleJob)\s*\(/i;
+
 // ---- DB connection patterns -------------------------------------------------
 
 type DbPattern = { re: RegExp; dbType: string; detail: string };
 
 const DB_PATTERNS: DbPattern[] = [
-  { re: /(?:require|from)\s*['"`]pg['"`]/, dbType: 'postgres', detail: 'pg (PostgreSQL)' },
+  { re: /(?:require|from)\s*\(?\s*['"`]pg['"`]/, dbType: 'postgres', detail: 'pg (PostgreSQL)' },
   { re: /new\s+Pool\s*\(|new\s+Client\s*\(\s*\{/, dbType: 'postgres', detail: 'pg Pool/Client' },
-  { re: /(?:require|from)\s*['"`]@prisma\/client['"`]|PrismaClient/, dbType: 'postgres', detail: 'Prisma ORM' },
+  { re: /(?:require|from)\s*\(?\s*['"`]@prisma\/client['"`]|PrismaClient/, dbType: 'postgres', detail: 'Prisma ORM' },
   {
-    re: /(?:require|from)\s*['"`]typeorm['"`]|createConnection\s*\(\s*\{|DataSource\s*\(\s*\{/,
+    re: /(?:require|from)\s*\(?\s*['"`]typeorm['"`]|createConnection\s*\(\s*\{|DataSource\s*\(\s*\{/,
     dbType: 'postgres',
     detail: 'TypeORM',
   },
   {
-    re: /(?:require|from)\s*['"`]sequelize['"`]|new\s+Sequelize\s*\(/,
+    re: /(?:require|from)\s*\(?\s*['"`]sequelize['"`]|new\s+Sequelize\s*\(/,
     dbType: 'postgres',
     detail: 'Sequelize ORM',
   },
   {
-    re: /(?:require|from)\s*['"`]mysql2?['"`]/,
+    re: /(?:require|from)\s*\(?\s*['"`]mysql2?['"`]/,
     dbType: 'mysql',
     detail: 'mysql/mysql2 driver',
   },
   {
-    re: /(?:require|from)\s*['"`]mariadb['"`]/,
+    re: /(?:require|from)\s*\(?\s*['"`]mariadb['"`]/,
     dbType: 'mysql',
     detail: 'mariadb driver',
   },
   {
-    re: /(?:require|from)\s*['"`]mongoose['"`]|mongoose\.connect\s*\(/,
+    re: /(?:require|from)\s*\(?\s*['"`]mongoose['"`]|mongoose\.connect\s*\(/,
     dbType: 'mongodb',
     detail: 'Mongoose (MongoDB)',
   },
   {
-    re: /(?:require|from)\s*['"`]mongodb['"`]|MongoClient/,
+    re: /(?:require|from)\s*\(?\s*['"`]mongodb['"`]|MongoClient/,
     dbType: 'mongodb',
     detail: 'MongoDB native driver',
   },
   {
-    re: /(?:require|from)\s*['"`](?:redis|ioredis)['"`]|createClient\s*\(\s*\{/,
+    re: /(?:require|from)\s*\(?\s*['"`](?:redis|ioredis)['"`]|createClient\s*\(\s*\{/,
     dbType: 'cache',
     detail: 'Redis client',
   },
   {
-    re: /(?:require|from)\s*['"`]@elastic\/elasticsearch['"`]|new\s+ElasticsearchClient\s*\(/,
+    re: /(?:require|from)\s*\(?\s*['"`]bullmq['"`]/,
+    dbType: 'cache',
+    detail: 'BullMQ (Redis backend)',
+  },
+  {
+    re: /(?:require|from)\s*\(?\s*['"`]@elastic\/elasticsearch['"`]|new\s+ElasticsearchClient\s*\(/,
     dbType: 'search',
     detail: 'Elasticsearch client',
   },
   {
-    re: /(?:require|from)\s*['"`]cassandra-driver['"`]/,
+    re: /(?:require|from)\s*\(?\s*['"`]cassandra-driver['"`]/,
     dbType: 'cassandra',
     detail: 'Cassandra driver',
   },
+  {
+    re: /(?:require|from)\s*\(?\s*['"`]firebase-admin['"`]|admin\.firestore\s*\(\)|admin\.database\s*\(\)/,
+    dbType: 'firestore',
+    detail: 'Firebase Admin',
+  },
 ];
 
-const DB_ENV_PATTERNS: DbPattern[] = [
-  { re: /\bDATABASE_URL\b/, dbType: 'postgres', detail: 'DATABASE_URL env var' },
+/**
+ * Env var patterns with a capturing group (group 1) for the actual variable name.
+ * Detection order matters: more specific patterns first.
+ */
+type DbEnvPattern = { re: RegExp; dbType: string };
+
+const DB_ENV_PATTERNS: DbEnvPattern[] = [
   {
-    re: /\b(?:POSTGRES_URL|POSTGRESQL_URL|PGHOST|POSTGRES_HOST)\b/,
+    re: /\bprocess\.env\.(DATABASE_URL|POSTGRES_URL|POSTGRESQL_URL|PGHOST|POSTGRES_HOST|PGDATABASE|POSTGRES_URI|PG_URI|PG_CONNECTION_STRING)\b/,
     dbType: 'postgres',
-    detail: 'Postgres env var',
   },
-  { re: /\b(?:MYSQL_URL|MYSQL_HOST|MYSQL_DATABASE)\b/, dbType: 'mysql', detail: 'MySQL env var' },
   {
-    re: /\b(?:MONGO(?:DB)?_(?:URI|URL|HOST))\b/,
-    dbType: 'mongodb',
-    detail: 'MongoDB env var',
+    re: /\bprocess\.env\.(MYSQL_URL|MYSQL_HOST|MYSQL_DATABASE|MYSQL_URI)\b/,
+    dbType: 'mysql',
   },
-  { re: /\b(?:REDIS_URL|REDIS_HOST|REDIS_URI)\b/, dbType: 'cache', detail: 'Redis env var' },
-  { re: /\bELASTICSEARCH_URL\b/, dbType: 'search', detail: 'Elasticsearch env var' },
+  {
+    re: /\bprocess\.env\.(MONGO(?:DB)?_(?:URI|URL|HOST)|MONGODB_CONNECTION_STRING)\b/,
+    dbType: 'mongodb',
+  },
+  {
+    // Capture any env var with REDIS in the name
+    re: /\bprocess\.env\.([A-Z][A-Z0-9_]*REDIS[A-Z0-9_]*|REDIS_(?:URL|HOST|URI|PORT|CONNECTION_STRING))\b/,
+    dbType: 'cache',
+  },
+  {
+    re: /\bprocess\.env\.(ELASTICSEARCH_URL|ELASTIC_URL|OPENSEARCH_URL)\b/,
+    dbType: 'search',
+  },
 ];
+
+/**
+ * Capture the variable name used to hold a DB connection.
+ * e.g. `const userDb = new Pool(...)` → captures "userDb"
+ */
+const DB_CONN_VAR_RE =
+  /(?:const|let|var)\s+(\w+)\s*=\s*(?:await\s+)?(?:new\s+)?(?:Pool|Client|Sequelize|PrismaClient|MongoClient)\s*\(/gi;
 
 // ---- Auth patterns ----------------------------------------------------------
 
 type AuthPattern = { re: RegExp; detail: string };
 
 const AUTH_PATTERNS: AuthPattern[] = [
-  { re: /passport\.authenticate\s*\(/, detail: 'Passport.js authenticate()' },
-  { re: /(?:require|from)\s*['"`]passport['"`]/, detail: 'Passport.js import' },
-  { re: /(?:require|from)\s*['"`]express-jwt['"`]|expressJwt\s*\(/, detail: 'express-jwt middleware' },
-  { re: /(?:require|from)\s*['"`]fastify-jwt['"`]|\.register\s*\(\s*fastifyJwt/, detail: 'fastify-jwt plugin' },
-  { re: /(?:require|from)\s*['"`]jsonwebtoken['"`]|jwt\.verify\s*\(/, detail: 'jsonwebtoken' },
+  // Require actual usage, not a bare `import passport` — importing the library
+  // does not mean this file wires up auth middleware (avoids false-positive
+  // auth nodes from import statements).
+  { re: /passport\.(?:authenticate|initialize|session|use)\s*\(/, detail: 'Passport.js' },
+  { re: /(?:require|from)\s*\(?\s*['"`]express-jwt['"`]|expressJwt\s*\(/, detail: 'express-jwt middleware' },
+  { re: /(?:require|from)\s*\(?\s*['"`]fastify-jwt['"`]|\.register\s*\(\s*fastifyJwt/, detail: 'fastify-jwt plugin' },
+  { re: /(?:require|from)\s*\(?\s*['"`]jsonwebtoken['"`]|jwt\.verify\s*\(/, detail: 'jsonwebtoken' },
   { re: /@UseGuards\s*\(/, detail: 'NestJS @UseGuards' },
   { re: /@AuthGuard\s*\(/, detail: 'NestJS @AuthGuard' },
   {
-    re: /(?:require|from)\s*['"`]auth0['"`]|new\s+(?:AuthenticationClient|ManagementClient)\s*\(/,
+    re: /(?:require|from)\s*\(?\s*['"`]auth0['"`]|new\s+(?:AuthenticationClient|ManagementClient)\s*\(/,
     detail: 'Auth0 SDK',
   },
-  { re: /(?:require|from)\s*['"`]@okta\//, detail: 'Okta SDK' },
+  { re: /(?:require|from)\s*\(?\s*['"`]@okta\//, detail: 'Okta SDK' },
   {
-    re: /(?:require|from)\s*['"`]keycloak-connect['"`]|new\s+Keycloak\s*\(/,
+    re: /(?:require|from)\s*\(?\s*['"`]keycloak-connect['"`]|new\s+Keycloak\s*\(/,
     detail: 'Keycloak Connect',
   },
-  { re: /(?:require|from)\s*['"`]amazon-cognito/, detail: 'AWS Cognito SDK' },
-  { re: /(?:require|from)\s*['"`]@aws-amplify\/auth['"`]/, detail: 'AWS Amplify Auth' },
+  { re: /(?:require|from)\s*\(?\s*['"`]amazon-cognito/, detail: 'AWS Cognito SDK' },
+  { re: /(?:require|from)\s*\(?\s*['"`]@aws-amplify\/auth['"`]/, detail: 'AWS Amplify Auth' },
   { re: /\.use\s*\(\s*requiresAuth\s*\(/, detail: 'auth middleware registration' },
 ];
 
@@ -144,11 +207,11 @@ const AUTH_PATTERNS: AuthPattern[] = [
 type SvcCallPattern = { re: RegExp; detail: string };
 
 const SERVICE_CALL_PATTERNS: SvcCallPattern[] = [
-  { re: /(?:require|from)\s*['"`]axios['"`]/, detail: 'axios HTTP client' },
+  { re: /(?:require|from)\s*\(?\s*['"`]axios['"`]/, detail: 'axios HTTP client' },
   { re: /axios\s*\.\s*(?:get|post|put|patch|delete|request)\s*\(/, detail: 'axios HTTP call' },
-  { re: /(?:require|from)\s*['"`]got['"`]/, detail: 'got HTTP client' },
-  { re: /(?:require|from)\s*['"`]node-fetch['"`]/, detail: 'node-fetch' },
-  { re: /(?:require|from)\s*['"`]@grpc\/grpc-js['"`]/, detail: 'gRPC client' },
+  { re: /(?:require|from)\s*\(?\s*['"`]got['"`]/, detail: 'got HTTP client' },
+  { re: /(?:require|from)\s*\(?\s*['"`]node-fetch['"`]/, detail: 'node-fetch' },
+  { re: /(?:require|from)\s*\(?\s*['"`]@grpc\/grpc-js['"`]/, detail: 'gRPC client' },
   {
     re: /new\s+\w+ServiceClient\s*\(\s*process\.env\./,
     detail: 'gRPC client from env',
@@ -158,6 +221,22 @@ const SERVICE_CALL_PATTERNS: SvcCallPattern[] = [
     detail: 'HTTP service client',
   },
 ];
+
+// ---- External HTTP destination extraction ----------------------------------
+
+/**
+ * Captures hardcoded URLs passed to HTTP client calls.
+ * Group 1 = full URL.
+ */
+const EXTERNAL_URL_CALL_RE =
+  /(?:axios|fetch|got|superagent|needle|undici|request)\s*(?:\.\s*(?:get|post|put|patch|delete|head|request)\s*)?\(\s*['"`](https?:\/\/[^'"`\s,)]+)['"`]/gi;
+
+/**
+ * gRPC client target strings.
+ * e.g. new PaymentServiceClient('payments-svc:50051') → "payments-svc"
+ */
+const GRPC_TARGET_RE =
+  /new\s+(\w+)ServiceClient\s*\(\s*['"`]([^'"`\s,)]+)['"`]/gi;
 
 // ---- analysis entry point ---------------------------------------------------
 
@@ -210,9 +289,74 @@ export function analyzeNodejsFile(file: ScannedFile): DetectedArtifact[] {
     }
   }
 
-  // DB imports + ORM
+  // App entry point (file starts the HTTP server)
+  const listenHit = testHit(APP_LISTEN_RE, content);
+  if (listenHit.hit) {
+    artifacts.push({
+      kind: 'app_entry',
+      detail: 'app.listen()',
+      file: relPath,
+      line: listenHit.line,
+    });
+  }
+
+  // Worker definitions (BullMQ, Agenda, node-cron)
+  let workerEmitted = false;
+  for (const m of matchAll(content, BULLMQ_WORKER_RE.source)) {
+    if (workerEmitted) break;
+    const queueName = m[1] ?? 'jobs';
+    artifacts.push({
+      kind: 'worker_definition',
+      detail: `BullMQ Worker("${queueName}")`,
+      file: relPath,
+      line: lineFromMatch(content, m),
+    });
+    workerEmitted = true;
+  }
+  if (!workerEmitted) {
+    for (const m of matchAll(content, AGENDA_DEF_RE.source)) {
+      const jobName = m[1] ?? 'job';
+      artifacts.push({
+        kind: 'worker_definition',
+        detail: `Agenda.define("${jobName}")`,
+        file: relPath,
+        line: lineFromMatch(content, m),
+      });
+      workerEmitted = true;
+      break;
+    }
+  }
+  if (!workerEmitted && testHit(NODE_CRON_RE, content).hit) {
+    const h = testHit(NODE_CRON_RE, content);
+    artifacts.push({
+      kind: 'worker_definition',
+      detail: 'cron schedule',
+      file: relPath,
+      line: h.line,
+    });
+  }
+
+  // DB env var detection first — captures the actual env var name for node naming.
+  // Checked before library imports so that "REDIS_URL" wins over "Redis client".
   const seenDbTypes = new Set<string>();
-  for (const { re, dbType, detail } of [...DB_PATTERNS, ...DB_ENV_PATTERNS]) {
+  for (const { re, dbType } of DB_ENV_PATTERNS) {
+    if (seenDbTypes.has(dbType)) continue;
+    const m = re.exec(content);
+    if (m?.[1]) {
+      const envVarName = m[1];
+      artifacts.push({
+        kind: 'db_connection',
+        detail: `${envVarName} → ${dbType}`,
+        file: relPath,
+        line: lineAt(content, m.index ?? 0),
+        connectionName: envVarName,
+      });
+      seenDbTypes.add(dbType);
+    }
+  }
+
+  // DB imports + ORM (library-level detection, fallback for types not found via env vars)
+  for (const { re, dbType, detail } of DB_PATTERNS) {
     if (seenDbTypes.has(dbType)) continue;
     const hit = testHit(re, content);
     if (hit.hit) {
@@ -226,6 +370,18 @@ export function analyzeNodejsFile(file: ScannedFile): DetectedArtifact[] {
     }
   }
 
+  // DB connection variable names (e.g. `const userDb = new Pool(...)`)
+  // Augments connectionName on an already-emitted artifact for the same dbType.
+  for (const m of matchAll(content, DB_CONN_VAR_RE.source)) {
+    const varName = m[1];
+    if (!varName || varName === 'db' || varName === 'client' || varName === 'pool') continue;
+    // Find the most recently emitted db_connection for postgres (Pool/Client are pg-specific)
+    const existing = [...artifacts].reverse().find(
+      (a) => a.kind === 'db_connection' && !a.connectionName && /postgres/i.test(a.detail),
+    );
+    if (existing) existing.connectionName = varName;
+  }
+
   // Auth middleware
   for (const { re, detail } of AUTH_PATTERNS) {
     const hit = testHit(re, content);
@@ -235,13 +391,47 @@ export function analyzeNodejsFile(file: ScannedFile): DetectedArtifact[] {
     }
   }
 
-  // Service-to-service calls
+  // Service-to-service calls (generic, for drift detection)
   for (const { re, detail } of SERVICE_CALL_PATTERNS) {
     const hit = testHit(re, content);
     if (hit.hit) {
       artifacts.push({ kind: 'service_call', detail, file: relPath, line: hit.line });
       break;
     }
+  }
+
+  // External HTTP calls — extract per-destination nodes
+  const seenDestinations = new Set<string>();
+  for (const m of matchAll(content, EXTERNAL_URL_CALL_RE.source)) {
+    const url = m[1];
+    if (!url) continue;
+    const hostname = hostnameFromUrl(url);
+    const label = labelFromHostname(hostname);
+    if (seenDestinations.has(label)) continue;
+    seenDestinations.add(label);
+    artifacts.push({
+      kind: 'external_http',
+      detail: `outbound ${url}`,
+      file: relPath,
+      line: lineFromMatch(content, m),
+      destination: label,
+    });
+  }
+
+  // gRPC client targets
+  for (const m of matchAll(content, GRPC_TARGET_RE.source)) {
+    const target = m[2] ?? '';
+    const svcName = m[1] ? m[1].replace(/ServiceClient$/, '').toLowerCase() : target.split(':')[0] ?? 'grpc-svc';
+    const label = svcName.replace(/[^a-z0-9-]/g, '-');
+    if (seenDestinations.has(label)) continue;
+    seenDestinations.add(label);
+    artifacts.push({
+      kind: 'external_http',
+      detail: `gRPC ${target}`,
+      file: relPath,
+      line: lineFromMatch(content, m),
+      destination: label,
+    });
   }
 
   return artifacts;

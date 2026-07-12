@@ -1,0 +1,36 @@
+{
+  "graph": {
+    "metadata": {
+      "name": "code-monolith",
+      "status": "draft",
+      "provenance": {
+        "source": "scan",
+        "extractors": [
+          "compose",
+          "openapi",
+          "manifest",
+          "code"
+        ],
+        "fileCount": 5
+      }
+    },
+    "nodes": [
+      {
+        "id": "gateway_code_monolith",
+        "type": "gateway",
+        "name": "code-monolith",
+        "config": {
+          "source": "reconstructed",
+          "provenance": [
+            {
+              "inferred_from": "index.ts:8",
+              "confidence": "low",
+              "extractor": "code"
+            }
+          ]
+        }
+      }
+    ],
+    "edges": []
+  }
+}

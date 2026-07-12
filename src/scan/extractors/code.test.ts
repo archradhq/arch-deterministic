@@ -70,6 +70,19 @@ describe('scanCodebase — code extractor', () => {
     expect(canonicalIrToJsonString(result.ir)).toBe(golden);
   });
 
+  it('collapses a route-decomposed monolith into a single gateway (singleService)', async () => {
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}code-monolith`, extractors: ['code'] });
+    const g = graphOf(result.ir);
+    // Two route modules under routes/ do NOT become separate service nodes.
+    expect(g.nodes.filter((n) => n.type === 'service')).toHaveLength(0);
+    expect(g.nodes.filter((n) => n.type === 'gateway')).toHaveLength(1);
+  });
+
+  it('does not create an auth node from a bare `import passport` (no usage)', async () => {
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}code-monolith`, extractors: ['code'] });
+    expect(graphOf(result.ir).nodes.some((n) => n.type === 'auth')).toBe(false);
+  });
+
   it('produces structurally valid, deterministic IR', async () => {
     const a = await scanCodebase({ from: `${FIXTURE_ROOT}code-basic` });
     const b = await scanCodebase({ from: `${FIXTURE_ROOT}code-basic` });

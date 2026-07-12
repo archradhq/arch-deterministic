@@ -450,6 +450,22 @@ export class UsersController {
     expect(artifacts.some((a) => a.kind === 'http_route')).toBe(true);
   });
 
+  it('does not treat a bare `import passport` as auth_middleware', () => {
+    const artifacts = analyzeNodejsFile({
+      relPath: 'src/auth.ts',
+      content: `import passport from 'passport';\nexport { passport };\n`,
+    });
+    expect(artifacts.some((a) => a.kind === 'auth_middleware')).toBe(false);
+  });
+
+  it('detects passport usage (authenticate/initialize) as auth_middleware', () => {
+    const artifacts = analyzeNodejsFile({
+      relPath: 'src/auth.ts',
+      content: `import passport from 'passport';\napp.use(passport.initialize());\napp.get('/me', passport.authenticate('jwt'), handler);\n`,
+    });
+    expect(artifacts.some((a) => a.kind === 'auth_middleware')).toBe(true);
+  });
+
   it('detects DATABASE_URL env var as db_connection', () => {
     const artifacts = analyzeNodejsFile({
       relPath: 'src/db.ts',
@@ -561,5 +577,293 @@ var conn = new SqlConnection("Server=.;Database=App;");
     expect(
       artifacts.some((a) => a.kind === 'db_connection' && /sqlserver/i.test(a.detail)),
     ).toBe(true);
+  });
+});
+
+// ============================================================================
+// Integration tests for service decomposition (Issue 1–4 requirements)
+// ============================================================================
+
+// ---- D1. Express three-route-file decomposition ----------------------------
+
+describe('Express multi-route decomposition: three route files → three service nodes', () => {
+  it('produces a gateway + 3 service nodes, not one big gateway', async () => {
+    const root = await makeTmp();
+    await writeFiles(root, {
+      'package.json': '{ "name": "shop-api" }',
+      'index.ts': `
+import express from 'express';
+import usersRouter from './routes/users.js';
+import paymentsRouter from './routes/payments.js';
+import reportsRouter from './routes/reports.js';
+const app = express();
+app.use('/users', usersRouter);
+app.use('/payments', paymentsRouter);
+app.use('/reports', reportsRouter);
+app.listen(3000);
+`,
+      'routes/users.ts': `
+import { Router } from 'express';
+const router = Router();
+router.get('/', (req, res) => res.json([]));
+router.post('/', (req, res) => res.json({ ok: true }));
+module.exports = router;
+`,
+      'routes/payments.ts': `
+import { Router } from 'express';
+const router = Router();
+router.post('/charge', (req, res) => res.json({ ok: true }));
+router.get('/history', (req, res) => res.json([]));
+module.exports = router;
+`,
+      'routes/reports.ts': `
+import { Router } from 'express';
+const router = Router();
+router.get('/summary', (req, res) => res.json({}));
+module.exports = router;
+`,
+    });
+
+    const result = await reconstructIrFromCodebase({ from: root, language: 'nodejs' });
+    const g = result.ir.graph as { nodes: { id: string; type: string; name: string }[]; edges: { from: string; to: string }[] };
+
+    const serviceNodes = g.nodes.filter((n) => n.type === 'service');
+    const gatewayNodes = g.nodes.filter((n) => n.type === 'gateway');
+
+    expect(gatewayNodes.length).toBe(1);
+    expect(serviceNodes.length).toBe(3);
+
+    const names = serviceNodes.map((n) => n.name);
+    expect(names).toContain('users');
+    expect(names).toContain('payments');
+    expect(names).toContain('reports');
+
+    // Gateway should have edges to all three services
+    const gwId = gatewayNodes[0]!.id;
+    const svcIds = serviceNodes.map((n) => n.id);
+    for (const svcId of svcIds) {
+      expect(g.edges.some((e) => e.from === gwId && e.to === svcId)).toBe(true);
+    }
+  });
+
+  it('collapses the same three route files into one service node with singleService', async () => {
+    const root = await makeTmp();
+    await writeFiles(root, {
+      'package.json': '{ "name": "shop-api" }',
+      'index.ts': `
+import express from 'express';
+import usersRouter from './routes/users.js';
+const app = express();
+app.use('/users', usersRouter);
+app.listen(3000);
+`,
+      'routes/users.ts': `
+import { Router } from 'express';
+const router = Router();
+router.get('/', (req, res) => res.json([]));
+module.exports = router;
+`,
+      'routes/orders.ts': `
+import { Router } from 'express';
+const router = Router();
+router.get('/', (req, res) => res.json([]));
+module.exports = router;
+`,
+    });
+
+    const result = await reconstructIrFromCodebase({ from: root, language: 'nodejs', singleService: true });
+    const g = result.ir.graph as { nodes: { type: string }[] };
+    // No route-file decomposition: a single primary node, no separate service nodes.
+    expect(g.nodes.filter((n) => n.type === 'service')).toHaveLength(0);
+    expect(g.nodes.filter((n) => n.type === 'gateway')).toHaveLength(1);
+  });
+});
+
+// ---- D2. NestJS controller decomposition -----------------------------------
+
+describe('NestJS controller decomposition: three controllers → three service nodes', () => {
+  it('detects *.controller.ts files as distinct service nodes', async () => {
+    const root = await makeTmp();
+    await writeFiles(root, {
+      'package.json': '{ "name": "nest-api" }',
+      'src/main.ts': `
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module.js';
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  await app.listen(3000);
+}
+bootstrap();
+`,
+      'src/users/users.controller.ts': `
+import { Controller, Get, Post, Param, Body } from '@nestjs/common';
+@Controller('users')
+export class UsersController {
+  @Get() findAll() { return []; }
+  @Post() create(@Body() dto: any) { return dto; }
+  @Get(':id') findOne(@Param('id') id: string) { return { id }; }
+}
+`,
+      'src/payments/payments.controller.ts': `
+import { Controller, Get, Post } from '@nestjs/common';
+@Controller('payments')
+export class PaymentsController {
+  @Post('charge') charge() { return {}; }
+  @Get('history') history() { return []; }
+}
+`,
+      'src/reports/reports.controller.ts': `
+import { Controller, Get } from '@nestjs/common';
+@Controller('reports')
+export class ReportsController {
+  @Get('summary') summary() { return {}; }
+}
+`,
+    });
+
+    const result = await reconstructIrFromCodebase({ from: root, language: 'nodejs' });
+    const g = result.ir.graph as { nodes: { id: string; type: string; name: string }[]; edges: unknown[] };
+
+    const serviceNodes = g.nodes.filter((n) => n.type === 'service');
+    const gatewayNodes = g.nodes.filter((n) => n.type === 'gateway');
+
+    expect(gatewayNodes.length).toBe(1);
+    expect(serviceNodes.length).toBe(3);
+
+    const names = serviceNodes.map((n) => n.name);
+    expect(names).toContain('users.controller');
+    expect(names).toContain('payments.controller');
+    expect(names).toContain('reports.controller');
+  });
+});
+
+// ---- D3. HTTP routes + BullMQ worker ---------------------------------------
+
+describe('HTTP routes + BullMQ worker → separate service and worker nodes', () => {
+  it('produces a gateway, service node for routes, and worker node for queue consumer', async () => {
+    const root = await makeTmp();
+    await writeFiles(root, {
+      'package.json': '{ "name": "job-api" }',
+      'index.ts': `
+import express from 'express';
+import apiRouter from './routes/api.js';
+const app = express();
+app.use('/api', apiRouter);
+app.listen(4000);
+`,
+      'routes/api.ts': `
+import { Router } from 'express';
+const router = Router();
+router.post('/jobs', (req, res) => res.json({ queued: true }));
+router.get('/status', (req, res) => res.json({ ok: true }));
+module.exports = router;
+`,
+      'worker.ts': `
+import { Worker } from 'bullmq';
+const worker = new Worker('jobs', async (job) => {
+  console.log('processing', job.data);
+  return { done: true };
+});
+worker.on('completed', (job) => console.log('done', job.id));
+`,
+    });
+
+    const result = await reconstructIrFromCodebase({ from: root, language: 'nodejs' });
+    const g = result.ir.graph as { nodes: { id: string; type: string; name: string }[]; edges: unknown[] };
+
+    const gatewayNodes = g.nodes.filter((n) => n.type === 'gateway');
+    const serviceNodes = g.nodes.filter((n) => n.type === 'service');
+    const workerNodes = g.nodes.filter((n) => n.type === 'worker');
+
+    expect(gatewayNodes.length).toBe(1);
+    expect(serviceNodes.length).toBeGreaterThanOrEqual(1);
+    expect(workerNodes.length).toBe(1);
+    expect(workerNodes[0]!.name).toBe('worker');
+  });
+});
+
+// ---- D4. External service nodes per destination ----------------------------
+
+describe('External service identification: distinct nodes per URL destination', () => {
+  it('creates separate external service nodes for Stripe, reCAPTCHA, and a gRPC target', async () => {
+    const root = await makeTmp();
+    await writeFiles(root, {
+      'package.json': '{ "name": "billing-api" }',
+      'src/billing.ts': `
+import axios from 'axios';
+async function charge(amount: number) {
+  return axios.post('https://api.stripe.com/v1/charges', { amount });
+}
+`,
+      'src/auth.ts': `
+async function verifyRecaptcha(token: string) {
+  const res = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+    method: 'POST',
+    body: new URLSearchParams({ secret: process.env.RECAPTCHA_SECRET!, response: token }),
+  });
+  return res.json();
+}
+`,
+      'src/notifications.ts': `
+import { NotificationServiceClient } from './proto/generated.js';
+const client = new NotificationServiceClient('notifications-svc:50051');
+`,
+      'src/app.ts': `
+import express from 'express';
+const app = express();
+app.get('/healthz', (_req, res) => res.json({ ok: true }));
+app.listen(3000);
+`,
+    });
+
+    const result = await reconstructIrFromCodebase({ from: root, language: 'nodejs' });
+    const g = result.ir.graph as { nodes: { id: string; type: string; name: string }[]; edges: unknown[] };
+
+    const extNodes = g.nodes.filter((n) => n.type === 'service' && n.name !== 'external-service');
+    const nodeNames = extNodes.map((n) => n.name);
+
+    // Should have stripe and google (recaptcha) as distinct external nodes
+    expect(nodeNames.some((n) => n.includes('stripe'))).toBe(true);
+    expect(nodeNames.some((n) => n.includes('google'))).toBe(true);
+    // Each is a distinct node
+    const stripeNodes = extNodes.filter((n) => n.name.includes('stripe'));
+    const googleNodes = extNodes.filter((n) => n.name.includes('google'));
+    expect(stripeNodes.length).toBe(1);
+    expect(googleNodes.length).toBe(1);
+  });
+});
+
+// ---- D5. Monolithic app — negative case (no forced decomposition) ----------
+
+describe('Monolithic app: all routes in one file → single service node', () => {
+  it('does not split a monolith into multiple services', async () => {
+    const root = await makeTmp();
+    await writeFiles(root, {
+      'package.json': '{ "name": "monolith" }',
+      'app.ts': `
+import express from 'express';
+import { Pool } from 'pg';
+const app = express();
+const db = new Pool({ connectionString: process.env.DATABASE_URL });
+app.get('/users', async (_req, res) => res.json(await db.query('SELECT 1')));
+app.post('/payments', async (_req, res) => res.json({ ok: true }));
+app.get('/reports', async (_req, res) => res.json([]));
+app.get('/health', (_req, res) => res.json({ ok: true }));
+app.listen(3000);
+`,
+    });
+
+    const result = await reconstructIrFromCodebase({ from: root, language: 'nodejs' });
+    const g = result.ir.graph as { nodes: { id: string; type: string }[]; edges: { from: string; to: string }[] };
+
+    const httpNodes = g.nodes.filter((n) => n.type === 'gateway' || n.type === 'service');
+    // Only one HTTP service node — the monolith
+    expect(httpNodes.length).toBe(1);
+    expect(httpNodes[0]!.type).toBe('gateway');
+
+    // DB node should still be present and connected
+    const dbNode = g.nodes.find((n) => n.type === 'postgres');
+    expect(dbNode).toBeDefined();
+    expect(g.edges.some((e) => e.from === httpNodes[0]!.id && e.to === dbNode?.id)).toBe(true);
   });
 });

@@ -9,7 +9,10 @@ export type ArtifactKind =
   | 'health_route'
   | 'db_connection'
   | 'auth_middleware'
-  | 'service_call';
+  | 'service_call'
+  | 'external_http'      // outbound HTTP/gRPC call with a known destination
+  | 'worker_definition'  // BullMQ Worker, Agenda job, cron schedule
+  | 'app_entry';         // file calls app.listen() / server.start()
 
 export type DetectedArtifact = {
   kind: ArtifactKind;
@@ -18,6 +21,10 @@ export type DetectedArtifact = {
   /** Relative path from codebase root. */
   file: string;
   line?: number;
+  /** For external_http: normalized destination hostname or service identifier. */
+  destination?: string;
+  /** For db_connection: env var or variable name for this connection (used for node naming). */
+  connectionName?: string;
 };
 
 export type ReconstructOptions = {
@@ -27,6 +34,13 @@ export type ReconstructOptions = {
   language?: Language | 'auto';
   /** Extra path fragments to exclude (in addition to built-in exclusions). */
   exclude?: string[];
+  /**
+   * When true, collapse everything into a single service node instead of
+   * decomposing route/controller files into separate service nodes. Used by
+   * `archrad scan`, where a monolith's many route modules should read as one
+   * service, not many. Default false (decomposition preserved).
+   */
+  singleService?: boolean;
 };
 
 export type ReconstructResult = {

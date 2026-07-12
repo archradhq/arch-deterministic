@@ -62,7 +62,9 @@ export const codeExtractor: Extractor = {
     const warnings: string[] = [];
     let result;
     try {
-      result = await reconstructIrFromCodebase({ from: tree.root, language: 'auto' });
+      // singleService: a monolith's many route modules should read as ONE service
+      // in the draft, not dozens of separate service nodes.
+      result = await reconstructIrFromCodebase({ from: tree.root, language: 'auto', singleService: true });
     } catch (e) {
       return [
         {
