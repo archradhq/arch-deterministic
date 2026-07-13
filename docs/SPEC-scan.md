@@ -191,24 +191,38 @@ Cross-cutting:
 
 ## 10. Build order (one extractor per PR)
 
-1. **Infra + `compose` extractor** (this is the first slice): plugin interface,
-   file tree, provenance annotation, `mergeDraftFragments`, CLI wiring, and the
-   `compose` extractor reusing `dockerComposeToCanonicalIr()`. Compose is chosen
-   first because it is the highest-confidence source and its converter already
-   exists and is tested.
-2. `openapi` extractor.
-3. `manifest` extractor (new client-lib → edge table; requires the dep-map
-   decision — no new runtime deps without asking).
-4. `code` extractor (wrap `reconstructIrFromCodebase`; reconcile its node-id
-   scheme with the merger).
+1. ✅ **Infra + `compose` extractor** — plugin interface, file tree, provenance
+   annotation, `mergeDraftFragments`, CLI wiring, `compose` reusing
+   `dockerComposeToCanonicalIr()`.
+2. ✅ `openapi` extractor — reuses `openApiStringToCanonicalIr()`; keeps engine
+   route-based ids (endpoints don't collide with other tiers).
+3. ✅ `manifest` extractor — hand-maintained driver-lib → infra map (no new dep);
+   `package.json` + `requirements.txt`.
+4. ✅ `code` extractor — wraps `reconstructIrFromCodebase()` with `singleService`
+   so a monolith reads as one service; artifact-based provenance.
 
-## 11. Open questions
+## 11. Open questions / follow-ups
 
-- **Node-id namespacing across extractors.** Compose names a Postgres node from
-  the service key; `reconstruct` names it `db_postgres_<svc>`. For merge-on-id to
-  find agreement, extractors need a shared id convention for common infra
-  (databases, caches, external APIs). Proposal: a canonical id helper
-  `scanNodeId(kind, name)` all extractors call. Decide during slice 1.
+Resolved:
+- **Node-id namespacing across extractors** — resolved via `scanNodeId(kind, name)`,
+  which all extractors route ids through. Infra with canonical names (postgres,
+  cache_redis) now merges across compose/manifest/code.
+
+Still open (tracked here, not blocking):
+- **App/infra id alignment is only partial.** `scanNodeId` makes canonically-named
+  infra agree, but nodes whose name is inferred differently across tiers still
+  fork. Observed on a real repo:
+  - App service: compose infers `gateway_api` (ports) vs manifest `service_api`
+    (generic) → two nodes for one app.
+  - Datastore naming: manifest emits `firestore` (canonical) while `code` names it
+    from the client variable → `firestore_firebase_admin` → no merge.
+  Candidate fixes: match by `(type, normalized-name)` at merge time rather than raw
+  id; or a per-type name-normalization pass before merge. Needs a decision before
+  it's worth implementing — see the merge-by-(type,name) option discussed in slice
+  planning.
+- **Manifest tier is npm/pip only.** Extend `lib-map.ts` + `manifest.ts` to
+  `go.mod`, `pom.xml`/Gradle, and `pyproject.toml` (TOML has no parser dep in this
+  package today — regex-extract the dependency arrays, or add a parser only with
+  sign-off). Each new ecosystem is additive and low-risk.
 - **Fixtures dir location** — using `fixtures/scan/` to match the repo; the
   CLAUDE.md text says `tests/fixtures/` (generic). Flagging the deviation.
-```
