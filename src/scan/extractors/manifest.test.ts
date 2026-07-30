@@ -74,12 +74,41 @@ describe('scanCodebase — cross-extractor infra merge', () => {
     }
   });
 
-  it('does NOT merge the app node across extractors (known type-mismatch limitation)', async () => {
-    // compose infers `gateway_api` (ports) while manifest emits `service_api`.
+  it('does NOT merge compose + manifest app nodes (compose is never tagged scanRoot — it can name multiple real services, so nothing there is safe to assume is "the" root)', async () => {
     const result = await scanCodebase({ from: `${FIXTURE_ROOT}compose-and-manifest` });
     const ids = graphOf(result.ir).nodes.map((n) => n.id);
     expect(ids).toContain('gateway_api');
     expect(ids).toContain('service_api');
+  });
+
+  it('DOES merge code + manifest app nodes for the same scan root (root-unify fixture)', async () => {
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}root-unify` });
+    const g = graphOf(result.ir);
+    const ids = g.nodes.map((n) => n.id);
+    // Exactly one root node survives — the more specific `gateway` (code), not a duplicate `service` (manifest).
+    expect(ids).toContain('gateway_root_unify');
+    expect(ids).not.toContain('service_billing_api');
+    const root = g.nodes.find((n) => n.id === 'gateway_root_unify')!;
+    expect(readProvenance(root).map((p) => p.extractor).sort()).toEqual(['code', 'manifest']);
+
+    // The postgres node from manifest (id `postgres`) and code (`postgres_database`) also merge.
+    expect(ids).toContain('postgres');
+    expect(ids).not.toContain('postgres_database');
+    const pg = g.nodes.find((n) => n.id === 'postgres')!;
+    expect(readProvenance(pg).map((p) => p.extractor).sort()).toEqual(['code', 'manifest']);
+
+    // Exactly one gateway->postgres edge, not two duplicates.
+    const pgEdges = g.edges.filter((e) => e.to === 'postgres');
+    expect(pgEdges).toHaveLength(1);
+    expect(readProvenance(pgEdges[0]!).map((p) => p.extractor).sort()).toEqual(['code', 'manifest']);
+  });
+
+  it('root-unify matches the committed golden byte-for-byte and is deterministic', async () => {
+    const a = await scanCodebase({ from: `${FIXTURE_ROOT}root-unify` });
+    const b = await scanCodebase({ from: `${FIXTURE_ROOT}root-unify` });
+    const golden = readFileSync(`${FIXTURE_ROOT}root-unify.expected-ir.json`, 'utf8');
+    expect(canonicalIrToJsonString(a.ir)).toBe(golden);
+    expect(canonicalIrToJsonString(a.ir)).toBe(canonicalIrToJsonString(b.ir));
   });
 
   it('produces structurally valid, deterministic IR', async () => {

@@ -111,7 +111,20 @@ export const codeExtractor: Extractor = {
       const art = pickArtifact(n, result.artifacts);
       const entry = provenanceEntry('code', art?.file ?? result.serviceName, art?.line, 'low');
       if (id) provByNodeId.set(id, entry);
-      return withProvenance(n, entry);
+      let tagged = withProvenance(n, entry);
+      // With singleService:true, exactly one non-worker node represents the whole
+      // scanned unit (name === serviceName) — mark it so the orchestrator can unify
+      // it with another extractor's root node for the same scan (see merge-draft.ts
+      // unifyScanRoots). Only that one node gets tagged; decomposed sub-services
+      // never do.
+      if (n.type !== 'worker' && n.name === result.serviceName) {
+        const config =
+          tagged.config && typeof tagged.config === 'object' && !Array.isArray(tagged.config)
+            ? (tagged.config as Record<string, unknown>)
+            : {};
+        tagged = { ...tagged, config: { ...config, scanRoot: true } };
+      }
+      return tagged;
     });
     const edges = rawEdges.map((e) => {
       const from = typeof e.from === 'string' ? e.from : '';

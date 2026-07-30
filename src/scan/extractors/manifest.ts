@@ -106,6 +106,11 @@ export const manifestExtractor: Extractor = {
       const componentName =
         (isNpm ? npmComponentName(text) : null) ?? dirComponentName(file.relPath, tree.root);
       const componentId = scanNodeId('service', componentName);
+      // A manifest directly at the scan root represents the whole scanned unit —
+      // tag it so the orchestrator can unify it with another extractor's root node
+      // for the same scan (see merge-draft.ts unifyScanRoots). A manifest nested in
+      // a subdirectory (a monorepo package) is its own component, not the root.
+      const isRootManifest = dirname(file.relPath) === '.';
 
       const nodes: Record<string, unknown>[] = [];
       const edges: Record<string, unknown>[] = [];
@@ -118,7 +123,7 @@ export const manifestExtractor: Extractor = {
             id: componentId,
             type: 'service',
             name: componentName,
-            config: { manifest: base },
+            config: { manifest: base, ...(isRootManifest ? { scanRoot: true } : {}) },
           },
           provenanceEntry('manifest', file.relPath, 1, 'low'),
         ),

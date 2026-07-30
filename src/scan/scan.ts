@@ -12,7 +12,7 @@ import type { Extractor, ScanOptions, ScanResult } from './types.js';
 import { ScanError } from './types.js';
 import { buildScanFileTree } from './file-tree.js';
 import { ensureProvenance } from './provenance.js';
-import { mergeDraftFragments } from './merge-draft.js';
+import { mergeDraftFragments, unifyDraft } from './merge-draft.js';
 import { composeExtractor } from './extractors/compose.js';
 import { openapiExtractor } from './extractors/openapi.js';
 import { manifestExtractor } from './extractors/manifest.js';
@@ -66,7 +66,12 @@ export async function scanCodebase(opts: ScanOptions): Promise<ScanResult> {
   const merged = mergeDraftFragments(partials, { priority: order });
   warnings.push(...merged.warnings);
 
-  if (merged.nodes.length === 0) {
+  // Second pass: unify equivalent nodes the id-based merge above can't see —
+  // the same app or the same infra described under a different id per tier.
+  // See merge-draft.ts unifyDraft / docs/SPEC-scan.md §11.
+  const unified = unifyDraft(merged.nodes, merged.edges, order);
+
+  if (unified.nodes.length === 0) {
     warnings.push(
       `archrad scan: no structural signals found in ${root} (extractors: ${order.join(', ') || 'none'}).`,
     );
@@ -83,8 +88,8 @@ export async function scanCodebase(opts: ScanOptions): Promise<ScanResult> {
           fileCount: tree.files.length,
         },
       },
-      nodes: merged.nodes,
-      edges: merged.edges,
+      nodes: unified.nodes,
+      edges: unified.edges,
     },
   };
 

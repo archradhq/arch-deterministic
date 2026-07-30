@@ -1,0 +1,87 @@
+{
+  "graph": {
+    "metadata": {
+      "name": "root-unify",
+      "status": "draft",
+      "provenance": {
+        "source": "scan",
+        "extractors": [
+          "compose",
+          "openapi",
+          "manifest",
+          "code"
+        ],
+        "fileCount": 2
+      }
+    },
+    "nodes": [
+      {
+        "id": "gateway_root_unify",
+        "type": "gateway",
+        "name": "root-unify",
+        "config": {
+          "source": "reconstructed",
+          "url": "/health",
+          "provenance": [
+            {
+              "inferred_from": "package.json:1",
+              "confidence": "low",
+              "extractor": "manifest"
+            },
+            {
+              "inferred_from": "src/index.ts:14",
+              "confidence": "low",
+              "extractor": "code"
+            }
+          ]
+        }
+      },
+      {
+        "id": "postgres",
+        "type": "postgres",
+        "name": "postgres",
+        "config": {
+          "inferredFromLibrary": "pg",
+          "provenance": [
+            {
+              "inferred_from": "package.json:6",
+              "confidence": "low",
+              "extractor": "manifest"
+            },
+            {
+              "inferred_from": "src/index.ts:5",
+              "confidence": "low",
+              "extractor": "code"
+            }
+          ]
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_svc_root_unify_db_postgres_root_unify_0",
+        "from": "gateway_root_unify",
+        "to": "postgres",
+        "metadata": {
+          "relation": "dbConnection",
+          "protocol": "tcp",
+          "async": false
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "package.json:6",
+              "confidence": "low",
+              "extractor": "manifest"
+            },
+            {
+              "inferred_from": "src/index.ts:14",
+              "confidence": "low",
+              "extractor": "code"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

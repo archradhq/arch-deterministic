@@ -132,6 +132,37 @@ sources agree. Implement as a new `mergeDraftFragments()` in
 `src/scan/merge-draft.ts`; factor shared helpers (`getGraph`, fingerprinting,
 `sortKeysDeep`) out of `fragment/merge.ts` if practical, else duplicate minimally.
 
+### 6.1 Post-merge unification (`unifyDraft`)
+
+`mergeDraftFragments` only unions nodes that already share an exact `id`. Two
+real cases need a looser equivalence, run as a second pass (`unifyDraft()` in
+`merge-draft.ts`, called from `scan.ts` right after the id-based merge):
+
+- **`unifyScanRoots`** — extractors that only ever describe ONE whole-scanned-unit
+  node tag it `config.scanRoot: true` (manifest, for a `package.json` directly at
+  the scan root; code, for the single non-worker node `reconstructIrFromCodebase`
+  produces with `singleService: true`). Any two `scanRoot`-tagged nodes are
+  collapsed to one: highest confidence wins, ties broken by **type specificity**
+  (`gateway` > `worker` > everything else) so a more informative classification
+  isn't discarded for a generic one, then by extractor priority. `compose` never
+  tags anything `scanRoot` — it can legitimately declare multiple real services, so
+  nothing in it is safe to assume is "the" root.
+- **`unifySingletonInfra`** — same-`type` nodes (postgres, mysql, mongodb,
+  cassandra, sqlserver, search, smtp, firestore, cache — types that realistically
+  have one instance per scanned unit) are collapsed across extractors even when
+  their **names** differ, e.g. manifest's `firestore` vs code's
+  `firestore_firebase_admin`. Guarded: a type group is left untouched if any
+  *single* extractor contributed more than one node of that type — that's a real
+  signal of genuinely distinct instances (primary + replica), and merging across
+  extractors would risk guessing which one a different tier's finding matches.
+
+Both operations share one mechanism (`collapseGroup`): pick the best node in the
+group as the survivor, rewire every edge endpoint referencing a collapsed node
+onto the survivor, union provenance, and re-dedupe any edges that collide as a
+result of the rewiring. The `scanRoot` tag itself is stripped from `config` before
+the draft IR is emitted — it's internal bookkeeping, not part of the public
+contract.
+
 ## 7. Output contract
 
 ```jsonc
@@ -207,19 +238,23 @@ Resolved:
 - **Node-id namespacing across extractors** — resolved via `scanNodeId(kind, name)`,
   which all extractors route ids through. Infra with canonical names (postgres,
   cache_redis) now merges across compose/manifest/code.
+- **App/infra id alignment across manifest + code** — resolved via a post-merge
+  `unifyDraft()` pass in `merge-draft.ts` (§6.1 below). On the real repo that
+  surfaced both cases: `gateway_server` (code) + `service_archrad_api` (manifest)
+  now collapse to one `gateway_server` node; `firestore` (manifest) +
+  `firestore_firebase_admin` (code) now collapse to one `firestore` node. Both
+  carry unioned provenance from both extractors.
+
+  **Still partial**: this only reconciles **manifest ↔ code**. `compose` is
+  deliberately never tagged as a unification candidate — a compose file can
+  legitimately declare multiple real services, so nothing in it is safe to assume
+  is "the" root the way a root-level `package.json` or a `singleService` code scan
+  is. The `compose-and-manifest` fixture's `gateway_api` / `service_api` pair is
+  the documented case that still does NOT merge, and shouldn't without a more
+  deliberate design (e.g. compose explicitly marking which of its services is the
+  scan's entry point).
 
 Still open (tracked here, not blocking):
-- **App/infra id alignment is only partial.** `scanNodeId` makes canonically-named
-  infra agree, but nodes whose name is inferred differently across tiers still
-  fork. Observed on a real repo:
-  - App service: compose infers `gateway_api` (ports) vs manifest `service_api`
-    (generic) → two nodes for one app.
-  - Datastore naming: manifest emits `firestore` (canonical) while `code` names it
-    from the client variable → `firestore_firebase_admin` → no merge.
-  Candidate fixes: match by `(type, normalized-name)` at merge time rather than raw
-  id; or a per-type name-normalization pass before merge. Needs a decision before
-  it's worth implementing — see the merge-by-(type,name) option discussed in slice
-  planning.
 - **Manifest tier is npm/pip only.** Extend `lib-map.ts` + `manifest.ts` to
   `go.mod`, `pom.xml`/Gradle, and `pyproject.toml` (TOML has no parser dep in this
   package today — regex-extract the dependency arrays, or add a parser only with
