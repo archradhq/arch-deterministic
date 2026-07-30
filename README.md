@@ -67,13 +67,14 @@ ArchRAD is a blueprint compiler and governance layer. You define your architectu
 ## Draft an IR from a real repo (`archrad scan`)
 
 `archrad scan` points at a repository and emits a **draft IR** — never a final
-answer, always something to review and edit. It runs four extractors, graded by
+answer, always something to review and edit. It runs six extractors, graded by
 how much they have to guess:
 
 | Source | Signal | Confidence |
 |--------|--------|------------|
-| Topology | `docker-compose.yml`, Kubernetes manifests | high — a declaration, not a guess |
+| Topology | `docker-compose.yml`, Kubernetes manifests | high — a declaration, parsed for real |
 | Interface | OpenAPI / Swagger | medium — documents a real surface, but only what's documented |
+| Infrastructure-as-code | Terraform (`*.tf`) | medium — a real declaration, but read via regex, not a true HCL parse |
 | Manifest | `package.json`, `requirements.txt` | low — a driver dependency implies an edge, not proof it's used |
 | Code | pattern scan of source (Node.js/TS, Python, C#) | low — regex over text, no semantic understanding |
 

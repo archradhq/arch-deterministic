@@ -33,6 +33,7 @@ results into a single draft IR.
 | `compose`  | `docker-compose.yml`, `compose.yaml` | `src/init/docker-compose.ts` → `dockerComposeToCanonicalIr()` | **high** |
 | `kubernetes` | any `.yaml`/`.yml` containing k8s manifests (detected by content, not filename) | *new* (see §3.1) — reuses `inferTypeFromImage()`, `connectionUrlHost()`, `composePlainEnvHostname()`, `CONNECTION_ENV_KEYS`, `HOST_ONLY_ENV_KEYS` from `src/init/docker-compose.ts` | **high** |
 | `openapi`  | `openapi.{json,yaml}`, `swagger.*` | `src/openapi-to-ir.ts` → `openApiStringToCanonicalIr()` | **medium** |
+| `terraform` | `*.tf` (HCL) | *new* — regex, not a real HCL parse (see §3.2) | **medium** |
 | `manifest` | `package.json`, `go.mod`, `requirements.txt`, `pyproject.toml`, `pom.xml` | *new* (client lib → edge table) | **low** |
 | `code`     | import graph, routes, DB conn strings | `src/reconstruct/reconstruct.ts` → `reconstructIrFromCodebase()` | **low** |
 
@@ -77,6 +78,41 @@ real clusters actually inject a database URL — is not resolved in this first
 cut; a workload's real DB connection may go undetected if it's wired through a
 Secret rather than a literal env value. No new dependency required (`js-yaml`
 is already a dependency, reused from `compose`'s own parsing).
+
+### 3.2 `terraform` extractor design
+
+Terraform is HCL, not YAML/JSON — `js-yaml` cannot parse it, and adding a real
+HCL parser is a new runtime dependency (against the "ask before adding any new
+dependency" rule). This extractor deliberately takes the **regex** path instead,
+matching how the `code` extractor already treats source text: no new
+dependency, at the cost of being less reliable than a real parse. That's why
+its confidence is **medium**, not `compose`/`kubernetes`'s `high` — a
+`resource` block is a real declaration, but regex-over-HCL can be fooled by a
+`count = 0` (disabled resource), a commented-out block, or a resource type it
+doesn't recognize.
+
+- **Detection:** any `*.tf` file; naive brace-counting to isolate each
+  `resource "<type>" "<name>" { ... }` block's body (accepts the rare
+  false-split from a brace inside a string literal — a known, documented
+  corner case, not silently perfect).
+- **Node mapping:** a fixed lookup table (`terraform-resource-map.ts`, same
+  shape as `lib-map.ts`) maps recognized `resource` types across AWS/GCP/Azure
+  to an IR node type — `aws_db_instance` → `postgres`, `google_pubsub_topic` →
+  `queue`, `google_cloud_run_service` → `service`, etc. Node id via
+  `scanNodeId(irType, localName)`, same canonicalization as every other tier —
+  so the SAME Postgres declared in both Terraform and a hybrid repo's
+  `docker-compose.yml` still merges. Unrecognized resource types are skipped
+  (no node), same "quiet skip" policy as `manifest`.
+- **Edges:** within a block's body, scan for `<other_type>.<other_local_name>`
+  references (Terraform's own interpolation syntax) against every OTHER
+  recognized resource collected from the same file. A reference to a
+  `postgres`/`mysql`/`mongodb`/… node becomes a `dbConnection` edge; a
+  `queue`-mapped node becomes a `queue` edge; anything else becomes a generic
+  `serviceCall` edge.
+- **No cross-module/`data` source resolution** in this first cut — only
+  `resource` blocks in the SAME file are considered; a `module "x" { source =
+  "./x" }` reference is not followed into the referenced module's own `.tf`
+  files.
 
 ## 4. Architecture
 
@@ -267,6 +303,10 @@ Cross-cutting:
    `package.json` + `requirements.txt`.
 4. ✅ `code` extractor — wraps `reconstructIrFromCodebase()` with `singleService`
    so a monolith reads as one service; artifact-based provenance.
+5. ✅ `kubernetes` extractor — content-detected (no fixed filename); reuses
+   `inferTypeFromImage()` and connection-env-var matching from `compose`.
+6. ✅ `terraform` extractor — regex over HCL (no HCL parser dependency);
+   `medium` confidence, not `high` — see §3.2 for why.
 
 ## 11. Open questions / follow-ups
 

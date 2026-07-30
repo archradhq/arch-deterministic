@@ -16,6 +16,7 @@ import { mergeDraftFragments, unifyDraft } from './merge-draft.js';
 import { composeExtractor } from './extractors/compose.js';
 import { kubernetesExtractor } from './extractors/kubernetes.js';
 import { openapiExtractor } from './extractors/openapi.js';
+import { terraformExtractor } from './extractors/terraform.js';
 import { manifestExtractor } from './extractors/manifest.js';
 import { codeExtractor } from './extractors/code.js';
 
@@ -24,6 +25,7 @@ export const REGISTERED_EXTRACTORS: Extractor[] = [
   composeExtractor,
   kubernetesExtractor,
   openapiExtractor,
+  terraformExtractor,
   manifestExtractor,
   codeExtractor,
 ];

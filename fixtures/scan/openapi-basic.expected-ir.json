@@ -9,6 +9,7 @@
           "compose",
           "kubernetes",
           "openapi",
+          "terraform",
           "manifest",
           "code"
         ],

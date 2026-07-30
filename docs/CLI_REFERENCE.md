@@ -91,8 +91,8 @@ the graph is marked `metadata.status: "draft"` — review and edit it, don't
 author from scratch. Deterministic: same repo in → byte-identical IR out; no
 network calls, no LLM.
 
-Confidence is graded by source: `compose` / `kubernetes` (high) > `openapi` (medium) >
-`manifest` / `code` (low). Overlap across extractors is expected — a
+Confidence is graded by source: `compose` / `kubernetes` (high) > `openapi` /
+`terraform` (medium) > `manifest` / `code` (low). Overlap across extractors is expected — a
 confidence-aware merge unions matching nodes instead of erroring, keeping the
 highest-confidence body and all contributing provenance.
 

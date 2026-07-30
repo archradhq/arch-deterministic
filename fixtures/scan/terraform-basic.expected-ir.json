@@ -1,0 +1,107 @@
+{
+  "graph": {
+    "metadata": {
+      "name": "terraform-basic",
+      "status": "draft",
+      "provenance": {
+        "source": "scan",
+        "extractors": [
+          "compose",
+          "kubernetes",
+          "openapi",
+          "terraform",
+          "manifest",
+          "code"
+        ],
+        "fileCount": 1
+      }
+    },
+    "nodes": [
+      {
+        "id": "postgres_orders_db",
+        "type": "postgres",
+        "name": "orders_db",
+        "config": {
+          "terraformResource": "aws_db_instance",
+          "provenance": [
+            {
+              "inferred_from": "main.tf:6",
+              "confidence": "medium",
+              "extractor": "terraform"
+            }
+          ]
+        }
+      },
+      {
+        "id": "queue_orders_queue",
+        "type": "queue",
+        "name": "orders_queue",
+        "config": {
+          "terraformResource": "aws_sqs_queue",
+          "provenance": [
+            {
+              "inferred_from": "main.tf:11",
+              "confidence": "medium",
+              "extractor": "terraform"
+            }
+          ]
+        }
+      },
+      {
+        "id": "service_api",
+        "type": "service",
+        "name": "api",
+        "config": {
+          "terraformResource": "aws_ecs_service",
+          "provenance": [
+            {
+              "inferred_from": "main.tf:15",
+              "confidence": "medium",
+              "extractor": "terraform"
+            }
+          ]
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_tf_aws_ecs_service_api_tf_aws_db_instance_orders_db",
+        "from": "service_api",
+        "to": "postgres_orders_db",
+        "metadata": {
+          "relation": "dbConnection",
+          "protocol": "tcp",
+          "async": false
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "main.tf:15",
+              "confidence": "medium",
+              "extractor": "terraform"
+            }
+          ]
+        }
+      },
+      {
+        "id": "e_tf_aws_ecs_service_api_tf_aws_sqs_queue_orders_queue",
+        "from": "service_api",
+        "to": "queue_orders_queue",
+        "metadata": {
+          "relation": "queue",
+          "protocol": "tcp",
+          "async": true
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "main.tf:15",
+              "confidence": "medium",
+              "extractor": "terraform"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
