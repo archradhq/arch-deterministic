@@ -36,6 +36,30 @@ describe('pickArtifact', () => {
   it('maps a gateway node to the app_entry artifact', () => {
     expect(pickArtifact({ id: 'gw', type: 'gateway' }, artifacts)?.file).toBe('src/index.ts');
   });
+
+  it('matches each datastore type to ITS OWN db_connection artifact, not the first one found', () => {
+    // Regression: a codebase with Postgres, Mongo, and Redis previously had every
+    // datastore node cite whichever db_connection artifact was detected first.
+    const mixed = [
+      { ...art('db_connection', 'src/mongo.ts', 3), detail: 'mongoose → mongodb' },
+      { ...art('db_connection', 'src/pg.ts', 7), detail: 'pg → postgres' },
+      { ...art('db_connection', 'src/redis.ts', 11), detail: 'ioredis → cache' },
+    ];
+    expect(pickArtifact({ id: 'x', type: 'postgres' }, mixed)?.file).toBe('src/pg.ts');
+    expect(pickArtifact({ id: 'x', type: 'mongodb' }, mixed)?.file).toBe('src/mongo.ts');
+    expect(pickArtifact({ id: 'x', type: 'cache' }, mixed)?.file).toBe('src/redis.ts');
+  });
+
+  it('matches each external-service node to its own destination, not the first call site found', () => {
+    // Regression: multiple external destinations (stripe, github, …) previously
+    // all cited the first external_http/service_call artifact in the codebase.
+    const mixed = [
+      { ...art('external_http', 'src/stripe.ts', 4), destination: 'stripe' },
+      { ...art('external_http', 'src/github.ts', 9), destination: 'github' },
+    ];
+    expect(pickArtifact({ id: 'ext_stripe', type: 'service', name: 'stripe' }, mixed)?.file).toBe('src/stripe.ts');
+    expect(pickArtifact({ id: 'ext_github', type: 'service', name: 'github' }, mixed)?.file).toBe('src/github.ts');
+  });
 });
 
 describe('scanCodebase — code extractor', () => {

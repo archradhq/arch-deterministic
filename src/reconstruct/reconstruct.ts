@@ -24,7 +24,7 @@ function slugId(s: string): string {
 }
 
 /** Map detected DB detail string to a canonical IR node type. */
-function dbNodeType(detail: string): string {
+export function dbNodeType(detail: string): string {
   const d = detail.toLowerCase();
   if (d.includes('→ cache') || d.includes('redis') || d.includes('memcached') || d.includes('bullmq')) return 'cache';
   if (d.includes('→ mysql') || d.includes('mysql')) return 'mysql';

@@ -18,7 +18,7 @@ import { basename } from 'node:path';
 import type { Extractor, PartialIR } from '../types.js';
 import { canonicalizeIds } from '../node-id.js';
 import { provenanceEntry, withProvenance } from '../provenance.js';
-import { reconstructIrFromCodebase } from '../../reconstruct/reconstruct.js';
+import { reconstructIrFromCodebase, dbNodeType } from '../../reconstruct/reconstruct.js';
 import type { DetectedArtifact } from '../../reconstruct/types.js';
 
 const DATASTORE_TYPES = new Set([
@@ -41,11 +41,23 @@ export function pickArtifact(
   const type = typeof node.type === 'string' ? node.type : '';
   const id = typeof node.id === 'string' ? node.id : '';
 
-  if (DATASTORE_TYPES.has(type)) return artifacts.find((a) => a.kind === 'db_connection');
+  if (DATASTORE_TYPES.has(type)) {
+    // Match the db_connection artifact whose OWN inferred type equals this
+    // node's type — several distinct datastores can appear in one codebase, and
+    // taking the first db_connection artifact overall would misattribute every
+    // node's provenance to whichever connection happened to be detected first.
+    const dbArtifacts = artifacts.filter((a) => a.kind === 'db_connection');
+    return dbArtifacts.find((a) => dbNodeType(a.detail) === type) ?? dbArtifacts[0];
+  }
   if (type === 'auth') return artifacts.find((a) => a.kind === 'auth_middleware');
   if (type === 'worker') return artifacts.find((a) => a.kind === 'worker_definition');
   if (type === 'service' && (id.startsWith('ext_') || id.startsWith('svc_ext'))) {
-    return artifacts.find((a) => a.kind === 'external_http' || a.kind === 'service_call');
+    // Multiple external destinations (stripe, github, …) can appear in one
+    // codebase — match by destination (reconstruct names the node after it) so
+    // each external-service node cites its own call site, not the first one found.
+    const name = typeof node.name === 'string' ? node.name : '';
+    const extArtifacts = artifacts.filter((a) => a.kind === 'external_http' || a.kind === 'service_call');
+    return extArtifacts.find((a) => a.destination === name) ?? extArtifacts[0];
   }
   // gateway / primary service node
   return (
