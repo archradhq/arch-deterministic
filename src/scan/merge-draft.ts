@@ -200,9 +200,14 @@ function collapseGroup(
   edges: Record<string, unknown>[],
   priority: string[],
 ): { nodes: Record<string, unknown>[]; edges: Record<string, unknown>[] } {
-  if (group.length < 2) return { nodes: allNodes, edges };
+  // Defensive: exported callers could hand this raw, unvalidated nodes (unlike
+  // mergeDraftFragments' own internal map, which only ever admits nodes with a
+  // real string id). Drop anything without one before grouping, so a malformed
+  // node can't collide with another under a shared `undefined` key.
+  const validGroup = group.filter((n) => typeof n.id === 'string' && n.id);
+  if (validGroup.length < 2) return { nodes: allNodes, edges };
 
-  const ranked = group
+  const ranked = validGroup
     .map((node) => {
       const provs = readProvenance(node);
       const bestOrder = provs.length

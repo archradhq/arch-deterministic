@@ -1433,10 +1433,7 @@ program
           exclude: cmdOpts.exclude,
         });
       } catch (e) {
-        const { ScanError } = await import('./scan/types.js');
-        console.error(
-          `archrad scan: ${e instanceof ScanError || e instanceof Error ? e.message : String(e)}`,
-        );
+        console.error(`archrad scan: ${e instanceof Error ? e.message : String(e)}`);
         process.exitCode = 1;
         return;
       }
