@@ -1,0 +1,122 @@
+{
+  "graph": {
+    "metadata": {
+      "name": "k8s-basic",
+      "status": "draft",
+      "provenance": {
+        "source": "scan",
+        "extractors": [
+          "compose",
+          "kubernetes",
+          "openapi",
+          "manifest",
+          "code"
+        ],
+        "fileCount": 1
+      }
+    },
+    "nodes": [
+      {
+        "id": "gateway_api_ingress",
+        "type": "gateway",
+        "name": "api-ingress",
+        "config": {
+          "k8sKind": "Ingress",
+          "provenance": [
+            {
+              "inferred_from": "k8s/manifests.yaml:64",
+              "confidence": "high",
+              "extractor": "kubernetes"
+            }
+          ]
+        }
+      },
+      {
+        "id": "postgres",
+        "type": "postgres",
+        "name": "postgres",
+        "config": {
+          "k8sKind": "StatefulSet",
+          "provenance": [
+            {
+              "inferred_from": "k8s/manifests.yaml:34",
+              "confidence": "high",
+              "extractor": "kubernetes"
+            }
+          ]
+        }
+      },
+      {
+        "id": "service_api",
+        "type": "service",
+        "name": "api",
+        "config": {
+          "k8sKind": "Deployment",
+          "provenance": [
+            {
+              "inferred_from": "k8s/manifests.yaml:1",
+              "confidence": "high",
+              "extractor": "kubernetes"
+            }
+          ]
+        }
+      },
+      {
+        "id": "worker_cleanup_old_runs",
+        "type": "worker",
+        "name": "cleanup-old-runs",
+        "config": {
+          "k8sKind": "CronJob",
+          "provenance": [
+            {
+              "inferred_from": "k8s/manifests.yaml:80",
+              "confidence": "high",
+              "extractor": "kubernetes"
+            }
+          ]
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_k8s_ing_api-ingress_k8s_api",
+        "from": "gateway_api_ingress",
+        "to": "service_api",
+        "metadata": {
+          "relation": "routes",
+          "protocol": "http",
+          "async": false
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "k8s/manifests.yaml:64",
+              "confidence": "high",
+              "extractor": "kubernetes"
+            }
+          ]
+        }
+      },
+      {
+        "id": "e_k8s_api_k8s_postgres_DATABASE_URL",
+        "from": "service_api",
+        "to": "postgres",
+        "metadata": {
+          "relation": "connectionUrl",
+          "protocol": "tcp",
+          "async": false,
+          "env": "DATABASE_URL"
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "k8s/manifests.yaml:1",
+              "confidence": "high",
+              "extractor": "kubernetes"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

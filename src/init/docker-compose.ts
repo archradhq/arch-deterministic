@@ -381,7 +381,7 @@ export function connectionUrlHost(raw: string): string | null {
   return null;
 }
 
-const CONNECTION_ENV_KEYS = [
+export const CONNECTION_ENV_KEYS = [
   'DATABASE_URL',
   'POSTGRES_URL',
   'MYSQL_URL',
@@ -394,7 +394,7 @@ const CONNECTION_ENV_KEYS = [
 ] as const;
 
 /** Hostname-only deps (Compose rarely uses full JDBC/Redis URLs — match service DNS name). */
-const HOST_ONLY_ENV_KEYS = [
+export const HOST_ONLY_ENV_KEYS = [
   'DATABASE_HOST',
   'DB_HOST',
   'POSTGRES_HOST',

@@ -31,6 +31,7 @@ results into a single draft IR.
 | Extractor | Signal source | Existing code to reuse | Confidence |
 |-----------|---------------|------------------------|------------|
 | `compose`  | `docker-compose.yml`, `compose.yaml` | `src/init/docker-compose.ts` → `dockerComposeToCanonicalIr()` | **high** |
+| `kubernetes` | any `.yaml`/`.yml` containing k8s manifests (detected by content, not filename) | *new* (see §3.1) — reuses `inferTypeFromImage()`, `connectionUrlHost()`, `composePlainEnvHostname()`, `CONNECTION_ENV_KEYS`, `HOST_ONLY_ENV_KEYS` from `src/init/docker-compose.ts` | **high** |
 | `openapi`  | `openapi.{json,yaml}`, `swagger.*` | `src/openapi-to-ir.ts` → `openApiStringToCanonicalIr()` | **medium** |
 | `manifest` | `package.json`, `go.mod`, `requirements.txt`, `pyproject.toml`, `pom.xml` | *new* (client lib → edge table) | **low** |
 | `code`     | import graph, routes, DB conn strings | `src/reconstruct/reconstruct.ts` → `reconstructIrFromCodebase()` | **low** |
@@ -41,6 +42,41 @@ node-id conflicts**, whereas scan must **resolve** them by confidence.
 
 Priority order for confidence assignment (per project spec):
 topology > interface def > manifest imports > shallow code.
+
+### 3.1 `kubernetes` extractor design
+
+Unlike `compose`, k8s manifests have no fixed filename — a cluster's YAML lives
+wherever a repo puts it. Detection is by **content**: any YAML document with
+both `apiVersion` and a `kind` in the recognized set (`Deployment`,
+`StatefulSet`, `DaemonSet`, `Pod`, `Job`, `CronJob`, `Service`, `Ingress`). Files
+are parsed as multi-document YAML (`---`-separated), same as `dockerComposeToCanonicalIr`'s
+own multi-doc handling.
+
+- **Workloads** (`Deployment`/`StatefulSet`/`DaemonSet`/`Pod`) → one node each.
+  Type comes from the pod template's first container image via
+  `inferTypeFromImage()` — the exact function `compose` uses, so a Postgres
+  StatefulSet and a Postgres Compose service classify identically.
+  `Job`/`CronJob` → type `worker` unconditionally (a batch job is a worker
+  regardless of image, matching how BullMQ workers are typed elsewhere).
+- **`Service`** is NOT its own node — it's routing, not a component. It's
+  resolved to an **alias**: the workload(s) its `spec.selector` matches (by pod
+  labels). Anything that references the Service's DNS name resolves to that
+  workload, mirroring how `compose` treats a service key as a hostname.
+- **`Ingress`** → a `gateway` node, with edges to the backend Services (resolved
+  to their workloads) named in `spec.rules[].http.paths[].backend.service.name`
+  (or the older `backend.serviceName`).
+- **Connections**: a workload's env vars are checked against the same
+  `CONNECTION_ENV_KEYS` / `HOST_ONLY_ENV_KEYS` constants and
+  `connectionUrlHost()` / `composePlainEnvHostname()` helpers `compose` uses —
+  if the resolved host matches another Service's DNS name (short name before
+  the first `.`) or a workload name directly, an edge is added.
+
+**Honest limitation (documented, not silently dropped):** only literal
+`env[].value` is read. `valueFrom.secretKeyRef` / `configMapKeyRef` — how most
+real clusters actually inject a database URL — is not resolved in this first
+cut; a workload's real DB connection may go undetected if it's wired through a
+Secret rather than a literal env value. No new dependency required (`js-yaml`
+is already a dependency, reused from `compose`'s own parsing).
 
 ## 4. Architecture
 

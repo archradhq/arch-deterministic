@@ -7,6 +7,7 @@
         "source": "scan",
         "extractors": [
           "compose",
+          "kubernetes",
           "openapi",
           "manifest",
           "code"
