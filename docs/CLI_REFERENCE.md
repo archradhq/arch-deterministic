@@ -81,6 +81,38 @@ archrad reconstruct --from ./src --verbose --exclude vendor
 
 ---
 
+## `archrad scan`
+
+Scan a repository and emit a **DRAFT IR** from structural signals — topology
+(`docker-compose.yml`), interface (OpenAPI/Swagger), manifests (`package.json`,
+`requirements.txt`), and shallow code analysis. Every node/edge carries
+`config.provenance[]` (`inferred_from: file:line`, `confidence`, `extractor`) and
+the graph is marked `metadata.status: "draft"` — review and edit it, don't
+author from scratch. Deterministic: same repo in → byte-identical IR out; no
+network calls, no LLM.
+
+Confidence is graded by source: `compose` (high) > `openapi` (medium) >
+`manifest` / `code` (low). Overlap across extractors is expected — a
+confidence-aware merge unions matching nodes instead of erroring, keeping the
+highest-confidence body and all contributing provenance.
+
+| Option | Description |
+|--------|-------------|
+| **`[path]`** | Repository root to scan (default: **`.`**). |
+| **`-o, --out <path>`** | Write draft IR JSON (default: print to **stdout**). |
+| **`--extractors <list>`** | Comma-separated extractors to enable (default: all four). |
+| **`--exclude <pattern>`** | Path fragment to exclude from scanning (repeatable). |
+| **`--dry-run`** | Print draft IR JSON to **stdout**; do not write a file. |
+| **`--verbose`** | Print per-extractor and warning details to **stderr**. |
+
+```bash
+archrad scan . --dry-run
+archrad scan ./server --out draft.ir.json --verbose
+archrad scan . --extractors compose,manifest
+```
+
+---
+
 ## `archrad lint`
 
 Run **architecture lint only** (**`IR-LINT-*`** + PolicyPacks). Thin, fast inner-loop alternative to `archrad validate` that **skips IR structural pre-checks** — use `archrad validate` once your graph shape is stable, then iterate on lint with this command. Unparseable IR still surfaces blockers (never a silent pass).

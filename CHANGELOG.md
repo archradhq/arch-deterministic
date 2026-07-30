@@ -5,6 +5,76 @@ All notable changes to **`@archrad/deterministic`** are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-07-30
+
+**Theme:** `archrad scan` — draft-IR generation from a real repository, graded by confidence, cited down to the line.
+
+### Added
+
+- **`archrad scan [path]`** — points at a repository and emits a **draft IR** (`metadata.status: "draft"`) from four extractors, run in priority order and merged:
+  - `compose` (**high** confidence) — `docker-compose.yml` / `compose.yaml`, reusing `dockerComposeToCanonicalIr()`.
+  - `openapi` (**medium**) — OpenAPI/Swagger specs found anywhere in the tree, reusing `openApiStringToCanonicalIr()`.
+  - `manifest` (**low**) — `package.json` / `requirements.txt`, mapping driver-level client libraries (`pg`, `ioredis`, `firebase-admin`, …) to the infrastructure they imply, via a hand-maintained lookup (no new runtime dependency).
+  - `code` (**low**) — shallow regex analysis of source via `reconstructIrFromCodebase()`, run with a new `singleService` option so a monolith's route modules read as one service instead of decomposing.
+  - CLI: `--out`, `--extractors <list>`, `--exclude <pattern>`, `--dry-run`, `--verbose`.
+- **Provenance on every node and edge** — `config.provenance[]`: `{ inferred_from: "file:line", confidence, extractor }`. Multiple sources agreeing on the same node union their provenance rather than duplicating it.
+- **`scanNodeId(kind, name)`** — canonical id construction so independent extractors describing the same infrastructure (a Postgres database, a Redis cache) agree on an id and can be merged.
+- **Confidence-aware merge (`mergeDraftFragments`)** — unlike `fragment merge` (which errors on `node.id` conflicts), `scan` treats overlap as the expected signal that two sources agree: the highest-confidence body wins, ties break by extractor priority, and all contributing provenance is unioned.
+- **Cross-tier duplicate unification (`unifyDraft`)** — a second merge pass that catches what id-based merging can't: the same app represented as `gateway` (code) vs a generic `service` (manifest), and the same datastore named differently per tier (e.g. `firestore` vs a client-variable-derived name). Resolved by grouping on an explicit `scanRoot` tag (for the one whole-scanned-unit node each of `manifest`/`code` can produce) and on shared `type` for known singleton infra (postgres, mongodb, cache, firestore, …), with a safety check that skips merging if a single extractor already reports more than one instance of that type.
+- **`reconstructIrFromCodebase` gained `singleService`** (opt-in, default off — existing decomposition behavior is unchanged for direct callers).
+
+### Changed
+
+- **Auth-middleware detection now requires usage, not just an import.** A bare `import passport from 'passport'` no longer produces an `auth_middleware` artifact; detection requires `passport.authenticate/initialize/session/use(...)`. Fixes false-positive (and duplicate) auth nodes in `archrad reconstruct` and `archrad scan`.
+- **`dbNodeType` is now exported** from `reconstruct.ts`, and the `code` extractor's provenance attribution now matches each datastore/external-service node to *its own* detected artifact (by inferred type / call destination) instead of the first one found anywhere in the codebase — fixes misattributed `file:line` citations when a codebase has more than one datastore or outbound call destination.
+
+### Added (tests)
+
+52 new tests under `src/scan/` (extractors, canonical ids, confidence-aware merge, cross-tier unification, determinism, byte-stable golden fixtures) plus 8 new regression tests in `src/reconstruct/reconstruct.test.ts` for the auth-usage and `singleService` changes.
+
+## [0.6.1] - 2026-05-21
+
+**Theme:** Source reconstruction quality — service decomposition, accurate node naming, external service identification.
+
+### Added
+
+- **Service decomposition (Node.js)** — `archrad reconstruct` now emits one node per detected service boundary instead of collapsing everything to a single gateway:
+  - Files in `routes/` / `controllers/` / `handlers/` / `endpoints/` directories → one `service` node per file
+  - NestJS `*.controller.ts` files and files with `@Get/@Post/…` artifacts → one `service` node per controller
+  - Entry files with `app.listen()` → `gateway` node
+  - BullMQ `Worker`, Agenda `define`, and cron `schedule` files → `worker` node
+  - Monolithic layout (no dedicated route directory) → unchanged single-node output (no forced decomposition)
+- **Worker detection** — new `worker_definition` artifact kind for BullMQ, Agenda, and node-cron workers.
+- **App entry detection** — new `app_entry` artifact kind for files that call `app.listen()` / `fastify.listen()`.
+- **External service identification** — outbound HTTP calls with hardcoded or env-var URLs create distinct external service nodes per destination hostname (e.g., `stripe`, `auth0`, `google`). gRPC `new FooServiceClient(target)` calls similarly produce destination-specific nodes.
+- **`destination` field on `DetectedArtifact`** — carries the normalized hostname/service label for `external_http` artifacts.
+- **`connectionName` field on `DetectedArtifact`** — carries the env var or variable name for `db_connection` artifacts (used for node naming).
+
+### Changed
+
+- **Node naming** — DB/cache nodes now use the most user-recognizable name available: (1) env var name (`REDIS_URL` → `"redis"`, `SESSION_REDIS_URL` → `"session-redis"`), (2) connection variable name (`const userDb = new Pool(…)` → `"userDb"`), (3) library/driver name as fallback. Node IDs and names no longer include `"env_var"` or other detection-method metadata.
+- **DB env var detection priority** — env var patterns are checked before library import patterns so that named env vars take precedence for node naming.
+- **CommonJS `require(...)` support** — all `(?:require|from)` patterns now handle `require('pkg')` (parenthesized CommonJS) in addition to ES module `from 'pkg'` syntax. Fixes BullMQ, Redis, and other CommonJS-only imports being missed.
+- **Shared DB node naming** — if a later service encounter provides a `connectionName` for an already-registered DB node type, the node name is upgraded to the user-recognizable name.
+- **Generic external node deduplication** — services without a detectable destination URL share a single `"external-service"` fallback node instead of creating one per service group.
+- **BullMQ implicit Redis** — added `(?:require|from)\s*\(?\s*['"`]bullmq['"`]` to DB patterns as a proxy for a Redis cache dependency.
+- **Firebase/Firestore detection** — added `firebase-admin` import pattern → `firestore` DB node type.
+- **`isDbLikeType`** update not required — `firestore` matching via existing `db` substring (`is**Db**Like`) does not fire; treated as a distinct type in `dbNodeType`.
+- **Reconstructed IR lint behavior** — after decomposition, `IR-LINT-DIRECT-DB-ACCESS-002` fires only when the `gateway` entry node has a direct edge to a datastore with no intermediate service layer. Decomposed service nodes are type `service` (not HTTP-like), so their DB edges do not trigger the rule. Validated against the InkByte server monorepo (525+ files) — no false-positive DIRECT-DB-ACCESS findings.
+
+### Added (tests)
+
+Five new integration tests in `src/reconstruct/reconstruct.test.ts`:
+1. `Express multi-route decomposition` — three route files → gateway + 3 service nodes with gateway edges
+2. `NestJS controller decomposition` — three `*.controller.ts` files → gateway + 3 service nodes
+3. `HTTP routes + BullMQ worker` — route file + worker file → gateway + service + worker nodes
+4. `External service identification` — axios/fetch to Stripe and reCAPTCHA → distinct named external nodes
+5. `Monolithic app (negative)` — all routes in one file → single `gateway` node (no forced split)
+
+### Documentation
+
+- README `### Source reconstruction` sections rewritten to document service decomposition logic, node naming rules, external service detection, and guidance for interpreting lint findings on reconstructed IR.
+
 ## [0.6.0] - 2026-05-18
 
 **Theme:** Implementation governance — source-code → IR reconstruction and IR-DRIFT-IMPL-* drift rules.

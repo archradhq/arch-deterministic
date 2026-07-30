@@ -33,6 +33,13 @@ archrad ingest openapi --spec ./openapi.yaml --out ./graph.json
 archrad validate --ir ./graph.json
 ```
 
+Or point at a real repo and let `archrad scan` draft one for you to review:
+
+```bash
+archrad scan . --out draft.ir.json
+archrad validate --ir ./draft.ir.json
+```
+
 ---
 
 ## What it does
@@ -46,12 +53,44 @@ ArchRAD is a blueprint compiler and governance layer. You define your architectu
 | `archrad explain <code>` | Canonical rule guidance without running a pass | — |
 | `archrad policies-sha256 --dir <policies>` | Generate a `archrad-policy-pack.sha256` manifest for signed PolicyPacks | — |
 | `archrad validate-drift` | IR vs generated code on disk | `DRIFT-*` |
+| `archrad scan` | Draft IR from a repo — topology, OpenAPI, manifests, code; every node cited + graded by confidence | — |
+| `archrad reconstruct` | Draft IR from source code alone (one of `scan`'s four signal sources, usable standalone) | — |
 | `archrad ingest openapi` | Derive IR from OpenAPI (local path or https URL for `--spec`; `-H` for URL auth headers) | — |
 | `archrad ingest backstage` | Backstage `catalog-info.yaml` → IR (Component, Resource, API, System; Location file targets) | — |
 | `archrad fragment merge` | Merge 2+ IR files — union by `node.id` (conflicts → stderr); `--prefix-fragments` for disjoint union | — |
 | `archrad export` | Compile IR → FastAPI or Express + Docker | — |
 
 **Ingest + merge workflows:** **`docs/INGEST.md`**. **All commands / flags:** **`docs/CLI_REFERENCE.md`**. **Codegen (`export`):** **`docs/EXPORT.md`**.
+
+---
+
+## Draft an IR from a real repo (`archrad scan`)
+
+`archrad scan` points at a repository and emits a **draft IR** — never a final
+answer, always something to review and edit. It runs four extractors, graded by
+how much they have to guess:
+
+| Source | Signal | Confidence |
+|--------|--------|------------|
+| Topology | `docker-compose.yml` | high — a declaration, not a guess |
+| Interface | OpenAPI / Swagger | medium — documents a real surface, but only what's documented |
+| Manifest | `package.json`, `requirements.txt` | low — a driver dependency implies an edge, not proof it's used |
+| Code | pattern scan of source (Node.js/TS, Python, C#) | low — regex over text, no semantic understanding |
+
+Every node and edge carries `config.provenance[]` — `inferred_from: "file:line"`,
+a `confidence`, and which extractor found it — so nothing has to be taken on
+faith. When two extractors describe the same thing, `scan` merges them (keeping
+the highest-confidence body, unioning all provenance) instead of duplicating or
+erroring.
+
+```bash
+archrad scan . --dry-run                       # print the draft, write nothing
+archrad scan ./server --out draft.ir.json       # write it
+archrad scan . --extractors compose,manifest    # only run specific extractors
+```
+
+The output is a normal IR file — pipe it straight into `archrad validate` once
+you've reviewed it. Full flags: **`docs/CLI_REFERENCE.md`**.
 
 ---
 
@@ -111,9 +150,44 @@ archrad reconstruct --from ./src --verbose
 
 | Language | Detected patterns |
 |----------|-------------------|
-| **Node.js / TypeScript** | Express, Fastify, NestJS routes; pg, Prisma, TypeORM, Sequelize, Mongoose, Redis; Passport, express-jwt, NestJS guards, Auth0, Okta, Keycloak, Cognito; axios, got, node-fetch, gRPC |
+| **Node.js / TypeScript** | Express, Fastify, NestJS routes + controllers; BullMQ workers, Agenda jobs, cron schedules; pg, Prisma, TypeORM, Sequelize, Mongoose, Redis, BullMQ, Firebase; Passport, express-jwt, NestJS guards, Auth0, Okta, Keycloak, Cognito; axios, got, node-fetch, gRPC; outbound HTTP URLs extracted per destination |
 | **Python** | Flask, FastAPI, Django URLs, DRF @action; SQLAlchemy, psycopg2, asyncpg, PyMongo, motor, redis-py; login_required, jwt_required, FastAPI OAuth2; requests, httpx, aiohttp, gRPC |
 | **C#** | Minimal API MapGet/MapPost; ASP.NET Core [HttpGet]/[ApiController]; EF Core DbContext, Npgsql, Dapper; [Authorize], AddAuthentication, JWT bearer; HttpClient, gRPC, RestSharp |
+
+### Service decomposition (Node.js)
+
+The reconstructor detects service boundaries and creates **one node per service** rather than collapsing everything into a single gateway:
+
+| Layout | Detection signal | Result |
+|--------|-----------------|--------|
+| Files in `routes/` or `controllers/` directory | `router.get/post/…` in dedicated file | One `service` node per file |
+| NestJS controllers | `@Controller` decorator / `*.controller.ts` naming | One `service` node per controller file |
+| Entry file with `app.listen()` | Mounts other routers | `gateway` node |
+| BullMQ / Agenda / cron files | `new Worker(…)`, `agenda.define(…)` | `worker` node |
+| Monolithic file (all routes in one file) | Single file, no `routes/` dir | Single `gateway` node — **no forced split** |
+
+Edges between nodes reflect what the reconstruction found:
+- **gateway → service** edges are added for all decomposed services.
+- **service → database** edges appear only when the route file itself contains a DB import or env var reference (not when DB access is hidden behind a shared utility module).
+
+### Node naming
+
+DB and cache nodes use the most user-recognizable name available:
+
+1. **Env var name** — `process.env.REDIS_URL` → node named `"redis"`, `process.env.SESSION_REDIS_URL` → `"session-redis"`
+2. **Connection variable name** — `const userDb = new Pool(…)` → node named `"userDb"` (for unique variable names)
+3. **Library / driver name** — fallback when no env var or named variable is detectable
+
+Node IDs and names never include `env_var` or other detection-method metadata.
+
+### External service identification
+
+Outbound HTTP/gRPC calls create **distinct external nodes** per destination:
+
+- `axios.post('https://api.stripe.com/…')` → node `"stripe"`
+- `fetch('https://auth0.com/oauth/token')` → node `"auth0"`
+- `new PaymentServiceClient('payments-svc:50051')` → node `"payment"` (gRPC)
+- Generic fallback for clients without a detectable URL: one shared `"external-service"` node
 
 ### Honest scope limits
 
@@ -123,6 +197,22 @@ Reconstruction is **best-effort signal, not certainty**:
 2. **Runtime config** — topology decisions made at runtime (feature flags, config-driven routing) cannot be statically analyzed.
 3. **Cross-language services** — a single codebase containing multiple language runtimes reduces accuracy.
 4. **Heavy abstractions** — macro-based or annotation-processor-heavy frameworks may obscure routes or connections.
+5. **Shared data access layers** — when DB connections live in a shared utility file (e.g., `db.ts`, `firebaseAdmin.ts`) rather than the route files themselves, those connections are **not linked to individual service nodes**. The reconstructed IR honestly omits edges it cannot trace statically.
+
+### Interpreting lint findings on reconstructed IR
+
+Run `archrad validate` on a reconstructed IR and you may see:
+
+| Finding | On reconstructed IR | Interpretation |
+|---------|-------------------|----------------|
+| `IR-LINT-DEAD-NODE-011` (service node, no outgoing edges) | Expected when services use a shared data-access layer | Not a real problem; the route files have no directly-detected downstream edges |
+| `IR-LINT-HIGH-FANOUT-004` on gateway | Expected for large monorepos | The gateway→service edge count reflects the route file count |
+| `IR-LINT-DIRECT-DB-ACCESS-002` on gateway | Real finding | A route in the entry file directly accesses a DB without a service layer |
+| `IR-LINT-NO-HEALTHCHECK-003` | May fire if health endpoint is in a separate `routes/health.ts` service node | Check whether the health route is reachable from the entry point |
+
+**`IR-LINT-DIRECT-DB-ACCESS-002` on reconstructed IR is the high-signal rule**: if it fires on a `gateway` node, it means the entry file itself has direct DB access (not delegated to a service layer). If the decomposition correctly identified service nodes between the gateway and the database, this rule should be silent.
+
+> **Treat reconstructed IR as a draft for human review, not as ground truth.** Use it to catch obvious drift between authored architecture and actual code, not as an authoritative picture of the system.
 
 Treat IR-DRIFT-IMPL-* findings as **"review required"**, not absolute truth. The reconstructed IR is signal, not certainty.
 
