@@ -72,7 +72,7 @@ how much they have to guess:
 
 | Source | Signal | Confidence |
 |--------|--------|------------|
-| Topology | `docker-compose.yml` | high — a declaration, not a guess |
+| Topology | `docker-compose.yml`, Kubernetes manifests | high — a declaration, not a guess |
 | Interface | OpenAPI / Swagger | medium — documents a real surface, but only what's documented |
 | Manifest | `package.json`, `requirements.txt` | low — a driver dependency implies an edge, not proof it's used |
 | Code | pattern scan of source (Node.js/TS, Python, C#) | low — regex over text, no semantic understanding |

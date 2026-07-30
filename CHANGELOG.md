@@ -11,8 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`archrad scan [path]`** — points at a repository and emits a **draft IR** (`metadata.status: "draft"`) from four extractors, run in priority order and merged:
+- **`archrad scan [path]`** — points at a repository and emits a **draft IR** (`metadata.status: "draft"`) from five extractors, run in priority order and merged:
   - `compose` (**high** confidence) — `docker-compose.yml` / `compose.yaml`, reusing `dockerComposeToCanonicalIr()`.
+  - `kubernetes` (**high**) — Deployment/StatefulSet/DaemonSet/Pod/Job/CronJob/Service/Ingress manifests, detected by content (any `.yaml`/`.yml` with `apiVersion` + a recognized `kind`, not filename). Reuses `inferTypeFromImage()` and the connection-env-var matching from the `compose` path so a Postgres StatefulSet and a Postgres Compose service classify identically. A `Service` is resolved as an alias to the workload(s) it selects, not its own node; an `Ingress` becomes a `gateway` routing to its backends.
   - `openapi` (**medium**) — OpenAPI/Swagger specs found anywhere in the tree, reusing `openApiStringToCanonicalIr()`.
   - `manifest` (**low**) — `package.json` / `requirements.txt`, mapping driver-level client libraries (`pg`, `ioredis`, `firebase-admin`, …) to the infrastructure they imply, via a hand-maintained lookup (no new runtime dependency).
   - `code` (**low**) — shallow regex analysis of source via `reconstructIrFromCodebase()`, run with a new `singleService` option so a monolith's route modules read as one service instead of decomposing.
@@ -30,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added (tests)
 
-52 new tests under `src/scan/` (extractors, canonical ids, confidence-aware merge, cross-tier unification, determinism, byte-stable golden fixtures) plus 8 new regression tests in `src/reconstruct/reconstruct.test.ts` for the auth-usage and `singleService` changes.
+61 new tests under `src/scan/` (five extractors, canonical ids, confidence-aware merge, cross-tier unification, determinism, byte-stable golden fixtures) plus 8 new regression tests in `src/reconstruct/reconstruct.test.ts` for the auth-usage and `singleService` changes. Full suite: 396 passing.
 
 ## [0.6.1] - 2026-05-21
 
