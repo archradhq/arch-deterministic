@@ -53,6 +53,15 @@ both `apiVersion` and a `kind` in the recognized set (`Deployment`,
 are parsed as multi-document YAML (`---`-separated), same as `dockerComposeToCanonicalIr`'s
 own multi-doc handling.
 
+- **Resolution is whole-tree, not per-file.** Every recognized document across
+  every YAML file in the scan is parsed into one flat list *before* any
+  Service/Ingress/env resolution runs. This matters because the single most
+  common real-world k8s layout is one resource per file
+  (`deployment.yaml`, `service.yaml`, `configmap.yaml`, `ingress.yaml` as
+  siblings in the same directory) — resolving per-file would silently produce
+  zero routing edges for that layout, which is worse than not trying at all
+  because nothing would signal the miss. (An earlier version of this extractor
+  did resolve per-file; caught and fixed before it shipped further.)
 - **Workloads** (`Deployment`/`StatefulSet`/`DaemonSet`/`Pod`) → one node each.
   Type comes from the pod template's first container image via
   `inferTypeFromImage()` — the exact function `compose` uses, so a Postgres
@@ -61,23 +70,28 @@ own multi-doc handling.
   regardless of image, matching how BullMQ workers are typed elsewhere).
 - **`Service`** is NOT its own node — it's routing, not a component. It's
   resolved to an **alias**: the workload(s) its `spec.selector` matches (by pod
-  labels). Anything that references the Service's DNS name resolves to that
-  workload, mirroring how `compose` treats a service key as a hostname.
+  labels), across the whole scan. Anything that references the Service's DNS
+  name resolves to that workload, mirroring how `compose` treats a service key
+  as a hostname.
 - **`Ingress`** → a `gateway` node, with edges to the backend Services (resolved
   to their workloads) named in `spec.rules[].http.paths[].backend.service.name`
-  (or the older `backend.serviceName`).
+  (or the older `backend.serviceName`), across the whole scan.
 - **Connections**: a workload's env vars are checked against the same
   `CONNECTION_ENV_KEYS` / `HOST_ONLY_ENV_KEYS` constants and
   `connectionUrlHost()` / `composePlainEnvHostname()` helpers `compose` uses —
   if the resolved host matches another Service's DNS name (short name before
   the first `.`) or a workload name directly, an edge is added.
-
-**Honest limitation (documented, not silently dropped):** only literal
-`env[].value` is read. `valueFrom.secretKeyRef` / `configMapKeyRef` — how most
-real clusters actually inject a database URL — is not resolved in this first
-cut; a workload's real DB connection may go undetected if it's wired through a
-Secret rather than a literal env value. No new dependency required (`js-yaml`
-is already a dependency, reused from `compose`'s own parsing).
+- **`valueFrom.configMapKeyRef`** is resolved when the referenced `ConfigMap`
+  is present anywhere in the scan and has a literal `data`/`stringData` value
+  for that key — ConfigMaps aren't secret, so real GitOps repos commonly commit
+  their actual values.
+- **`valueFrom.secretKeyRef`** is deliberately NOT resolved — a `Secret`'s
+  `data` is base64, and in a properly secured repo the real value lives in an
+  external secret manager, not git, so even reading it would usually yield
+  nothing real. Silently skipping it would be a **silent miss** (the SPEC's
+  worst outcome), so instead: a connection-shaped env var wired through
+  `secretKeyRef` produces an explicit **warning** naming the workload and key —
+  "connection likely present here, but not detectable" beats no signal at all.
 
 ### 3.2 `terraform` extractor design
 

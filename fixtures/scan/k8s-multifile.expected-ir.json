@@ -1,0 +1,108 @@
+{
+  "graph": {
+    "metadata": {
+      "name": "k8s-multifile",
+      "status": "draft",
+      "provenance": {
+        "source": "scan",
+        "extractors": [
+          "compose",
+          "kubernetes",
+          "openapi",
+          "terraform",
+          "manifest",
+          "code"
+        ],
+        "fileCount": 6
+      }
+    },
+    "nodes": [
+      {
+        "id": "gateway_billing_ingress",
+        "type": "gateway",
+        "name": "billing-ingress",
+        "config": {
+          "k8sKind": "Ingress",
+          "provenance": [
+            {
+              "inferred_from": "k8s/ingress.yaml:1",
+              "confidence": "high",
+              "extractor": "kubernetes"
+            }
+          ]
+        }
+      },
+      {
+        "id": "postgres",
+        "type": "postgres",
+        "name": "postgres",
+        "config": {
+          "k8sKind": "StatefulSet",
+          "provenance": [
+            {
+              "inferred_from": "k8s/statefulset-postgres.yaml:1",
+              "confidence": "high",
+              "extractor": "kubernetes"
+            }
+          ]
+        }
+      },
+      {
+        "id": "service_billing_api",
+        "type": "service",
+        "name": "billing-api",
+        "config": {
+          "k8sKind": "Deployment",
+          "provenance": [
+            {
+              "inferred_from": "k8s/deployment.yaml:1",
+              "confidence": "high",
+              "extractor": "kubernetes"
+            }
+          ]
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_k8s_ing_billing-ingress_k8s_billing-api",
+        "from": "gateway_billing_ingress",
+        "to": "service_billing_api",
+        "metadata": {
+          "relation": "routes",
+          "protocol": "http",
+          "async": false
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "k8s/ingress.yaml:1",
+              "confidence": "high",
+              "extractor": "kubernetes"
+            }
+          ]
+        }
+      },
+      {
+        "id": "e_k8s_billing-api_k8s_postgres_DATABASE_URL",
+        "from": "service_billing_api",
+        "to": "postgres",
+        "metadata": {
+          "relation": "connectionUrl",
+          "protocol": "tcp",
+          "async": false,
+          "env": "DATABASE_URL"
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "k8s/deployment.yaml:1",
+              "confidence": "high",
+              "extractor": "kubernetes"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

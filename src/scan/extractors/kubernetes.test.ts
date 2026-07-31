@@ -91,3 +91,47 @@ describe('scanCodebase — kubernetes extractor', () => {
     expect(hasIrStructuralErrors(validateIrStructural(result.ir))).toBe(false);
   });
 });
+
+describe('scanCodebase — kubernetes extractor, resolution across files', () => {
+  // k8s-multifile mirrors the most common real-world layout: one resource per
+  // file (deployment.yaml, service.yaml, configmap.yaml, ingress.yaml as
+  // siblings) — the layout an earlier, per-file version of this extractor
+  // would have silently failed to resolve at all.
+
+  it('resolves a Service to its workload across separate files', async () => {
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}k8s-multifile`, extractors: ['kubernetes'] });
+    const g = graphOf(result.ir);
+    const routeEdge = g.edges.find((e) => (e.metadata as Record<string, unknown>)?.relation === 'routes');
+    expect(routeEdge?.from).toBe('gateway_billing_ingress');
+    expect(routeEdge?.to).toBe('service_billing_api');
+  });
+
+  it('resolves valueFrom.configMapKeyRef against a ConfigMap in a different file', async () => {
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}k8s-multifile`, extractors: ['kubernetes'] });
+    const g = graphOf(result.ir);
+    const dbEdge = g.edges.find((e) => e.to === 'postgres');
+    expect(dbEdge?.from).toBe('service_billing_api');
+    expect((dbEdge?.metadata as Record<string, unknown>)?.env).toBe('DATABASE_URL');
+  });
+
+  it('warns (does not silently drop) a connection env var wired through a Secret', async () => {
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}k8s-multifile`, extractors: ['kubernetes'] });
+    expect(result.warnings.some((w) => w.includes('REDIS_URL') && w.includes('Secret'))).toBe(true);
+    // And no edge was fabricated for it — no node/edge references a resolved Redis host.
+    const g = graphOf(result.ir);
+    expect(g.nodes.some((n) => n.type === 'cache')).toBe(false);
+  });
+
+  it('matches the committed golden byte-for-byte and is deterministic', async () => {
+    const a = await scanCodebase({ from: `${FIXTURE_ROOT}k8s-multifile` });
+    const b = await scanCodebase({ from: `${FIXTURE_ROOT}k8s-multifile` });
+    const golden = readFileSync(`${FIXTURE_ROOT}k8s-multifile.expected-ir.json`, 'utf8');
+    expect(canonicalIrToJsonString(a.ir)).toBe(golden);
+    expect(canonicalIrToJsonString(a.ir)).toBe(canonicalIrToJsonString(b.ir));
+  });
+
+  it('produces structurally valid IR', async () => {
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}k8s-multifile` });
+    expect(hasIrStructuralErrors(validateIrStructural(result.ir))).toBe(false);
+  });
+});
