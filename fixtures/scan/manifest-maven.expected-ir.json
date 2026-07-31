@@ -1,0 +1,107 @@
+{
+  "graph": {
+    "metadata": {
+      "name": "manifest-maven",
+      "status": "draft",
+      "provenance": {
+        "source": "scan",
+        "extractors": [
+          "compose",
+          "kubernetes",
+          "openapi",
+          "terraform",
+          "manifest",
+          "code"
+        ],
+        "fileCount": 1
+      }
+    },
+    "nodes": [
+      {
+        "id": "postgres",
+        "type": "postgres",
+        "name": "postgres",
+        "config": {
+          "inferredFromLibrary": "org.postgresql:postgresql",
+          "provenance": [
+            {
+              "inferred_from": "pom.xml:9",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      },
+      {
+        "id": "queue_kafka",
+        "type": "queue",
+        "name": "kafka",
+        "config": {
+          "inferredFromLibrary": "org.springframework.kafka:spring-kafka",
+          "provenance": [
+            {
+              "inferred_from": "pom.xml:14",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      },
+      {
+        "id": "service_billing_service",
+        "type": "service",
+        "name": "billing-service",
+        "config": {
+          "manifest": "pom.xml",
+          "provenance": [
+            {
+              "inferred_from": "pom.xml:1",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_service_billing_service_postgres",
+        "from": "service_billing_service",
+        "to": "postgres",
+        "metadata": {
+          "relation": "dbConnection",
+          "protocol": "tcp",
+          "async": false
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "pom.xml:9",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      },
+      {
+        "id": "e_service_billing_service_queue_kafka",
+        "from": "service_billing_service",
+        "to": "queue_kafka",
+        "metadata": {
+          "relation": "queue",
+          "protocol": "tcp",
+          "async": true
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "pom.xml:14",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

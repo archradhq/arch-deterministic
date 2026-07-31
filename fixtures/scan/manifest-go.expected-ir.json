@@ -1,0 +1,141 @@
+{
+  "graph": {
+    "metadata": {
+      "name": "manifest-go",
+      "status": "draft",
+      "provenance": {
+        "source": "scan",
+        "extractors": [
+          "compose",
+          "kubernetes",
+          "openapi",
+          "terraform",
+          "manifest",
+          "code"
+        ],
+        "fileCount": 1
+      }
+    },
+    "nodes": [
+      {
+        "id": "cache_redis",
+        "type": "cache",
+        "name": "redis",
+        "config": {
+          "inferredFromLibrary": "github.com/redis/go-redis/v9",
+          "provenance": [
+            {
+              "inferred_from": "go.mod:8",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      },
+      {
+        "id": "postgres",
+        "type": "postgres",
+        "name": "postgres",
+        "config": {
+          "inferredFromLibrary": "github.com/jackc/pgx/v5",
+          "provenance": [
+            {
+              "inferred_from": "go.mod:7",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      },
+      {
+        "id": "queue_kafka",
+        "type": "queue",
+        "name": "kafka",
+        "config": {
+          "inferredFromLibrary": "github.com/segmentio/kafka-go",
+          "provenance": [
+            {
+              "inferred_from": "go.mod:11",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      },
+      {
+        "id": "service_orders_api",
+        "type": "service",
+        "name": "orders-api",
+        "config": {
+          "manifest": "go.mod",
+          "provenance": [
+            {
+              "inferred_from": "go.mod:1",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_service_orders_api_cache_redis",
+        "from": "service_orders_api",
+        "to": "cache_redis",
+        "metadata": {
+          "relation": "cacheConnection",
+          "protocol": "tcp",
+          "async": false
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "go.mod:8",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      },
+      {
+        "id": "e_service_orders_api_postgres",
+        "from": "service_orders_api",
+        "to": "postgres",
+        "metadata": {
+          "relation": "dbConnection",
+          "protocol": "tcp",
+          "async": false
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "go.mod:7",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      },
+      {
+        "id": "e_service_orders_api_queue_kafka",
+        "from": "service_orders_api",
+        "to": "queue_kafka",
+        "metadata": {
+          "relation": "queue",
+          "protocol": "tcp",
+          "async": true
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "go.mod:11",
+              "confidence": "low",
+              "extractor": "manifest"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -128,6 +128,26 @@ doesn't recognize.
   "./x" }` reference is not followed into the referenced module's own `.tf`
   files.
 
+### 3.3 `manifest` extractor: Go and Java coverage
+
+Extends the existing `manifest` extractor (§3, `low` confidence) to two more
+ecosystems, same shape as npm/pip: a hand-maintained driver-lib → infra lookup
+(`GO_LIB_MAP`, `MAVEN_LIB_MAP` in `lib-map.ts`), no new dependency.
+
+- **`go.mod`** — regex over the `require (...)` block and single-line
+  `require <module> v<version>` statements. A trailing `/v2`, `/v3`, … module
+  version suffix is stripped before lookup (`github.com/jackc/pgx/v5` →
+  `github.com/jackc/pgx`), since Go's own versioning convention would
+  otherwise silently miss every major-version-2+ import of a mapped driver.
+  Component name from the `module` directive's last path segment.
+- **`pom.xml`** — regex over `<dependency>…</dependency>` blocks, keying on
+  `groupId:artifactId`. Component name: the first `<artifactId>` in the file —
+  a best-effort heuristic (not a real XML parse), correct for the common case
+  where the project's own `<artifactId>` precedes its `<dependencies>` block,
+  and consistent with the project's established "regex over a full parse"
+  posture elsewhere in `scan`.
+- Both are additive: existing npm/pip fixtures and behavior are unchanged.
+
 ## 4. Architecture
 
 ```
@@ -345,9 +365,10 @@ Resolved:
   scan's entry point).
 
 Still open (tracked here, not blocking):
-- **Manifest tier is npm/pip only.** Extend `lib-map.ts` + `manifest.ts` to
-  `go.mod`, `pom.xml`/Gradle, and `pyproject.toml` (TOML has no parser dep in this
-  package today — regex-extract the dependency arrays, or add a parser only with
-  sign-off). Each new ecosystem is additive and low-risk.
+- **Manifest tier: Gradle and `pyproject.toml` still uncovered.** `go.mod` and
+  `pom.xml` (Maven) are resolved as of this entry — see §3.3. Gradle
+  (`build.gradle`/`.kts`) and `pyproject.toml` (TOML has no parser dep in this
+  package today — regex-extract or add a parser only with sign-off) remain
+  additive, low-risk follow-ups.
 - **Fixtures dir location** — using `fixtures/scan/` to match the repo; the
   CLAUDE.md text says `tests/fixtures/` (generic). Flagging the deviation.

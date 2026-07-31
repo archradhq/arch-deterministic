@@ -84,8 +84,9 @@ archrad reconstruct --from ./src --verbose --exclude vendor
 ## `archrad scan`
 
 Scan a repository and emit a **DRAFT IR** from structural signals — topology
-(`docker-compose.yml`), interface (OpenAPI/Swagger), manifests (`package.json`,
-`requirements.txt`), and shallow code analysis. Every node/edge carries
+(`docker-compose.yml`, Kubernetes, Terraform), interface (OpenAPI/Swagger),
+manifests (`package.json`, `requirements.txt`, `go.mod`, `pom.xml`), and
+shallow code analysis. Every node/edge carries
 `config.provenance[]` (`inferred_from: file:line`, `confidence`, `extractor`) and
 the graph is marked `metadata.status: "draft"` — review and edit it, don't
 author from scratch. Deterministic: same repo in → byte-identical IR out; no

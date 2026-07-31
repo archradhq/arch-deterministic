@@ -75,7 +75,7 @@ how much they have to guess:
 | Topology | `docker-compose.yml`, Kubernetes manifests | high — a declaration, parsed for real |
 | Interface | OpenAPI / Swagger | medium — documents a real surface, but only what's documented |
 | Infrastructure-as-code | Terraform (`*.tf`) | medium — a real declaration, but read via regex, not a true HCL parse |
-| Manifest | `package.json`, `requirements.txt` | low — a driver dependency implies an edge, not proof it's used |
+| Manifest | `package.json`, `requirements.txt`, `go.mod`, `pom.xml` | low — a driver dependency implies an edge, not proof it's used |
 | Code | pattern scan of source (Node.js/TS, Python, C#) | low — regex over text, no semantic understanding |
 
 Every node and edge carries `config.provenance[]` — `inferred_from: "file:line"`,

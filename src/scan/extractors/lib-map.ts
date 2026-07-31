@@ -73,3 +73,45 @@ export const PIP_LIB_MAP: Record<string, InfraTarget> = {
   'kafka-python': QUEUE('kafka'),
   'confluent-kafka': QUEUE('kafka'),
 };
+
+/**
+ * Go module path (from go.mod `require`) → infra target. Keyed on the module
+ * path with any trailing `/vN` major-version suffix already stripped by the
+ * caller (`github.com/jackc/pgx/v5` is looked up as `github.com/jackc/pgx`).
+ */
+export const GO_LIB_MAP: Record<string, InfraTarget> = {
+  'github.com/lib/pq': DB('postgres', 'postgres'),
+  'github.com/jackc/pgx': DB('postgres', 'postgres'),
+  'github.com/go-sql-driver/mysql': DB('mysql', 'mysql'),
+  'go.mongodb.org/mongo-driver': DB('mongodb', 'mongodb'),
+  'github.com/gocql/gocql': DB('cassandra', 'cassandra'),
+  'cloud.google.com/go/firestore': DB('firestore', 'firestore'),
+  'github.com/redis/go-redis': CACHE,
+  'github.com/go-redis/redis': CACHE,
+  'github.com/gomodule/redigo': CACHE,
+  'github.com/streadway/amqp': QUEUE('rabbitmq'),
+  'github.com/rabbitmq/amqp091-go': QUEUE('rabbitmq'),
+  'github.com/segmentio/kafka-go': QUEUE('kafka'),
+  'github.com/confluentinc/confluent-kafka-go': QUEUE('kafka'),
+  'github.com/elastic/go-elasticsearch': DB('search', 'elasticsearch'),
+};
+
+/** Maven `groupId:artifactId` (from pom.xml `<dependency>`) → infra target. */
+export const MAVEN_LIB_MAP: Record<string, InfraTarget> = {
+  'org.postgresql:postgresql': DB('postgres', 'postgres'),
+  'mysql:mysql-connector-java': DB('mysql', 'mysql'),
+  'com.mysql:mysql-connector-j': DB('mysql', 'mysql'),
+  'org.mongodb:mongodb-driver-sync': DB('mongodb', 'mongodb'),
+  'org.mongodb:mongo-java-driver': DB('mongodb', 'mongodb'),
+  'com.datastax.oss:java-driver-core': DB('cassandra', 'cassandra'),
+  'com.google.cloud:google-cloud-firestore': DB('firestore', 'firestore'),
+  'redis.clients:jedis': CACHE,
+  'io.lettuce:lettuce-core': CACHE,
+  'com.rabbitmq:amqp-client': QUEUE('rabbitmq'),
+  'org.springframework.amqp:spring-rabbit': QUEUE('rabbitmq'),
+  'org.apache.kafka:kafka-clients': QUEUE('kafka'),
+  'org.springframework.kafka:spring-kafka': QUEUE('kafka'),
+  'org.elasticsearch.client:elasticsearch-rest-high-level-client': DB('search', 'elasticsearch'),
+  'jakarta.mail:jakarta.mail-api': { type: 'smtp', name: 'smtp', relation: 'smtp', protocol: 'smtp', async: false },
+  'com.sun.mail:javax.mail': { type: 'smtp', name: 'smtp', relation: 'smtp', protocol: 'smtp', async: false },
+};

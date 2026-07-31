@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { scanCodebase } from '../scan.js';
 import { parseRequirementLine } from './manifest.js';
-import { NPM_LIB_MAP, PIP_LIB_MAP } from './lib-map.js';
+import { NPM_LIB_MAP, PIP_LIB_MAP, GO_LIB_MAP, MAVEN_LIB_MAP } from './lib-map.js';
 import { canonicalIrToJsonString } from '../../yamlToIr.js';
 import { validateIrStructural, hasIrStructuralErrors } from '../../ir-structural.js';
 import { readProvenance, elementConfidence } from '../provenance.js';
@@ -116,5 +116,79 @@ describe('scanCodebase — cross-extractor infra merge', () => {
     const b = await scanCodebase({ from: `${FIXTURE_ROOT}compose-and-manifest` });
     expect(canonicalIrToJsonString(a.ir)).toBe(canonicalIrToJsonString(b.ir));
     expect(hasIrStructuralErrors(validateIrStructural(a.ir))).toBe(false);
+  });
+});
+
+describe('lib maps — go and maven', () => {
+  it('map recognized Go and Maven driver libs to canonical infra targets', () => {
+    expect(GO_LIB_MAP['github.com/jackc/pgx']!.type).toBe('postgres');
+    expect(GO_LIB_MAP['github.com/redis/go-redis']!.type).toBe('cache');
+    expect(MAVEN_LIB_MAP['org.postgresql:postgresql']!.type).toBe('postgres');
+    expect(MAVEN_LIB_MAP['org.springframework.kafka:spring-kafka']!.type).toBe('queue');
+  });
+});
+
+describe('scanCodebase — manifest extractor, go.mod', () => {
+  it('resolves driver libs, stripping the /vN major-version suffix before lookup', async () => {
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}manifest-go`, extractors: ['manifest'] });
+    const g = graphOf(result.ir);
+    const ids = g.nodes.map((n) => n.id).sort();
+    // github.com/jackc/pgx/v5 -> postgres; github.com/redis/go-redis/v9 -> cache;
+    // github.com/segmentio/kafka-go (no version suffix) -> queue.
+    expect(ids).toEqual(['cache_redis', 'postgres', 'queue_kafka', 'service_orders_api']);
+  });
+
+  it('does not match a non-driver library (gin, a web framework)', async () => {
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}manifest-go`, extractors: ['manifest'] });
+    const ids = graphOf(result.ir).nodes.map((n) => n.id);
+    expect(ids.some((id) => id.includes('gin'))).toBe(false);
+  });
+
+  it('derives the component name from the module directive’s last path segment', async () => {
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}manifest-go`, extractors: ['manifest'] });
+    const component = graphOf(result.ir).nodes.find((n) => n.type === 'service')!;
+    expect(component.name).toBe('orders-api');
+  });
+
+  it('matches the committed golden byte-for-byte and is deterministic', async () => {
+    const a = await scanCodebase({ from: `${FIXTURE_ROOT}manifest-go` });
+    const b = await scanCodebase({ from: `${FIXTURE_ROOT}manifest-go` });
+    const golden = readFileSync(`${FIXTURE_ROOT}manifest-go.expected-ir.json`, 'utf8');
+    expect(canonicalIrToJsonString(a.ir)).toBe(golden);
+    expect(canonicalIrToJsonString(a.ir)).toBe(canonicalIrToJsonString(b.ir));
+  });
+});
+
+describe('scanCodebase — manifest extractor, pom.xml (maven)', () => {
+  it('resolves recognized <dependency> blocks by groupId:artifactId', async () => {
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}manifest-maven`, extractors: ['manifest'] });
+    const g = graphOf(result.ir);
+    const ids = g.nodes.map((n) => n.id).sort();
+    expect(ids).toEqual(['postgres', 'queue_kafka', 'service_billing_service']);
+  });
+
+  it('does not match a non-driver dependency (spring-boot-starter-web)', async () => {
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}manifest-maven`, extractors: ['manifest'] });
+    const ids = graphOf(result.ir).nodes.map((n) => n.id);
+    expect(ids.some((id) => id.includes('spring-boot'))).toBe(false);
+  });
+
+  it('derives the component name from the project’s own <artifactId>, not a dependency’s', async () => {
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}manifest-maven`, extractors: ['manifest'] });
+    const component = graphOf(result.ir).nodes.find((n) => n.type === 'service')!;
+    expect(component.name).toBe('billing-service');
+  });
+
+  it('matches the committed golden byte-for-byte and is deterministic', async () => {
+    const a = await scanCodebase({ from: `${FIXTURE_ROOT}manifest-maven` });
+    const b = await scanCodebase({ from: `${FIXTURE_ROOT}manifest-maven` });
+    const golden = readFileSync(`${FIXTURE_ROOT}manifest-maven.expected-ir.json`, 'utf8');
+    expect(canonicalIrToJsonString(a.ir)).toBe(golden);
+    expect(canonicalIrToJsonString(a.ir)).toBe(canonicalIrToJsonString(b.ir));
+  });
+
+  it('produces structurally valid IR', async () => {
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}manifest-maven` });
+    expect(hasIrStructuralErrors(validateIrStructural(result.ir))).toBe(false);
   });
 });
