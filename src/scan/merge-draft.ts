@@ -21,7 +21,11 @@ import {
   normalizeProvenance,
   readProvenance,
 } from './provenance.js';
-import { isDbLikeType, isQueueLikeNodeType } from '../graphPredicates.js';
+import {
+  isDbLikeType,
+  isInfraLeafSinkLintType,
+  isQueueLikeNodeType,
+} from '../graphPredicates.js';
 
 export type MergeDraftOptions = {
   /** Extractor names in canonical priority order (index 0 = highest priority). */
@@ -166,11 +170,21 @@ export function mergeDraftFragments(
 // group to its best member, rewire edges, union provenance. See
 // docs/SPEC-scan.md §11.
 
-/** Lower is more specific/informative; used only to break ties within a unify group. */
-const TYPE_SPECIFICITY: Record<string, number> = { gateway: 0, worker: 1 };
+/**
+ * Lower is more specific/informative; used only to break ties within a unify group.
+ *
+ * Concrete infrastructure ranks ABOVE `gateway`, because those types are positive
+ * identifications (a recognized image, a known driver) whereas `gateway` is a
+ * fallback: an unrecognized image that happens to publish a port gets promoted to
+ * it. A Compose override that re-declares `db:` to add a port forward carries no
+ * image, so without this ordering the guessed `gateway` would outrank the base
+ * file's identified `postgres` and relabel the database as an HTTP entry point.
+ */
+const TYPE_SPECIFICITY: Record<string, number> = { gateway: 1, worker: 2 };
 function typeSpecificity(node: Record<string, unknown>): number {
   const t = typeof node.type === 'string' ? node.type : '';
-  return TYPE_SPECIFICITY[t] ?? 2;
+  if (isDbLikeType(t) || isQueueLikeNodeType(t) || isInfraLeafSinkLintType(t)) return 0;
+  return TYPE_SPECIFICITY[t] ?? 3;
 }
 
 function isScanRoot(node: Record<string, unknown>): boolean {

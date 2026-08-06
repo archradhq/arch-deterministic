@@ -140,6 +140,26 @@ describe('unifyComposeOverrides', () => {
     expect(result.nodes).toHaveLength(2);
   });
 
+  it('keeps the identified datastore type when an override re-declares the service without an image', () => {
+    // compose.yml: `db: image: postgres:18` → postgres (identified).
+    // compose.override.yml: `db:` with only ports → unknown image, promoted to
+    // gateway (guessed). The identified type must win, or the database is
+    // relabelled an HTTP entry point and then linted as one.
+    const nodes = [
+      node('postgres_db', 'postgres', {
+        name: 'db',
+        config: { provenance: [prov('compose', 'compose.yml:12', 'high')] },
+      }),
+      node('gateway_db', 'gateway', {
+        name: 'db',
+        config: { provenance: [prov('compose', 'compose.override.yml:4', 'high')] },
+      }),
+    ];
+    const result = unifyComposeOverrides(nodes, [], ['compose']);
+    expect(result.nodes).toHaveLength(1);
+    expect(result.nodes[0]!.type).toBe('postgres');
+  });
+
   it('leaves distinct service names alone', () => {
     const nodes = [
       node('gateway_api', 'gateway', { name: 'api', config: { provenance: [prov('compose', 'a.yml:1', 'high')] } }),
