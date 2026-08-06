@@ -147,6 +147,7 @@ export {
   DockerComposeInitError,
   type DockerComposeInitOptions,
   inferTypeFromImage,
+  composeLocalBuildContext,
   enumerateTraefikHttpBackendRefs,
   connectionUrlHost,
   composeDependsOnDefaultServiceKey,
@@ -173,6 +174,22 @@ export {
 export { getStaticRuleGuidance, listStaticRuleCodes } from './static-rule-guidance.js';
 
 export { reconstructIrFromCodebase } from './reconstruct/reconstruct.js';
+
+export { scanCodebase, registeredExtractorNames } from './scan/scan.js';
+export type { ScanOptions, ScanResult, Confidence, Provenance } from './scan/types.js';
+export { ScanError } from './scan/types.js';
+export { readProvenance, elementConfidence } from './scan/provenance.js';
+
+export {
+  irToWorkflowDoc,
+  layoutPositions,
+  layoutTier,
+  type WorkflowDoc,
+  type WorkflowDocNode,
+  type WorkflowDocEdge,
+  type WorkflowDocMetadata,
+  type IrToWorkflowDocOptions,
+} from './scan/workflow-doc.js';
 
 export {
   type ReconstructOptions,
