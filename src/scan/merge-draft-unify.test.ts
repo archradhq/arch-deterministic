@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { unifyScanRoots, unifySingletonInfra, unifyDraft } from './merge-draft.js';
+import {
+  unifyScanRoots,
+  unifySingletonInfra,
+  unifyComposeOverrides,
+  unifyRedundantEdges,
+  unifyDraft,
+} from './merge-draft.js';
 import { readProvenance, elementConfidence } from './provenance.js';
 
 function prov(extractor: string, from: string, confidence: 'high' | 'medium' | 'low' = 'low') {
@@ -99,5 +105,89 @@ describe('unifyDraft', () => {
     const result = unifyDraft(nodes, [], ['manifest', 'code']);
     expect(result.nodes).toHaveLength(2);
     expect(elementConfidence(result.nodes[0]!)).toBe('low');
+  });
+});
+
+describe('unifyComposeOverrides', () => {
+  const overrideNodes = () => [
+    node('gateway_node_app', 'gateway', {
+      name: 'node-app',
+      config: { provenance: [prov('compose', 'docker-compose.yml:4', 'high')] },
+    }),
+    node('service_node_app', 'service', {
+      name: 'node-app',
+      config: { provenance: [prov('compose', 'docker-compose.dev.yml:4', 'high')] },
+    }),
+  ];
+
+  it('collapses one service declared across base and override compose files', () => {
+    const result = unifyComposeOverrides(overrideNodes(), [], ['compose']);
+    expect(result.nodes).toHaveLength(1);
+    // gateway (ports published in the base file) is the more specific type.
+    expect(result.nodes[0]!.id).toBe('gateway_node_app');
+    expect(readProvenance(result.nodes[0]!).map((p) => p.inferred_from).sort()).toEqual([
+      'docker-compose.dev.yml:4',
+      'docker-compose.yml:4',
+    ]);
+  });
+
+  it('leaves same-named nodes alone when another extractor corroborates one of them', () => {
+    const nodes = overrideNodes();
+    nodes[1]!.config = {
+      provenance: [prov('compose', 'docker-compose.dev.yml:4', 'high'), prov('code', 'src/index.js:1')],
+    };
+    const result = unifyComposeOverrides(nodes, [], ['compose', 'code']);
+    expect(result.nodes).toHaveLength(2);
+  });
+
+  it('leaves distinct service names alone', () => {
+    const nodes = [
+      node('gateway_api', 'gateway', { name: 'api', config: { provenance: [prov('compose', 'a.yml:1', 'high')] } }),
+      node('gateway_web', 'gateway', { name: 'web', config: { provenance: [prov('compose', 'b.yml:1', 'high')] } }),
+    ];
+    expect(unifyComposeOverrides(nodes, [], ['compose']).nodes).toHaveLength(2);
+  });
+});
+
+describe('unifyRedundantEdges', () => {
+  const nodes = [
+    node('app', 'gateway'),
+    node('mongodb', 'mongodb'),
+    node('redis', 'cache'),
+  ];
+
+  it('collapses compose depends_on with a code dbConnection into one link', () => {
+    const edges = [
+      { id: 'e0', from: 'app', to: 'mongodb', metadata: { relation: 'depends_on' }, config: { provenance: [prov('compose', 'docker-compose.yml:4', 'high')] } },
+      { id: 'e1', from: 'app', to: 'mongodb', metadata: { relation: 'dbConnection' }, config: { provenance: [prov('code', 'src/index.js:9')] } },
+    ];
+    const result = unifyRedundantEdges(nodes, edges);
+    expect(result).toHaveLength(1);
+    expect((result[0]!.metadata as Record<string, unknown>).relation).toBe('dbConnection');
+    expect(readProvenance(result[0]!).map((p) => p.extractor).sort()).toEqual(['code', 'compose']);
+  });
+
+  it('names the surviving relation from the target type, resolving extractor disagreement', () => {
+    // code calls a Redis link dbConnection, manifest calls it cacheConnection.
+    const edges = [
+      { id: 'e0', from: 'app', to: 'redis', metadata: { relation: 'dbConnection' }, config: { provenance: [prov('code', 'a.ts:1')] } },
+      { id: 'e1', from: 'app', to: 'redis', metadata: { relation: 'cacheConnection' }, config: { provenance: [prov('manifest', 'package.json:3')] } },
+    ];
+    const result = unifyRedundantEdges(nodes, edges);
+    expect(result).toHaveLength(1);
+    expect((result[0]!.metadata as Record<string, unknown>).relation).toBe('cacheConnection');
+  });
+
+  it('keeps semantically distinct parallel edges (routes alongside a data link)', () => {
+    const edges = [
+      { id: 'e0', from: 'app', to: 'mongodb', metadata: { relation: 'dbConnection' }, config: {} },
+      { id: 'e1', from: 'app', to: 'mongodb', metadata: { relation: 'serviceCall' }, config: {} },
+    ];
+    expect(unifyRedundantEdges(nodes, edges)).toHaveLength(2);
+  });
+
+  it('leaves a single edge untouched', () => {
+    const edges = [{ id: 'e0', from: 'app', to: 'mongodb', metadata: { relation: 'depends_on' }, config: {} }];
+    expect(unifyRedundantEdges(nodes, edges)).toEqual(edges);
   });
 });

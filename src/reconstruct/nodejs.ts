@@ -52,6 +52,24 @@ const HEALTH_PATH_RE = /^(\/health(?:z|check)?|\/healthy|\/ready|\/live|\/ping|\
 const EXPRESS_ROUTE_RE =
   /(?:app|router|server|route)\s*\.\s*(get|post|put|patch|delete|all|use)\s*\(\s*['"`]([^'"`\n]+)['"`]/gi;
 
+/**
+ * Fastify's full route declaration on ANY receiver: `app.route({ url, method })`,
+ * `server.route({...})`, `instance.route({...})`. {@link FASTIFY_ROUTE_RE} only
+ * recognises the object form when the variable happens to be named `fastify` or
+ * `server`, but Fastify's own docs and most codebases call it `app` — which meant
+ * canonical Fastify health probes (`app.route({ url: '/live' })`) were invisible
+ * and every Fastify service false-fired IR-LINT-NO-HEALTHCHECK-003.
+ *
+ * Captures the object head (up to the first nested `}` or the closing brace), from
+ * which `url` and `method` are read. Nested option objects such as
+ * `schema: { hide: true }` terminate the capture, which is fine: `url`/`method` are
+ * conventionally declared first.
+ */
+const FASTIFY_ROUTE_OBJECT_RE =
+  /\b[A-Za-z_$][\w$]*\s*\.\s*route\s*\(\s*\{([^}]*)/gi;
+const FASTIFY_ROUTE_URL_RE = /\burl\s*:\s*['"`]([^'"`\n]+)['"`]/i;
+const FASTIFY_ROUTE_METHOD_RE = /\bmethod\s*:\s*(?:\[\s*)?['"`]([A-Za-z]+)['"`]/i;
+
 /** Fastify: fastify.get('/path', ...) */
 const FASTIFY_ROUTE_RE =
   /(?:fastify|server)\s*\.\s*(get|post|put|patch|delete|route)\s*\(\s*\{[^}]*url\s*:\s*['"`]([^'"`\n]+)['"`]|(?:fastify|server)\s*\.\s*(get|post|put|patch|delete)\s*\(\s*['"`]([^'"`\n]+)['"`]/gi;
@@ -184,7 +202,13 @@ const AUTH_PATTERNS: AuthPattern[] = [
   // auth nodes from import statements).
   { re: /passport\.(?:authenticate|initialize|session|use)\s*\(/, detail: 'Passport.js' },
   { re: /(?:require|from)\s*\(?\s*['"`]express-jwt['"`]|expressJwt\s*\(/, detail: 'express-jwt middleware' },
-  { re: /(?:require|from)\s*\(?\s*['"`]fastify-jwt['"`]|\.register\s*\(\s*fastifyJwt/, detail: 'fastify-jwt plugin' },
+  // Fastify's auth plugins were renamed to the `@fastify/` scope in v3; match both
+  // the legacy and current names, plus the `jwtVerify()` decorator the plugin adds
+  // (which is how request-level auth is actually enforced in Fastify apps).
+  {
+    re: /(?:require|from)\s*\(?\s*['"`](?:fastify-jwt|@fastify\/(?:jwt|auth|passport|basic-auth|bearer-auth))['"`]|\.register\s*\(\s*fastifyJwt|\.jwtVerify\s*\(/,
+    detail: 'Fastify JWT/auth plugin',
+  },
   { re: /(?:require|from)\s*\(?\s*['"`]jsonwebtoken['"`]|jwt\.verify\s*\(/, detail: 'jsonwebtoken' },
   { re: /@UseGuards\s*\(/, detail: 'NestJS @UseGuards' },
   { re: /@AuthGuard\s*\(/, detail: 'NestJS @AuthGuard' },
@@ -264,6 +288,16 @@ export function analyzeNodejsFile(file: ScannedFile): DetectedArtifact[] {
       kind,
       `fastify.${method.toLowerCase()}(${path})`,
     );
+  }
+
+  // Fastify full route declarations: <anything>.route({ url, method })
+  for (const m of matchAll(file.content, FASTIFY_ROUTE_OBJECT_RE.source)) {
+    const body = m[1] ?? '';
+    const path = body.match(FASTIFY_ROUTE_URL_RE)?.[1];
+    if (!path) continue;
+    const method = (body.match(FASTIFY_ROUTE_METHOD_RE)?.[1] ?? 'GET').toUpperCase();
+    const kind = HEALTH_PATH_RE.test(path) ? 'health_route' : 'http_route';
+    pushRouteArtifact(artifacts, file, m, kind, `route({ ${method} ${path} })`);
   }
 
   // NestJS @Controller + @Verb

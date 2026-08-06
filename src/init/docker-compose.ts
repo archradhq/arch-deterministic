@@ -84,6 +84,14 @@ function composeImageInferredAsNonHttpService(imageRef: string): boolean {
 
   if (/\bcoredns\b|kube-dns/.test(p)) return true;
 
+  // Local emulators and HTTP test doubles. They speak HTTP and publish a port,
+  // but they stand in for a cloud service during development — they are not an
+  // entry point into the system under review, so linting them as one (missing
+  // auth, extra HTTP entry) is pure noise. `localstack` is covered above.
+  const emulators =
+    /\bfauxqs\b|\bwiremock\b|mockserver|\bmountebank\b|\bhoverfly\b|\bmoto\b|\bgcs-emulator\b|firebase-tools|\bfake-gcs-server\b|azurite|dynamodb-local|\bsmocker\b|\bprism\b/;
+  if (emulators.test(p)) return true;
+
   return false;
 }
 
@@ -107,7 +115,32 @@ export function inferTypeFromImage(imageRef: string): { type: string; warning?: 
   }
 
   /**
-   * Datastores — IR uses heterogeneous `postgres` bucket historically (still DB-like via isDbLikeType).
+   * Datastores the IR models as their own node type. These MUST be matched before
+   * the generic bucket below: the code extractor already emits `mongodb`/`mysql`/
+   * `cassandra`/`sqlserver` (see `dbNodeType`), so bucketing the compose tier's
+   * MongoDB container as `postgres` both mislabels it ("datastore node
+   * postgres_mongodb") and blocks cross-tier unification, since scan groups
+   * singleton infra by exact type.
+   */
+  const SPECIFIC_DATASTORES: { type: string; hay: RegExp; last: RegExp }[] = [
+    { type: 'mongodb', hay: /\bmongodb\b|\bmongo\b/, last: /^mongodb?\b|^mongo/ },
+    { type: 'mysql', hay: /\bmysql\b|\bmariadb\b|percona/, last: /^mysql|^mariadb|^percona/ },
+    { type: 'cassandra', hay: /\bcassandra\b|scylladb/, last: /^cassandra|^scylla/ },
+    {
+      type: 'sqlserver',
+      hay: /microsoft\.com\/(mssql|azure-sql)|mssql\/server|microsoft\/azure-sql|azure-sql-edge|\bmssql\b/,
+      last: /^mssql|^azure-sql/,
+    },
+  ];
+  for (const candidate of SPECIFIC_DATASTORES) {
+    if (candidate.hay.test(hay) || candidate.last.test(last)) {
+      return { type: candidate.type };
+    }
+  }
+
+  /**
+   * Remaining datastores — IR uses a heterogeneous `postgres` bucket historically
+   * (still DB-like via isDbLikeType).
    */
   const dataHay =
     /\bpostgres\b|\bpostgresql\b|mysql|\bmariadb\b|percona|cockroachdb|\bcockroach\/|mongodb|mongo\b|\boracle\b|edb\/postgres|edb\/postgresql|microsoft\.com\/(mssql|azure-sql|cbl-mariner)|mssql\/server|microsoft\/azure-sql|azure-sql-edge|timescaledb|\btimescale\b|snowflake\b|planetscale\b|milvus\b|neo4j|clickhouse|couchdb|ravendb|scylladb|cassandra\b|singlestore\b|\bhana\b|hive\b|hdfs\b/;
@@ -514,6 +547,35 @@ function hasPublishedPorts(serviceDef: Record<string, unknown>): boolean {
   return typeof ports === 'string' && ports.length > 0;
 }
 
+/**
+ * The build context of a service, normalized, or null when it is not built from
+ * a local path (no `build:`, or a remote git context like
+ * `build: https://github.com/…`).
+ *
+ * `'.'` means "the directory holding this compose file". Callers use that to tell
+ * a service built from the whole repo apart from one built out of a subdirectory
+ * (`build: ./tests/`), which is a sibling component, not the repo's app.
+ */
+export function composeLocalBuildContext(serviceDef: Record<string, unknown>): string | null {
+  const build = serviceDef.build;
+  if (build == null) return null;
+  const context =
+    typeof build === 'string'
+      ? build
+      : typeof build === 'object' && !Array.isArray(build)
+        ? (build as Record<string, unknown>).context
+        : undefined;
+  // `build: {}` with no context defaults to the compose file's own directory.
+  if (context == null) return '.';
+  if (typeof context !== 'string') return null;
+  const trimmed = context.trim();
+  if (!trimmed) return '.';
+  if (/^(?:[a-z][a-z0-9+.-]*:\/\/|git@|github\.com\/)/i.test(trimmed)) return null;
+  // Normalize './', './/', 'a/b/' → '.', 'a/b'
+  const normalized = trimmed.replace(/\\/g, '/').replace(/\/+$/, '');
+  return normalized === '' || normalized === '.' ? '.' : normalized.replace(/^\.\//, '');
+}
+
 function resolveImage(serviceName: string, serviceDef: Record<string, unknown>): string {
   const im = serviceDef.image;
   if (typeof im === 'string' && im.trim()) return im.trim();
@@ -648,6 +710,13 @@ export function dockerComposeToCanonicalIr(
         ...lintHints,
         compose: {
           image,
+          // Local build context (`.` = this compose file's own directory) rather
+          // than a pulled image — factual metadata `scan` uses to recognise which
+          // service is the app under scan.
+          ...(() => {
+            const ctx = composeLocalBuildContext(serviceDef);
+            return ctx == null ? {} : { buildContext: ctx };
+          })(),
           ...(Object.keys(env).length ? { envKeys: Object.keys(env).sort() } : {}),
           ...(metaNetworks.length ? { networks: metaNetworks } : {}),
         },

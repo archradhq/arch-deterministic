@@ -484,6 +484,57 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     expect(artifacts.some((a) => a.kind === 'health_route')).toBe(true);
   });
 
+  it('detects a Fastify object-form route on any receiver name', () => {
+    // Fastify's canonical liveness probe. The receiver is `app`, not `fastify`,
+    // and the route is declared as an object — the form real Fastify apps use.
+    const artifacts = analyzeNodejsFile({
+      relPath: 'src/app.ts',
+      content: `
+  app.route({
+    url: '/live',
+    method: 'GET',
+    logLevel: 'warn',
+    schema: { hide: true },
+    handler: (_request, reply) => reply.status(200).send({ status: 'OK' }),
+  })
+`,
+    });
+    expect(artifacts.some((a) => a.kind === 'health_route')).toBe(true);
+  });
+
+  it('detects a non-health Fastify object-form route as http_route', () => {
+    const artifacts = analyzeNodejsFile({
+      relPath: 'src/routes.ts',
+      content: `server.route({ method: 'POST', url: '/v1/users', handler })`,
+    });
+    expect(artifacts.some((a) => a.kind === 'http_route')).toBe(true);
+    expect(artifacts.some((a) => a.kind === 'health_route')).toBe(false);
+  });
+
+  it('ignores a .route({}) call that declares no url', () => {
+    const artifacts = analyzeNodejsFile({
+      relPath: 'src/misc.ts',
+      content: `thing.route({ method: 'GET', handler })`,
+    });
+    expect(artifacts.some((a) => a.kind === 'http_route' || a.kind === 'health_route')).toBe(false);
+  });
+
+  it('detects the scoped @fastify/jwt plugin as auth_middleware', () => {
+    const artifacts = analyzeNodejsFile({
+      relPath: 'src/app.ts',
+      content: `import fastifyJwt from '@fastify/jwt';\nawait app.register(fastifyJwt, { secret });\n`,
+    });
+    expect(artifacts.some((a) => a.kind === 'auth_middleware')).toBe(true);
+  });
+
+  it('detects the fastify jwtVerify() decorator as auth_middleware', () => {
+    const artifacts = analyzeNodejsFile({
+      relPath: 'src/plugins/jwtTokenPlugin.ts',
+      content: `export const jwtTokenPlugin = fp(async (app) => {\n  await request.jwtVerify()\n})\n`,
+    });
+    expect(artifacts.some((a) => a.kind === 'auth_middleware')).toBe(true);
+  });
+
   it('records 1-based line numbers on detected artifacts', () => {
     const content = [
       'import express from "express";',

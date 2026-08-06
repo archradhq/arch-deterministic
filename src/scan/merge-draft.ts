@@ -21,6 +21,7 @@ import {
   normalizeProvenance,
   readProvenance,
 } from './provenance.js';
+import { isDbLikeType, isQueueLikeNodeType } from '../graphPredicates.js';
 
 export type MergeDraftOptions = {
   /** Extractor names in canonical priority order (index 0 = highest priority). */
@@ -324,13 +325,161 @@ function stripScanRootTag(node: Record<string, unknown>): Record<string, unknown
   return { ...node, config: rest };
 }
 
-/** Run both post-merge unification passes, in order, then strip internal tags. */
+/** File part of a provenance record's `"<relPath>:<line>"`. */
+function provenanceFile(record: Provenance): string {
+  const idx = record.inferred_from.lastIndexOf(':');
+  return idx > 0 ? record.inferred_from.slice(0, idx) : record.inferred_from;
+}
+
+/**
+ * Unify the SAME compose service declared across multiple compose files —
+ * `docker-compose.yml` plus its `.dev` / `.prod` / `.test` override siblings all
+ * describing one `node-app`. That is Compose's own override semantics, so the
+ * duplicates are an artifact of reading each file independently, not evidence of
+ * distinct components.
+ *
+ * Deliberately narrow: only nodes whose provenance comes exclusively from the
+ * compose extractor, sharing a name, contributed by DIFFERENT files. Two services
+ * with the same name in the same file cannot happen (YAML keys are unique), and
+ * nodes corroborated by another extractor are left to the other passes.
+ */
+export function unifyComposeOverrides(
+  nodes: Record<string, unknown>[],
+  edges: Record<string, unknown>[],
+  priority: string[],
+): { nodes: Record<string, unknown>[]; edges: Record<string, unknown>[] } {
+  const byName = new Map<string, Record<string, unknown>[]>();
+  for (const node of nodes) {
+    const name = typeof node.name === 'string' ? node.name : '';
+    if (!name) continue;
+    const prov = readProvenance(node);
+    if (prov.length === 0 || !prov.every((p) => p.extractor === 'compose')) continue;
+    (byName.get(name) ?? byName.set(name, []).get(name)!).push(node);
+  }
+
+  let curNodes = nodes;
+  let curEdges = edges;
+  for (const group of byName.values()) {
+    if (group.length < 2) continue;
+    const files = new Set(group.flatMap((n) => readProvenance(n).map(provenanceFile)));
+    if (files.size < group.length) continue; // not one-node-per-file: leave it alone
+    const result = collapseGroup(group, curNodes, curEdges, priority);
+    curNodes = result.nodes;
+    curEdges = result.edges;
+  }
+  return { nodes: curNodes, edges: curEdges };
+}
+
+/**
+ * Relations that all describe ONE infrastructure link at differing fidelity:
+ * compose says `depends_on`, code says `dbConnection`, manifest says
+ * `cacheConnection`, k8s says `connectionUrl`. They are not parallel edges.
+ */
+const INFRA_LINK_RELATIONS = new Set([
+  'depends_on',
+  'dependsOn',
+  'dbConnection',
+  'cacheConnection',
+  'connectionUrl',
+  'queue',
+  'smtp',
+]);
+
+/**
+ * Canonical relation for an infra link, derived from what the TARGET actually is.
+ * Extractors disagree on naming (code calls a Redis link `dbConnection`, manifest
+ * calls it `cacheConnection`); the target's type is the objective tiebreaker.
+ */
+function canonicalInfraRelation(targetType: string, present: Set<string>): string {
+  const t = String(targetType ?? '').toLowerCase();
+  if (t === 'cache') return 'cacheConnection';
+  if (t === 'smtp') return 'smtp';
+  if (isQueueLikeNodeType(t)) return 'queue';
+  if (isDbLikeType(t)) return 'dbConnection';
+  // Unknown target: keep the most specific relation we were given.
+  for (const r of ['dbConnection', 'cacheConnection', 'queue', 'smtp', 'connectionUrl']) {
+    if (present.has(r)) return r;
+  }
+  return 'depends_on';
+}
+
+/**
+ * Collapse parallel edges between the same pair that merely restate one infra
+ * link. Only groups whose relations are ALL in {@link INFRA_LINK_RELATIONS} are
+ * touched — `routes`, `serviceCall`, and `authMiddleware` can legitimately run in
+ * parallel with a data link and are left alone.
+ */
+export function unifyRedundantEdges(
+  nodes: Record<string, unknown>[],
+  edges: Record<string, unknown>[],
+): Record<string, unknown>[] {
+  const typeById = new Map<string, string>();
+  for (const n of nodes) {
+    if (typeof n.id === 'string') typeById.set(n.id, typeof n.type === 'string' ? n.type : '');
+  }
+
+  const groups = new Map<string, Record<string, unknown>[]>();
+  for (const e of edges) {
+    const key = `${String(e.from)} ${String(e.to)}`;
+    (groups.get(key) ?? groups.set(key, []).get(key)!).push(e);
+  }
+
+  const collapsedByKey = new Map<string, Record<string, unknown>>();
+  for (const [key, group] of groups) {
+    if (group.length < 2) continue;
+    const relations = new Set(group.map(edgeRelation));
+    if (![...relations].every((r) => INFRA_LINK_RELATIONS.has(r))) continue;
+
+    const ranked = [...group].sort(
+      (a, b) => confidenceRank(elementConfidence(b)) - confidenceRank(elementConfidence(a)),
+    );
+    const survivor = ranked[0]!;
+    const mergedProv = normalizeProvenance(group.flatMap(readProvenance));
+    const targetType = typeById.get(String(survivor.to)) ?? '';
+    const metadata =
+      survivor.metadata && typeof survivor.metadata === 'object' && !Array.isArray(survivor.metadata)
+        ? (survivor.metadata as Record<string, unknown>)
+        : {};
+    collapsedByKey.set(key, {
+      ...withMergedProvenance(survivor, mergedProv),
+      metadata: { ...metadata, relation: canonicalInfraRelation(targetType, relations) },
+    });
+  }
+
+  if (collapsedByKey.size === 0) return edges;
+
+  const emitted = new Set<string>();
+  const result: Record<string, unknown>[] = [];
+  for (const e of edges) {
+    const key = `${String(e.from)} ${String(e.to)}`;
+    const collapsed = collapsedByKey.get(key);
+    if (!collapsed) {
+      result.push(e);
+      continue;
+    }
+    if (emitted.has(key)) continue;
+    emitted.add(key);
+    result.push(collapsed);
+  }
+  return result;
+}
+
+/**
+ * Run the post-merge unification passes, in order, then strip internal tags.
+ * Compose overrides collapse FIRST so the surviving service (which may carry the
+ * `scanRoot` tag from its `build:` declaration) is the one offered to
+ * `unifyScanRoots`.
+ */
 export function unifyDraft(
   nodes: Record<string, unknown>[],
   edges: Record<string, unknown>[],
   priority: string[],
 ): { nodes: Record<string, unknown>[]; edges: Record<string, unknown>[] } {
-  const afterRoots = unifyScanRoots(nodes, edges, priority);
+  const afterOverrides = unifyComposeOverrides(nodes, edges, priority);
+  const afterRoots = unifyScanRoots(afterOverrides.nodes, afterOverrides.edges, priority);
   const afterInfra = unifySingletonInfra(afterRoots.nodes, afterRoots.edges, priority);
-  return { nodes: afterInfra.nodes.map(stripScanRootTag), edges: afterInfra.edges };
+  // Edge de-duplication runs last: node unification is what makes parallel infra
+  // links land on the same (from, to) pair in the first place.
+  const dedupedEdges = unifyRedundantEdges(afterInfra.nodes, afterInfra.edges);
+  return { nodes: afterInfra.nodes.map(stripScanRootTag), edges: dedupedEdges };
 }

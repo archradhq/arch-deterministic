@@ -60,6 +60,40 @@ export function serviceLineIndex(text: string, names: Set<string>): Map<string, 
   return map;
 }
 
+/**
+ * Tag a compose service as the scan root when it is built from the repository
+ * root itself, so `unifyScanRoots` merges it with the code/manifest tiers' view
+ * of the same application.
+ *
+ * Deliberately strict on both axes, because a wrong merge silently fabricates
+ * architecture:
+ *  - the compose file must sit at the repo root (a nested `result/compose.yml`
+ *    describes a sub-component, not the repo);
+ *  - the build context must be that same root (`build: .`). `build: ./tests/`
+ *    is a sibling component — a test harness or migration job — not the app.
+ *
+ * A service pulled via `image:` never qualifies: it may be any third-party
+ * component, which is what keeps compose+manifest fixtures from over-merging.
+ */
+function tagScanRootIfBuiltFromRoot(
+  node: Record<string, unknown>,
+  composeFileRelPath: string,
+): Record<string, unknown> {
+  const isRootComposeFile = !composeFileRelPath.includes('/');
+  if (!isRootComposeFile) return node;
+
+  const config =
+    node.config && typeof node.config === 'object' && !Array.isArray(node.config)
+      ? (node.config as Record<string, unknown>)
+      : undefined;
+  const compose =
+    config?.compose && typeof config.compose === 'object' && !Array.isArray(config.compose)
+      ? (config.compose as Record<string, unknown>)
+      : undefined;
+  if (compose?.buildContext !== '.') return node;
+  return { ...node, config: { ...(config ?? {}), scanRoot: true } };
+}
+
 export const composeExtractor: Extractor = {
   name: 'compose',
   defaultConfidence: 'high',
@@ -107,7 +141,8 @@ export const composeExtractor: Extractor = {
       const nodes = rawNodes.map((n) => {
         const name = typeof n.name === 'string' ? n.name : '';
         const line = lineByName.get(name) ?? 1;
-        return withProvenance(n, provenanceEntry('compose', file.relPath, line, 'high'));
+        const tagged = tagScanRootIfBuiltFromRoot(n, file.relPath);
+        return withProvenance(tagged, provenanceEntry('compose', file.relPath, line, 'high'));
       });
       const edges = rawEdges.map((e) => {
         const fromName = typeof e.from === 'string' ? nameById.get(e.from) : undefined;

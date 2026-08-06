@@ -10,6 +10,7 @@ import {
   enumerateTraefikHttpBackendRefs,
   dockerComposeToCanonicalIr,
   inferTypeFromImage,
+  composeLocalBuildContext,
   normalizedComposeRepositoryPath,
 } from './docker-compose.js';
 
@@ -44,9 +45,60 @@ describe('inferTypeFromImage', () => {
     expect(inferTypeFromImage('confluentinc/cp-kafka:7').type).toBe('queue');
     expect(inferTypeFromImage('minio/minio').type).toBe('storage');
     expect(inferTypeFromImage('quay.io/keycloak/keycloak:24').type).toBe('keycloak');
-    expect(inferTypeFromImage('mcr.microsoft.com/mssql/server:2019-latest').type).toBe('postgres');
     expect(inferTypeFromImage('maildev/maildev').type).toBe('smtp');
     expect(inferTypeFromImage('coredns/coredns:2').type).toBe('dns');
+  });
+
+  it('maps datastores the IR models to their own type, not the generic postgres bucket', () => {
+    // These four have dedicated IR node types (the code extractor already emits
+    // them via dbNodeType), so the compose tier must agree or cross-tier
+    // unification cannot match them up.
+    expect(inferTypeFromImage('mongo:4.2.1-bionic').type).toBe('mongodb');
+    expect(inferTypeFromImage('mongodb/mongodb-community-server').type).toBe('mongodb');
+    expect(inferTypeFromImage('mysql:8').type).toBe('mysql');
+    expect(inferTypeFromImage('mariadb:11').type).toBe('mysql');
+    expect(inferTypeFromImage('cassandra:5').type).toBe('cassandra');
+    expect(inferTypeFromImage('mcr.microsoft.com/mssql/server:2019-latest').type).toBe('sqlserver');
+  });
+
+  it('does not treat a local emulator/test double as an HTTP gateway', () => {
+    // fauxqs (an SQS/SNS emulator) publishes a port and has an unrecognised
+    // image, but it stands in for a cloud service in dev — linting it as a
+    // public HTTP entry produced false MISSING-AUTH / ISOLATED-NODE findings.
+    const yaml = `
+services:
+  fauxqs:
+    image: kibertoad/fauxqs:latest
+    ports: ["4566:4566"]
+  api:
+    image: mycompany/api:latest
+    ports: ["8080:8080"]
+`;
+    const { ir } = dockerComposeToCanonicalIr(yaml);
+    const nodes = (ir.graph as { nodes: { id: string; type: string }[] }).nodes;
+    expect(nodes.find((n) => n.id.includes('fauxqs'))?.type).toBe('service');
+    // A pulled but plausibly-real API image is still promoted to a gateway.
+    expect(nodes.find((n) => n.id.includes('api'))?.type).toBe('gateway');
+  });
+
+  it('distinguishes a repo-root build context from a subdirectory one', () => {
+    // '.' means the app itself; a subdirectory is a sibling component (test
+    // harness, migration job) that must never be merged into the app root.
+    expect(composeLocalBuildContext({ build: '.' })).toBe('.');
+    expect(composeLocalBuildContext({ build: './' })).toBe('.');
+    expect(composeLocalBuildContext({ build: {} })).toBe('.');
+    expect(composeLocalBuildContext({ build: { context: '.' } })).toBe('.');
+    expect(composeLocalBuildContext({ build: './tests/' })).toBe('tests');
+    expect(composeLocalBuildContext({ build: { context: './vote' } })).toBe('vote');
+    // Not a local build at all.
+    expect(composeLocalBuildContext({ image: 'postgres:15' })).toBeNull();
+    expect(composeLocalBuildContext({ build: 'https://github.com/acme/repo.git' })).toBeNull();
+  });
+
+  it('keeps unmodelled datastores in the generic postgres bucket', () => {
+    expect(inferTypeFromImage('postgres:15').type).toBe('postgres');
+    expect(inferTypeFromImage('clickhouse/clickhouse-server').type).toBe('postgres');
+    expect(inferTypeFromImage('neo4j:5').type).toBe('postgres');
   });
 
   it('warns on unknown image', () => {
@@ -200,7 +252,7 @@ services:
     expect(lint.some((f) => f.code === 'IR-LINT-MULTIPLE-HTTP-ENTRIES-009')).toBe(false);
     expect(lint.some((f) => f.code === 'IR-LINT-NO-HEALTHCHECK-003')).toBe(false);
     const nodes = (ir.graph as { nodes: { id: string; type: string }[] }).nodes;
-    expect(nodes.find((n) => n.id === 'mssql')?.type).toBe('postgres');
+    expect(nodes.find((n) => n.id === 'mssql')?.type).toBe('sqlserver');
   });
 
   it('maps depends_on ${_VAR:-mongodb} literals to mongodb edges (Compose default syntax)', () => {
