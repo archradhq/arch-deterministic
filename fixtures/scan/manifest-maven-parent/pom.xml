@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Spring Boot shape: the project inherits from spring-boot-starter-parent, so the
+  FIRST <artifactId> in the file belongs to the parent, not to this project.
+  Naming the component from it would label every Spring service
+  "spring-boot-starter-parent".
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.3.0</version>
+  </parent>
+
+  <groupId>org.example</groupId>
+  <artifactId>spring-petclinic</artifactId>
+  <version>1.0.0</version>
+  <name>petclinic</name>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>42.6.0</version>
+    </dependency>
+  </dependencies>
+</project>

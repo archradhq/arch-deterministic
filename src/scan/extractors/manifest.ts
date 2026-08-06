@@ -132,10 +132,26 @@ function mavenHits(text: string): Hit[] {
   return hits;
 }
 
-/** Component name: the first `<artifactId>` in the file (best-effort — the project's own, before any `<dependencies>`). */
+/**
+ * Component name for a pom.xml.
+ *
+ * The `<parent>` block MUST be stripped first: nearly every Spring Boot project
+ * inherits from `spring-boot-starter-parent`, and that block's `<artifactId>` is
+ * the first one in the file — so reading it naively names every Java service
+ * after its parent POM rather than itself.
+ *
+ * Prefers `<name>` when present. Maven treats it as the project's display name,
+ * and it is what deployment resources are conventionally named after, so it
+ * aligns with the compose/Kubernetes tiers' view of the same component. Falls
+ * back to the project's own `<artifactId>`, which is always present.
+ */
 function mavenComponentName(text: string): string | null {
-  const m = text.match(/<artifactId>([^<]+)<\/artifactId>/);
-  return m?.[1]?.trim() || null;
+  const withoutParent = text.replace(/<parent>[\s\S]*?<\/parent>/g, '');
+  const displayName = withoutParent.match(/<name>([^<]+)<\/name>/)?.[1]?.trim();
+  if (displayName && !displayName.includes('${')) return displayName;
+  // Stop before <dependencies> so a dependency's artifactId can never win.
+  const beforeDeps = withoutParent.split(/<dependencies>/)[0] ?? withoutParent;
+  return beforeDeps.match(/<artifactId>([^<]+)<\/artifactId>/)?.[1]?.trim() || null;
 }
 
 /** Derive a component name for a manifest that has no explicit name field. */

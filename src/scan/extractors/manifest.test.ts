@@ -179,6 +179,19 @@ describe('scanCodebase — manifest extractor, pom.xml (maven)', () => {
     expect(component.name).toBe('billing-service');
   });
 
+  it('ignores the <parent> block when naming the component', async () => {
+    // Nearly every Spring Boot pom inherits from spring-boot-starter-parent, whose
+    // <artifactId> is the first in the file — naming from it labelled every Java
+    // service after its parent POM.
+    const result = await scanCodebase({
+      from: `${FIXTURE_ROOT}manifest-maven-parent`,
+      extractors: ['manifest'],
+    });
+    const component = graphOf(result.ir).nodes.find((n) => n.type === 'service')!;
+    expect(component.name).toBe('petclinic');
+    expect(component.name).not.toBe('spring-boot-starter-parent');
+  });
+
   it('matches the committed golden byte-for-byte and is deterministic', async () => {
     const a = await scanCodebase({ from: `${FIXTURE_ROOT}manifest-maven` });
     const b = await scanCodebase({ from: `${FIXTURE_ROOT}manifest-maven` });
