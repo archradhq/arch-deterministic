@@ -305,6 +305,190 @@ describe('validateIrLint', () => {
     expect(validateIrLint(ir).some((x) => x.code === 'IR-LINT-DEAD-NODE-011')).toBe(false);
   });
 
+  it('IR-LINT-DEAD-NODE-011 does not fire on a wired-up auth node', () => {
+    // A real scan of an Express app: passport is wired as middleware and guards
+    // every route, but the IR has no "auth protects route" edge, so the node is
+    // always a terminal. Reporting it as a "dead component" is a false positive.
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'gw', type: 'gateway', name: 'app', config: { auth: 'bearer' } },
+          { id: 'auth_passport_js', type: 'auth', name: 'Passport.js' },
+        ],
+        edges: [{ from: 'gw', to: 'auth_passport_js', metadata: { relation: 'authMiddleware' } }],
+      },
+    };
+    expect(validateIrLint(ir).some((x) => x.code === 'IR-LINT-DEAD-NODE-011')).toBe(false);
+  });
+
+  it('IR-LINT-ISOLATED-NODE-005 still reports an auth node that is not wired up at all', () => {
+    // The exemption above must not hide a genuinely unattached auth node — that
+    // case has no in-edges and belongs to the isolated-node rule. (That rule only
+    // speaks when the graph has edges elsewhere, hence the api → db edge.)
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'api', type: 'http', name: 'API', config: { url: '/x', method: 'GET', auth: 'bearer' } },
+          { id: 'db', type: 'postgres', name: 'DB' },
+          { id: 'orphan_auth', type: 'auth', name: 'Unwired auth' },
+        ],
+        edges: [{ from: 'api', to: 'db' }],
+      },
+    };
+    const f = validateIrLint(ir);
+    expect(f.some((x) => x.code === 'IR-LINT-ISOLATED-NODE-005' && x.nodeId === 'orphan_auth')).toBe(true);
+  });
+
+  it('IR-LINT-DEAD-NODE-011 still fires on a dead non-auth component alongside an auth node', () => {
+    // Regression guard: exempting auth must not weaken detection of real dead ends.
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'gw', type: 'gateway', name: 'app', config: { auth: 'bearer' } },
+          { id: 'auth_x', type: 'auth', name: 'Auth' },
+          { id: 'legacy_worker', type: 'transform', name: 'Legacy transform' },
+        ],
+        edges: [
+          { from: 'gw', to: 'auth_x' },
+          { from: 'gw', to: 'legacy_worker' },
+        ],
+      },
+    };
+    const f = validateIrLint(ir);
+    expect(f.some((x) => x.code === 'IR-LINT-DEAD-NODE-011' && x.nodeId === 'legacy_worker')).toBe(true);
+    expect(f.some((x) => x.code === 'IR-LINT-DEAD-NODE-011' && x.nodeId === 'auth_x')).toBe(false);
+  });
+
+  it('IR-LINT-DIRECT-DB-ACCESS-002 asserts a defect for a single-endpoint node', () => {
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'orders-api', type: 'http', name: 'Orders API', config: { url: '/orders', method: 'GET' } },
+          { id: 'orders-db', type: 'postgres', name: 'Orders DB' },
+        ],
+        edges: [{ from: 'orders-api', to: 'orders-db' }],
+      },
+    };
+    const f = validateIrLint(ir).find((x) => x.code === 'IR-LINT-DIRECT-DB-ACCESS-002')!;
+    expect(f.message).toMatch(/connects directly to datastore node/);
+    expect(f.fixHint).toMatch(/Introduce a service or domain layer/);
+  });
+
+  it('IR-LINT-DIRECT-DB-ACCESS-002 only observes for a whole-app gateway node', () => {
+    // A gateway aggregates many routes, so this edge cannot distinguish a layered
+    // codebase from an unlayered one — the finding must not assert a defect.
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'app', type: 'gateway', name: 'app', config: { auth: 'bearer' } },
+          { id: 'mongodb', type: 'mongodb', name: 'mongodb' },
+        ],
+        edges: [{ from: 'app', to: 'mongodb' }],
+      },
+    };
+    const f = validateIrLint(ir).find((x) => x.code === 'IR-LINT-DIRECT-DB-ACCESS-002')!;
+    expect(f).toBeDefined(); // still surfaced
+    expect(f.message).toMatch(/No service or domain layer is visible/);
+    expect(f.message).not.toMatch(/connects directly to datastore node/);
+  });
+});
+
+describe('evidence confidence gating', () => {
+  const prov = (confidence: 'high' | 'medium' | 'low') => ({
+    provenance: [{ inferred_from: 'src/index.js:9', confidence, extractor: 'code' }],
+  });
+
+  it('leaves authored IR (no provenance) untouched', () => {
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'api', type: 'http', name: 'API', config: { url: '/x', method: 'GET' } },
+          { id: 'db', type: 'postgres', name: 'DB' },
+        ],
+        edges: [{ from: 'api', to: 'db' }],
+      },
+    };
+    const f = validateIrLint(ir).find((x) => x.code === 'IR-LINT-DIRECT-DB-ACCESS-002')!;
+    expect(f.evidenceConfidence).toBeUndefined();
+    expect(f.message).not.toMatch(/low-confidence/i);
+  });
+
+  it('records high confidence without hedging the wording', () => {
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'api', type: 'http', name: 'API', config: { url: '/x', method: 'GET' } },
+          { id: 'db', type: 'postgres', name: 'DB' },
+        ],
+        edges: [{ from: 'api', to: 'db', config: prov('high') }],
+      },
+    };
+    const f = validateIrLint(ir).find((x) => x.code === 'IR-LINT-DIRECT-DB-ACCESS-002')!;
+    expect(f.evidenceConfidence).toBe('high');
+    expect(f.message).not.toMatch(/low-confidence/i);
+  });
+
+  it('hedges wording when the cited edge rests on low-confidence evidence', () => {
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'api', type: 'http', name: 'API', config: { url: '/x', method: 'GET' } },
+          { id: 'db', type: 'postgres', name: 'DB' },
+        ],
+        edges: [{ from: 'api', to: 'db', config: prov('low') }],
+      },
+    };
+    const f = validateIrLint(ir).find((x) => x.code === 'IR-LINT-DIRECT-DB-ACCESS-002')!;
+    expect(f.evidenceConfidence).toBe('low');
+    expect(f.message).toMatch(/^Possible \(low-confidence evidence\): /);
+    expect(f.impact).toMatch(/Confirm against the cited source/);
+    // Severity is intentionally preserved so --fail-on semantics do not shift.
+    expect(f.severity).toBe('warning');
+  });
+
+  it('takes the strongest confidence when several extractors corroborate', () => {
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'api', type: 'http', name: 'API', config: { url: '/x', method: 'GET' } },
+          { id: 'db', type: 'postgres', name: 'DB' },
+        ],
+        edges: [
+          {
+            from: 'api',
+            to: 'db',
+            config: {
+              provenance: [
+                { inferred_from: 'src/index.js:9', confidence: 'low', extractor: 'code' },
+                { inferred_from: 'docker-compose.yml:4', confidence: 'high', extractor: 'compose' },
+              ],
+            },
+          },
+        ],
+      },
+    };
+    const f = validateIrLint(ir).find((x) => x.code === 'IR-LINT-DIRECT-DB-ACCESS-002')!;
+    expect(f.evidenceConfidence).toBe('high');
+    expect(f.message).not.toMatch(/low-confidence/i);
+  });
+
+  it('falls back to the cited node when the rule records no edge', () => {
+    const ir = {
+      graph: {
+        nodes: [
+          { id: 'gw', type: 'gateway', name: 'app', config: { auth: 'bearer' } },
+          { id: 'legacy', type: 'transform', name: 'Legacy', config: prov('low') },
+        ],
+        edges: [{ from: 'gw', to: 'legacy' }],
+      },
+    };
+    const f = validateIrLint(ir).find((x) => x.code === 'IR-LINT-DEAD-NODE-011')!;
+    expect(f.evidenceConfidence).toBe('low');
+    expect(f.message).toMatch(/^Possible \(low-confidence evidence\): /);
+  });
+});
+
+describe('ir-lint rules (continued)', () => {
   it('IR-LINT-DEAD-NODE-011 does not fire on queue sink nodes', () => {
     const ir = {
       graph: {

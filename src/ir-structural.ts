@@ -27,6 +27,17 @@ export type IrStructuralFinding = {
   suggestion?: string;
   /** Risk/context line (CLI “Impact:”) */
   impact?: string;
+  /**
+   * Confidence of the evidence this finding rests on, taken from the scan
+   * provenance of the node/edge it cites.
+   *
+   * Absent for authored IR and `archrad init` output, which carry no provenance —
+   * those are statements of intent and are reported at face value. Present only
+   * for `archrad scan` drafts, where `low` means the finding derives from
+   * heuristic source pattern-matching rather than a declared topology file, and
+   * the wording is softened to match.
+   */
+  evidenceConfidence?: 'high' | 'medium' | 'low';
 };
 
 const HTTP_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']);

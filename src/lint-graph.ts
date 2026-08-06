@@ -27,6 +27,38 @@ export function edgeEndpoints(e: Record<string, unknown>): { from: string; to: s
   return { from, to };
 }
 
+/**
+ * Strongest scan-provenance confidence recorded on a node or edge, or null when
+ * the element carries no provenance at all.
+ *
+ * `archrad scan` annotates every element it infers with one record per extractor
+ * (`config.provenance`). Authored IR and `archrad init` output have none, which is
+ * why the return is nullable rather than defaulting to `low`: "no provenance" means
+ * "this was declared, not inferred", not "weak evidence".
+ *
+ * Strongest-wins mirrors the scan merger: when a topology file and a source-code
+ * heuristic both describe an element, the declared topology is the better evidence.
+ */
+export function evidenceConfidence(
+  element: unknown,
+): 'high' | 'medium' | 'low' | null {
+  if (!element || typeof element !== 'object') return null;
+  const config = (element as Record<string, unknown>).config;
+  if (!config || typeof config !== 'object' || Array.isArray(config)) return null;
+  const records = (config as Record<string, unknown>).provenance;
+  if (!Array.isArray(records) || records.length === 0) return null;
+
+  const rank = { high: 3, medium: 2, low: 1 } as const;
+  let best: 'high' | 'medium' | 'low' | null = null;
+  for (const record of records) {
+    if (!record || typeof record !== 'object') continue;
+    const c = (record as Record<string, unknown>).confidence;
+    if (c !== 'high' && c !== 'medium' && c !== 'low') continue;
+    if (best === null || rank[c] > rank[best]) best = c;
+  }
+  return best;
+}
+
 export function nodeType(n: Record<string, unknown>): string {
   return String(n.type ?? n.kind ?? '').toLowerCase();
 }

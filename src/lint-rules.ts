@@ -13,44 +13,75 @@ import {
   looksLikeHealthUrl,
   buildSyncAdjacencyForLint,
   edgeRepresentsAsyncBoundary,
+  evidenceConfidence,
 } from './lint-graph.js';
 import {
   isAuthLikeNodeType,
+  isHttpEndpointType,
   isInfraLeafSinkLintType,
   isQueueLikeNodeType,
 } from './graphPredicates.js';
 
 const LAYER: IrStructuralFinding['layer'] = 'lint';
 
-/** IR-LINT-DIRECT-DB-ACCESS-002 — HTTP-like → datastore-like in one hop (broader than strict api/gateway + database enum). */
+/**
+ * IR-LINT-DIRECT-DB-ACCESS-002 — HTTP-like → datastore-like in one hop.
+ *
+ * The claim this rule can support depends on what the HTTP node represents:
+ *
+ *  - **A single endpoint** (`http`/`rest`/`api`/`graphql` — one route, carrying
+ *    `config.url` + method): the edge really does mean "this handler reaches
+ *    persistence directly with nothing in between". That is a defect, stated as one.
+ *
+ *  - **A whole application** (`gateway`/`bff`/`grpc` — an aggregate of many
+ *    routes): the edge only means "this app uses that datastore", which is true of
+ *    every application with a database, layered or not. A well-structured
+ *    controller → service → model codebase produces exactly the same edge as an
+ *    unlayered one, because the app is a single opaque node. Asserting a violation
+ *    here is unfalsifiable, so the finding is phrased as the observation the graph
+ *    actually supports: no intermediate layer is *visible*.
+ *
+ * Both still report — the distinction is in what is claimed, not whether the
+ * pattern is surfaced.
+ */
 export function ruleDirectDbAccess(g: ParsedLintGraph): IrStructuralFinding[] {
   const findings: IrStructuralFinding[] = [];
   const seenPair = new Set<string>();
-  for (const e of g.edges) {
-    if (!e || typeof e !== 'object') continue;
+  g.edges.forEach((e, edgeIndex) => {
+    if (!e || typeof e !== 'object') return;
     const { from, to } = edgeEndpoints(e as Record<string, unknown>);
-    if (!from || !to) continue;
+    if (!from || !to) return;
     const pairKey = `${from}\0${to}`;
     const a = g.nodeById.get(from);
     const b = g.nodeById.get(to);
-    if (!a || !b) continue;
+    if (!a || !b) return;
     const ta = nodeType(a);
     const tb = nodeType(b);
-    if (isHttpLikeType(ta) && isDbLikeType(tb)) {
-      if (seenPair.has(pairKey)) continue;
-      seenPair.add(pairKey);
-      findings.push({
-        code: 'IR-LINT-DIRECT-DB-ACCESS-002',
-        severity: 'warning',
-        layer: LAYER,
-        message: `API node "${from}" connects directly to datastore node "${to}"`,
-        nodeId: from,
-        fixHint: 'Introduce a service or domain layer between HTTP handlers and persistence.',
-        suggestion: 'Route traffic through an application/service node so HTTP is not coupled to a single DB node.',
-        impact: 'Harder to test, swap storage, or enforce invariants at a single boundary.',
-      });
-    }
-  }
+    if (!isHttpLikeType(ta) || !isDbLikeType(tb)) return;
+    if (seenPair.has(pairKey)) return;
+    seenPair.add(pairKey);
+
+    const isSingleEndpoint = isHttpEndpointType(ta);
+    findings.push({
+      code: 'IR-LINT-DIRECT-DB-ACCESS-002',
+      severity: 'warning',
+      layer: LAYER,
+      edgeIndex,
+      nodeId: from,
+      message: isSingleEndpoint
+        ? `API node "${from}" connects directly to datastore node "${to}"`
+        : `No service or domain layer is visible between HTTP entry "${from}" and datastore node "${to}"`,
+      fixHint: isSingleEndpoint
+        ? 'Introduce a service or domain layer between HTTP handlers and persistence.'
+        : `Confirm "${from}" routes persistence through an internal service layer; if it does, this is a modelling gap rather than a defect.`,
+      suggestion: isSingleEndpoint
+        ? 'Route traffic through an application/service node so HTTP is not coupled to a single DB node.'
+        : 'This node aggregates many routes, so the graph cannot tell a layered codebase from an unlayered one. Decompose it in the IR to make the boundary explicit.',
+      impact: isSingleEndpoint
+        ? 'Harder to test, swap storage, or enforce invariants at a single boundary.'
+        : 'If no layer exists, storage changes and invariant enforcement have no single boundary to sit behind.',
+    });
+  });
   return findings;
 }
 
@@ -317,7 +348,6 @@ export function ruleHttpMissingAuth(g: ParsedLintGraph): IrStructuralFinding[] {
     if ((inDegree.get(id) ?? 0) > 0) continue; // not an entry node
     /** IdP / SSO containers surface HTTP login flows; they must not satisfy "missing auth" as API gateways. */
     if (isAuthLikeNodeType(nodeType(n))) continue;
-
     const cfg = (n.config ?? {}) as Record<string, unknown>;
 
     // Explicit opt-out: config.authRequired === false marks an intentionally public endpoint
@@ -373,7 +403,15 @@ export function ruleDeadNode(g: ParsedLintGraph): IrStructuralFinding[] {
       isDbLikeType(t) ||
       isQueueLikeNodeType(t) ||
       isHttpLikeType(t) ||
-      isInfraLeafSinkLintType(t)
+      isInfraLeafSinkLintType(t) ||
+      // Auth middleware is a legitimate terminal node in this IR: the graph
+      // records "app → auth" but has no vocabulary for "auth guards these
+      // routes", so a correctly wired auth node ALWAYS has zero out-edges. The
+      // rule therefore fires on 100% of detected auth nodes and carries no
+      // information about them. An auth node that is genuinely not wired up has
+      // no in-edges either and is reported by IR-LINT-ISOLATED-NODE-005, so
+      // nothing is hidden by this exemption.
+      isAuthLikeNodeType(t)
     ) {
       continue;
     }
@@ -430,8 +468,54 @@ export function runArchitectureLinting(
   const out: IrStructuralFinding[] = [];
   for (const rule of LINT_RULE_REGISTRY) {
     for (const f of rule(g)) {
-      if (!omit.has(f.code)) out.push(f);
+      if (!omit.has(f.code)) out.push(annotateEvidence(g, f));
     }
   }
   return out;
+}
+
+/** Prefix marking a finding whose evidence is heuristic rather than declared. */
+const LOW_CONFIDENCE_PREFIX = 'Possible (low-confidence evidence): ';
+
+/**
+ * Attach the confidence of the evidence a finding rests on, and soften the wording
+ * when that evidence is only a source-code heuristic.
+ *
+ * Applied centrally rather than in each rule so that every current and future rule
+ * inherits it, and so no rule can accidentally overstate its evidence.
+ *
+ * The element cited by the finding is the evidence: an edge when the rule recorded
+ * `edgeIndex` (the edge IS the claim for relational rules), otherwise the node.
+ * Findings on IR with no provenance — authored blueprints, `archrad init` output —
+ * are left exactly as-is: absence of provenance means the architecture was declared,
+ * not inferred, so there is nothing to hedge.
+ *
+ * Severity is deliberately NOT downgraded. Severity feeds `--fail-on` exit policy,
+ * which is a contract consumers configure; silently reclassifying findings would
+ * change CI outcomes without anyone asking. The confidence is exposed as data so
+ * callers can filter or gate on it explicitly.
+ */
+function annotateEvidence(
+  g: ParsedLintGraph,
+  finding: IrStructuralFinding,
+): IrStructuralFinding {
+  const element =
+    finding.edgeIndex !== undefined
+      ? g.edges[finding.edgeIndex]
+      : finding.nodeId !== undefined
+        ? g.nodeById.get(finding.nodeId)
+        : undefined;
+
+  const confidence = evidenceConfidence(element);
+  if (confidence === null) return finding;
+  if (confidence !== 'low') return { ...finding, evidenceConfidence: confidence };
+
+  return {
+    ...finding,
+    evidenceConfidence: confidence,
+    message: `${LOW_CONFIDENCE_PREFIX}${finding.message}`,
+    impact: finding.impact
+      ? `${finding.impact} Confirm against the cited source before acting — this was inferred by source pattern-matching, not read from a declared topology file.`
+      : undefined,
+  };
 }
