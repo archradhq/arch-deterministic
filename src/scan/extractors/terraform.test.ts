@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { scanCodebase } from '../scan.js';
+import { terraformComponentName } from './terraform.js';
 import { refineAwsDbEngine, refineGoogleSqlEngine, relationForTargetType } from './terraform-resource-map.js';
 import { canonicalIrToJsonString } from '../../yamlToIr.js';
 import { validateIrStructural, hasIrStructuralErrors } from '../../ir-structural.js';
@@ -81,5 +82,26 @@ describe('scanCodebase — terraform extractor', () => {
   it('produces structurally valid IR', async () => {
     const result = await scanCodebase({ from: `${FIXTURE_ROOT}terraform-basic` });
     expect(hasIrStructuralErrors(validateIrStructural(result.ir))).toBe(false);
+  });
+});
+
+describe('terraformComponentName', () => {
+  it('keeps a label that actually names the component', () => {
+    expect(terraformComponentName('aws_sqs_queue', 'order_events')).toBe('order_events');
+    expect(terraformComponentName('google_sql_database_instance', 'billing')).toBe('billing');
+  });
+
+  it('falls back to the resource type for placeholder labels', () => {
+    // `resource "aws_sqs_queue" "this"` is the idiomatic form inside a module —
+    // the label says nothing, so naming the node after it yields a component
+    // literally called "this".
+    expect(terraformComponentName('aws_sqs_queue', 'this')).toBe('sqs queue');
+    expect(terraformComponentName('aws_db_instance', 'main')).toBe('db instance');
+    expect(terraformComponentName('google_redis_instance', 'default')).toBe('redis instance');
+    expect(terraformComponentName('azurerm_servicebus_queue', 'THIS')).toBe('servicebus queue');
+  });
+
+  it('leaves an unknown provider prefix intact rather than mangling it', () => {
+    expect(terraformComponentName('acme_widget_thing', 'this')).toBe('acme widget thing');
   });
 });

@@ -60,6 +60,31 @@ function irTypeFor(resourceType: string, body: string): string {
   return base;
 }
 
+/**
+ * Terraform labels that carry no information about the component.
+ *
+ * `resource "aws_sqs_queue" "this"` is the idiomatic form inside a module — the
+ * module IS the thing, so the label is a placeholder. Naming the component after
+ * it produces a node called "this", which makes any module-style repository look
+ * broken on a canvas. `main` and `default` are the same convention.
+ */
+const PLACEHOLDER_LABELS = new Set(['this', 'main', 'default']);
+
+/**
+ * Component name for a Terraform resource: the author's label when it says
+ * something, otherwise the resource type with its provider prefix stripped
+ * (`aws_sqs_queue` → `sqs queue`), which is the most specific real information
+ * the declaration carries.
+ */
+export function terraformComponentName(resourceType: string, localName: string): string {
+  if (!PLACEHOLDER_LABELS.has(localName.trim().toLowerCase())) return localName;
+  const withoutProvider = resourceType.replace(
+    /^(?:aws|google|azurerm|azuread|kubernetes|helm|docker|oci|alicloud|digitalocean)_/,
+    '',
+  );
+  return (withoutProvider || resourceType).replace(/_/g, ' ');
+}
+
 /** Every `<resourceType>.<localName>` reference in `body` that names another collected resource. */
 function referencedResources(body: string, resources: TfResource[], selfId: string): TfResource[] {
   const refs = new Set<string>();
@@ -106,7 +131,12 @@ export const terraformExtractor: Extractor = {
       for (const r of resources) {
         nodes.push(
           withProvenance(
-            { id: r.id, type: r.irType, name: r.localName, config: { terraformResource: r.resourceType } },
+            {
+              id: r.id,
+              type: r.irType,
+              name: terraformComponentName(r.resourceType, r.localName),
+              config: { terraformResource: r.resourceType },
+            },
             provenanceEntry('terraform', file.relPath, r.line, 'medium'),
           ),
         );
