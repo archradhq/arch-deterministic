@@ -7,7 +7,7 @@
     "drift in this corpus means OUR behaviour changed, never that upstream did.",
     "",
     "`expected` lists finding codes with their occurrence count. `notes` records WHY a",
-    "finding is expected — several are known false positives kept deliberately, so that",
+    "finding is expected \u2014 several are known false positives kept deliberately, so that",
     "when one is fixed the harness fails and forces this file to be updated rather than",
     "letting the fix pass unnoticed.",
     "",
@@ -113,7 +113,7 @@
       "name": "microservices-demo",
       "url": "https://github.com/GoogleCloudPlatform/microservices-demo.git",
       "commit": "6bece005bb4460e1ae252ba8f7de5fd3ae2cb62d",
-      "why": "Kubernetes-native polyglot. Tracks the *_SERVICE_ADDR extraction gap — the largest known scan-quality deficit.",
+      "why": "Kubernetes-native polyglot. Tracks the *_SERVICE_ADDR extraction gap \u2014 the largest known scan-quality deficit.",
       "expectedNodes": 19,
       "expected": {
         "IR-LINT-SYNC-CHAIN-001": 1,
@@ -127,8 +127,21 @@
         "resolved-2026-08": "Was 12 isolated nodes, caused by the Kubernetes extractor ignoring *_SERVICE_ADDR wiring. With those edges extracted the graph is the real Online Boutique topology (21 edges), and the counts below were re-adjudicated against it.",
         "IR-LINT-ISOLATED-NODE-005": "TRUE, both of them. opentelemetrycollector is referenced by no env address anywhere in the manifests, and the terraform state bucket is genuinely standalone infrastructure.",
         "IR-LINT-HIGH-FANOUT-004": "TRUE. frontend calls 8 services and checkoutservice calls 6; that is the actual shape of this application and worth surfacing.",
-        "IR-LINT-SYNC-CHAIN-001": "TRUE. ingress → frontend → checkoutservice → leaf is a real 4-hop synchronous chain.",
-        "IR-LINT-DEAD-NODE-011": "Rose from 2 to 6 because the graph is now connected: adservice, emailservice, paymentservice and currencyservice are leaf gRPC services that legitimately terminate. Same known weakness as auth nodes — the rule fires on anything that receives without emitting. Not a regression from this change."
+        "IR-LINT-SYNC-CHAIN-001": "TRUE. ingress \u2192 frontend \u2192 checkoutservice \u2192 leaf is a real 4-hop synchronous chain.",
+        "IR-LINT-DEAD-NODE-011": "Rose from 2 to 6 because the graph is now connected: adservice, emailservice, paymentservice and currencyservice are leaf gRPC services that legitimately terminate. Same known weakness as auth nodes \u2014 the rule fires on anything that receives without emitting. Not a regression from this change."
+      }
+    },
+    {
+      "name": "terraform-aws-eks",
+      "url": "https://github.com/terraform-aws-modules/terraform-aws-eks.git",
+      "commit": "d386adc021dc370efe1bceb7991fbed6e9787c84",
+      "why": "Pure HCL. The only corpus entry exercising the Terraform tier, and a direct guard for the placeholder-label naming fix.",
+      "expectedNodes": 2,
+      "expected": {},
+      "notes": {
+        "clean": "Zero findings, and that is the correct answer: a Terraform module declares infrastructure, not a running system, so there is no topology to lint.",
+        "naming": "The SQS queue is declared as `resource \"aws_sqs_queue\" \"this\"`. It must be named `sqs queue` from the resource type \u2014 a node called `this` means the placeholder-label fallback regressed.",
+        "KNOWN-THIN": "2 nodes from 185 files. The tier reads resources it recognises and ignores the rest, so this is a depth limit rather than a correctness one. A larger node count here is an improvement, not a regression \u2014 re-adjudicate rather than assume."
       }
     }
   ]
