@@ -180,3 +180,62 @@ describe('scanCodebase — kubernetes extractor, service-address env vars', () =
     expect(canonicalIrToJsonString(a.ir)).toBe(canonicalIrToJsonString(b.ir));
   });
 });
+
+describe('scanCodebase — kubernetes extractor, container-arg wiring', () => {
+  const scan = () => scanCodebase({ from: `${FIXTURE_ROOT}k8s-arg-wiring`, extractors: ['kubernetes'] });
+
+  it('links a service named in a `--flag=url` container arg', async () => {
+    const g = graphOf((await scan()).ir);
+    const edge = g.edges.find(
+      (e) => String(e.from).includes('frontend') && String(e.to).includes('backend'),
+    );
+    expect(edge).toBeDefined();
+    expect((edge!.metadata as Record<string, unknown>).relation).toBe('serviceCall');
+  });
+
+  it('links the two-token `--flag` `url` spelling as well', async () => {
+    const g = graphOf((await scan()).ir);
+    const edge = g.edges.find(
+      (e) => String(e.from).includes('backend') && String(e.to).includes('cache'),
+    );
+    expect(edge).toBeDefined();
+    // The target is a cache, so a connection rather than a call.
+    expect((edge!.metadata as Record<string, unknown>).relation).toBe('connectionUrl');
+  });
+
+  it('does not invent a component from an arg naming a host outside the scan', async () => {
+    const g = graphOf((await scan()).ir);
+    expect(g.nodes.map((n) => String(n.id))).not.toContain(
+      expect.stringContaining('not_in_this_scan'),
+    );
+    expect(g.edges.filter((e) => String(e.to).includes('not'))).toHaveLength(0);
+  });
+
+  it('ignores scalar args that carry no URL scheme', async () => {
+    // `--port=9898` and `--level=info` must produce nothing at all.
+    const g = graphOf((await scan()).ir);
+    expect(g.edges).toHaveLength(3);
+  });
+
+  it('leaves no workload isolated in a fully arg-wired fixture', async () => {
+    const g = graphOf((await scan()).ir);
+    const touched = new Set(g.edges.flatMap((e) => [String(e.from), String(e.to)]));
+    for (const n of g.nodes) expect(touched.has(String(n.id))).toBe(true);
+  });
+
+  it('carries high-confidence provenance, and is deterministic', async () => {
+    const a = await scanCodebase({ from: `${FIXTURE_ROOT}k8s-arg-wiring` });
+    const b = await scanCodebase({ from: `${FIXTURE_ROOT}k8s-arg-wiring` });
+    expect(canonicalIrToJsonString(a.ir)).toBe(canonicalIrToJsonString(b.ir));
+    // Only the kubernetes tier: an unfiltered scan also carries low-confidence
+    // edges from the image/manifest tiers, which say nothing about this rule.
+    for (const e of graphOf((await scan()).ir).edges) {
+      expect(elementConfidence(e)).toBe('high');
+      expect(readProvenance(e)[0]!.extractor).toBe('kubernetes');
+    }
+  });
+
+  it('produces structurally valid IR', async () => {
+    expect(hasIrStructuralErrors(validateIrStructural((await scan()).ir))).toBe(false);
+  });
+});

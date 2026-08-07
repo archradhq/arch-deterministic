@@ -40,7 +40,7 @@ type EnvVar = {
     secretKeyRef?: { name?: string; key?: string };
   };
 };
-type PodSpec = { containers?: { image?: string; env?: EnvVar[] }[] };
+type PodSpec = { containers?: { image?: string; env?: EnvVar[]; command?: string[]; args?: string[] }[] };
 type K8sDoc = {
   kind?: string;
   apiVersion?: string;
@@ -139,6 +139,23 @@ function podEnvVars(doc: K8sDoc): Record<string, EnvVar> {
     }
   }
   return env;
+}
+
+/**
+ * Every `command`/`args` token across all containers, with a leading `--flag=`
+ * stripped, so `--backend-url=http://backend:9898/echo` and the two-token form
+ * `--backend-url` `http://backend:9898/echo` both reduce to the bare value.
+ */
+function podArgValues(doc: K8sDoc): string[] {
+  const out: string[] = [];
+  for (const c of podSpecOf(doc)?.containers ?? []) {
+    for (const token of [...(c.command ?? []), ...(c.args ?? [])]) {
+      if (typeof token !== 'string') continue;
+      const eq = token.indexOf('=');
+      out.push(eq === -1 ? token : token.slice(eq + 1));
+    }
+  }
+  return out;
 }
 
 function selectorMatches(selector: Record<string, string> | undefined, labels: Record<string, string>): boolean {
@@ -306,7 +323,11 @@ export const kubernetesExtractor: Extractor = {
       // an explicit port (or an address-shaped key) keeps incidental values like
       // `CACHE_TYPE: redis` from being read as a reference to the redis workload.
       const ADDRESS_SHAPED_KEY = /(_ADDR|_ADDRESS|_ENDPOINT|_SERVICE|_TARGET|_UPSTREAM|_BACKEND)$/i;
-      const linkedTargets = new Set<string>();
+      // Seeded with whatever the two keyed loops above already linked, so the
+      // value-matched rules below cannot restate an edge under a second id.
+      const linkedTargets = new Set<string>(
+        edges.filter((e) => e.from === fromId).map((e) => String(e.to)),
+      );
       for (const [key, ev] of Object.entries(envVars)) {
         if (CONNECTION_KEY_SET.has(key)) continue; // already handled above
         const resolved = resolveEnvValue(ev, configMapData);
@@ -331,6 +352,42 @@ export const kubernetesExtractor: Extractor = {
                 from: fromId,
                 to: toId,
                 metadata: { relation, protocol: 'tcp', async: false, env: key },
+              },
+              prov(loc.file, loc.line),
+            ),
+          );
+        }
+      }
+
+      // ---- Connection edges from container args (`--cache-server=tcp://cache:6379`) ----
+      // Every loop above reads `env`, which misses an entire wiring convention: Go
+      // and Java services in particular take their peers as command-line flags, so
+      // a fleet wired that way extracted as unconnected workloads and was then
+      // reported as disconnected subgraphs — our blind spot stated as the user's
+      // defect, the same failure the *_SERVICE_ADDR gap caused.
+      //
+      // The safety property matches the env rule: the value must carry a URL
+      // SCHEME and its host must resolve to a Service or workload found in this
+      // same scan, so `--level=info` or `--port=9898` can never invent a
+      // component. Requiring the scheme is what makes a flag list unnecessary.
+      for (const raw of podArgValues(w)) {
+        const host = connectionUrlHost(raw);
+        if (!host) continue;
+        for (const toId of resolveHostToIds(host, workloadIdsByServiceName, workloadIdByName)) {
+          if (toId === fromId || linkedTargets.has(toId)) continue;
+          linkedTargets.add(toId);
+          const targetType = String(nodeTypeById.get(toId) ?? '');
+          const relation =
+            isDbLikeType(targetType) || isQueueLikeNodeType(targetType) || targetType === 'cache'
+              ? 'connectionUrl'
+              : 'serviceCall';
+          edges.push(
+            withProvenance(
+              {
+                id: `e_${fromId}_${toId}_arg`,
+                from: fromId,
+                to: toId,
+                metadata: { relation, protocol: 'tcp', async: false },
               },
               prov(loc.file, loc.line),
             ),

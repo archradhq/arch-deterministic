@@ -1,0 +1,80 @@
+# Service-to-service wiring via container ARGS rather than env vars — the
+# convention Go and Java services overwhelmingly use, and one every env-based
+# rule misses. Modelled on stefanprodan/podinfo, which wires its whole topology
+# this way and was therefore extracted as four disconnected workloads.
+#
+# Pins both spellings (`--flag=value` and the two-token `--flag` `value`) and the
+# guards: a value must carry a URL SCHEME and resolve to a workload in this same
+# scan, so `--level=info`, `--port=9898` and an unknown host stay inert.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    app: frontend
+spec:
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - image: ghcr.io/example/app:v1
+          command:
+            - ./app
+            - --port=9898
+            - --level=info
+            - --backend-url=http://backend:9898/echo
+            - --cache-server=tcp://cache:6379
+            - --telemetry-url=http://not-in-this-scan:4317
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  selector:
+    app: backend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - image: ghcr.io/example/app:v1
+          command:
+            - ./app
+          args:
+            - --cache-server
+            - tcp://cache:6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cache
+spec:
+  selector:
+    app: cache
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cache
+  labels:
+    app: cache
+spec:
+  template:
+    metadata:
+      labels:
+        app: cache
+    spec:
+      containers:
+        - image: redis:7-alpine
