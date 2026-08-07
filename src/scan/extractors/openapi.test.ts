@@ -28,9 +28,12 @@ describe('scanCodebase — openapi extractor', () => {
     const result = await scanCodebase({ from: `${FIXTURE_ROOT}openapi-basic` });
     const nodes = nodesOf(result.ir);
 
-    expect(nodes).toHaveLength(3);
+    // 3 operations + the API node that serves them (see extractor: without it
+    // every operation is an isolated node and trips IR-LINT-ISOLATED-NODE-005).
+    expect(nodes).toHaveLength(4);
     for (const n of nodes) {
-      expect(n.type).toBe('http');
+      // Operations are `http`; the one node fronting them is the API itself.
+      expect(n.type).toBe(n.id === 'gateway_orders_api' ? 'gateway' : 'http');
       const prov = readProvenance(n);
       expect(prov[0]!.confidence).toBe('medium');
       expect(prov[0]!.extractor).toBe('openapi');
@@ -41,7 +44,12 @@ describe('scanCodebase — openapi extractor', () => {
   it('preserves the engine route-based ids (no canonical remap)', async () => {
     const result = await scanCodebase({ from: `${FIXTURE_ROOT}openapi-basic` });
     const ids = nodesOf(result.ir).map((n) => n.id).sort();
-    expect(ids).toEqual(['openapi_get_health', 'openapi_get_orders', 'openapi_post_orders']);
+    expect(ids).toEqual([
+      'gateway_orders_api',
+      'openapi_get_health',
+      'openapi_get_orders',
+      'openapi_post_orders',
+    ]);
   });
 
   it('matches the committed golden draft IR byte-for-byte', async () => {
@@ -63,6 +71,6 @@ describe('scanCodebase — openapi extractor', () => {
       extractors: ['openapi'],
     });
     expect(result.extractorsRun).toEqual(['openapi']);
-    expect(nodesOf(result.ir)).toHaveLength(3);
+    expect(nodesOf(result.ir)).toHaveLength(4); // 3 operations + the API node
   });
 });

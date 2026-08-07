@@ -18,6 +18,23 @@
     },
     "nodes": [
       {
+        "id": "gateway_orders_api",
+        "type": "gateway",
+        "name": "orders-api",
+        "config": {
+          "openapi": {
+            "spec": "openapi.yaml"
+          },
+          "provenance": [
+            {
+              "inferred_from": "openapi.yaml:1",
+              "confidence": "medium",
+              "extractor": "openapi"
+            }
+          ]
+        }
+      },
+      {
         "id": "openapi_get_health",
         "type": "http",
         "kind": "http",
@@ -82,6 +99,64 @@
         }
       }
     ],
-    "edges": []
+    "edges": [
+      {
+        "id": "e_gateway_orders_api_openapi_get_health",
+        "from": "gateway_orders_api",
+        "to": "openapi_get_health",
+        "metadata": {
+          "relation": "routes",
+          "protocol": "http",
+          "async": false
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "openapi.yaml:1",
+              "confidence": "medium",
+              "extractor": "openapi"
+            }
+          ]
+        }
+      },
+      {
+        "id": "e_gateway_orders_api_openapi_get_orders",
+        "from": "gateway_orders_api",
+        "to": "openapi_get_orders",
+        "metadata": {
+          "relation": "routes",
+          "protocol": "http",
+          "async": false
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "openapi.yaml:1",
+              "confidence": "medium",
+              "extractor": "openapi"
+            }
+          ]
+        }
+      },
+      {
+        "id": "e_gateway_orders_api_openapi_post_orders",
+        "from": "gateway_orders_api",
+        "to": "openapi_post_orders",
+        "metadata": {
+          "relation": "routes",
+          "protocol": "http",
+          "async": false
+        },
+        "config": {
+          "provenance": [
+            {
+              "inferred_from": "openapi.yaml:1",
+              "confidence": "medium",
+              "extractor": "openapi"
+            }
+          ]
+        }
+      }
+    ]
   }
 }
