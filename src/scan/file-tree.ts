@@ -37,6 +37,34 @@ const EXCLUDED_DIRS = new Set([
   'vendor',
 ]);
 
+/**
+ * Directories holding test material rather than the system being described.
+ *
+ * A repository's fixtures are not its architecture. argo-cd keeps Kubernetes
+ * YAML for its unit tests, and scanning it produced 169 nodes of which 47 —
+ * better than a quarter — were pods and jobs that exist only to be asserted
+ * against: `service_never_ready`, `worker_fail`, deployments named for the
+ * failure mode they reproduce. They crowd out the real components and light up
+ * the lint rules, because a fixture is disconnected by design.
+ *
+ * `testdata` is Go's convention and the worst offender; the rest are the common
+ * equivalents. Deliberately NOT excluded: `examples`, which in most repositories
+ * is a real deployment someone is expected to run.
+ */
+const TEST_DIRS = new Set(['testdata', 'test-data', '__tests__', '__fixtures__', '__mocks__', 'fixtures']);
+
+/**
+ * Whether `name` is a test directory in a position that makes it one.
+ *
+ * `test`/`tests`/`e2e` are only treated as test roots at the top level of the
+ * repository — nested, the name is too common to trust, and a service genuinely
+ * called `tests` deep in a tree should not vanish.
+ */
+function isTestDir(name: string, relDir: string): boolean {
+  if (TEST_DIRS.has(name)) return true;
+  return relDir === '' && (name === 'test' || name === 'tests' || name === 'e2e');
+}
+
 function toPosix(p: string): string {
   return p.replace(/\\/g, '/');
 }
@@ -64,6 +92,10 @@ export function buildScanFileTree(rootDir: string, extraExclude: string[] = []):
       const rel = toPosix(full.slice(root.length).replace(/^[/\\]/, ''));
       if (ent.isDirectory()) {
         if (EXCLUDED_DIRS.has(ent.name.toLowerCase())) continue;
+        // `rel` is the directory itself, so its parent is what decides whether
+        // a bare `test`/`e2e` sits at the repository root.
+        const parentRel = rel.slice(0, Math.max(0, rel.length - ent.name.length - 1));
+        if (isTestDir(ent.name.toLowerCase(), parentRel)) continue;
         walk(full);
       } else if (ent.isFile()) {
         if (extraExclude.some((frag) => frag && rel.includes(frag))) continue;

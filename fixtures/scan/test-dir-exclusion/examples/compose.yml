@@ -1,0 +1,6 @@
+# Deliberately KEPT: examples/ is usually a real deployment someone runs.
+services:
+  example-guestbook:
+    image: example/guestbook:1.0.0
+    ports:
+      - 9003:9003

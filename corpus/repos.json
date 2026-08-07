@@ -132,6 +132,28 @@
       }
     },
     {
+      "name": "argo-cd",
+      "url": "https://github.com/argoproj/argo-cd.git",
+      "commit": "4f07b36fd7c321c2bf932a2c854b7084ad42e989",
+      "why": "Large Go/Kubernetes repo that keeps test fixtures as YAML. The guard for two crashes-and-noise defects: a malformed manifest that aborted the scan, and testdata directories being read as architecture.",
+      "expectedNodes": 122,
+      "expected": {
+        "IR-LINT-HIGH-FANOUT-004": 1,
+        "IR-LINT-NO-HEALTHCHECK-003": 1,
+        "IR-LINT-ISOLATED-NODE-005": 15,
+        "IR-LINT-MULTIPLE-HTTP-ENTRIES-009": 1,
+        "IR-LINT-MISSING-AUTH-010": 2
+      },
+      "notes": {
+        "MALFORMED-YAML-FIXED": "Why this repo was added, part one. resource_customizations/apps.kruise.io/DaemonSet/testdata/no-update-strategy-partition.yaml writes `containers:` as a mapping instead of a list, and iterating it threw a TypeError that aborted the entire scan — one bad file meant no output at all. Any crash here is that regression.",
+        "TESTDATA-EXCLUDED": "Why this repo was added, part two. Before test directories were excluded this scanned to 169 nodes, 47 of which came only from fixture paths — service_never_ready, worker_fail, deployments named for the failure mode they reproduce. A node count near 169, or any node named for a failure mode, means the exclusion regressed.",
+        "IR-LINT-ISOLATED-NODE-005": "15, and all TRUE as stated — these are argo-cd's real components (argocd-server, repo-server, application-controller, applicationset-controller, notifications-controller, commit-server, dex, redis, redis-ha). The wiring genuinely is not in the manifests: every address is a valueFrom.configMapKeyRef into argocd-cmd-params-cm on keys like `repo.server` and `redis.server` (manifests/base/server/argocd-server-deployment.yaml:109), and that ConfigMap (manifests/base/config/argocd-cmd-params-cm.yaml) ships with NO data section — the keys are `optional: true` and the defaults live in Go code. This is a distinct gap from Eureka-style discovery: the env var names are visible, but their values are one indirection away and simply absent.",
+        "IR-LINT-HIGH-FANOUT-004": "TRUE but low value, the known OpenAPI shape. assets/swagger.json is one spec covering the whole API, so its 106 operations hang off a single node. Also the source of that node's odd name: the spec's info.title is literally 'Consolidate Services'.",
+        "IR-LINT-MISSING-AUTH-010": "2, down from 20 once fixtures were excluded. TRUE as stated and still the whole-app-node weakness — argo-cd's auth is real (dex, SSO, RBAC) but lives in Go code and in the dex node, not in the API gateway node's neighbourhood.",
+        "IR-LINT-NO-HEALTHCHECK-003": "TRUE as stated, low value. argo-cd serves /healthz, but from Go code we have no analyser for; the OpenAPI spec does not declare it."
+      }
+    },
+    {
       "name": "petclinic-micro",
       "url": "https://github.com/spring-petclinic/spring-petclinic-microservices.git",
       "commit": "305a1f13e4f961001d4e6cb50a9db51dc3fc5967",

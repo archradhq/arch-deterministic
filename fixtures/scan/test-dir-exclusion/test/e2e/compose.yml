@@ -1,0 +1,6 @@
+# Top-level e2e harness. Excluded.
+services:
+  fixture-e2e-harness:
+    image: example/harness:1.0.0
+    ports:
+      - 9002:9002

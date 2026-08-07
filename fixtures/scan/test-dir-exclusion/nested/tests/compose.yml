@@ -1,0 +1,6 @@
+# Deliberately KEPT: `tests` is only a test root at the repository top level.
+services:
+  nested-tests-service:
+    image: example/nested:1.0.0
+    ports:
+      - 9004:9004

@@ -1,0 +1,6 @@
+# Go convention: fixture asserted against by unit tests. Never architecture.
+services:
+  fixture-never-ready:
+    image: example/fixture:1.0.0
+    ports:
+      - 9001:9001

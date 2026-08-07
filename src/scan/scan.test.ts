@@ -13,6 +13,25 @@ function graphOf(ir: Record<string, unknown>) {
   return g;
 }
 
+describe('scanCodebase — test-material directories', () => {
+  it('skips fixture directories but keeps examples/ and nested tests/', async () => {
+    // argo-cd keeps Kubernetes YAML for its unit tests: 47 of its 169 nodes were
+    // fixtures like `service_never_ready`, disconnected by design and crowding
+    // out the real components.
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}test-dir-exclusion` });
+    const names = graphOf(result.ir).nodes.map((n) => n.name as string);
+
+    expect(names).toContain('api');
+    // testdata/ at any depth, and a top-level test/ tree, are test material.
+    expect(names).not.toContain('fixture-never-ready');
+    expect(names).not.toContain('fixture-e2e-harness');
+    // examples/ is usually a deployment someone is expected to run, and `tests`
+    // is only a test root at the top level — both are kept on purpose.
+    expect(names).toContain('example-guestbook');
+    expect(names).toContain('nested-tests-service');
+  });
+});
+
 describe('scanCodebase — compose extractor', () => {
   it('emits a draft IR with canonical node ids and provenance on every element', async () => {
     const result = await scanCodebase({ from: `${FIXTURE_ROOT}compose-basic` });
