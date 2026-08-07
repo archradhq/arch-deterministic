@@ -882,6 +882,42 @@ app.listen(3000);
     expect(stripeNodes.length).toBe(1);
     expect(googleNodes.length).toBe(1);
   });
+
+  it('ignores loopback destinations and never labels an address by its first octet', async () => {
+    const root = await makeTmp();
+    await writeFiles(root, {
+      'package.json': '{ "name": "immich-ish" }',
+      // immich's e2e config pings the app under test on loopback. That is the
+      // service talking to itself, and it became a component named "127".
+      'e2e/vitest.config.ts': `
+export default { globalSetup: async () => {
+  await fetch('http://127.0.0.1:2285/api/server/ping');
+  await fetch('http://localhost:3001/api/ready');
+} };
+`,
+      'src/metrics.ts': `
+async function push() {
+  return fetch('http://10.20.30.40:9090/api/v1/write', { method: 'POST' });
+}
+`,
+      'src/app.ts': `
+import express from 'express';
+const app = express();
+app.get('/healthz', (_req, res) => res.json({ ok: true }));
+app.listen(3000);
+`,
+    });
+
+    const result = await reconstructIrFromCodebase({ from: root, language: 'nodejs' });
+    const g = result.ir.graph as { nodes: { id: string; type: string; name: string }[] };
+    const names = g.nodes.map((n) => n.name);
+
+    expect(names).not.toContain('127');
+    expect(names).not.toContain('localhost');
+    expect(names).not.toContain('10');
+    // A routable address is still a real dependency — it keeps every octet.
+    expect(names).toContain('10-20-30-40');
+  });
 });
 
 // ---- D5. Monolithic app — negative case (no forced decomposition) ----------

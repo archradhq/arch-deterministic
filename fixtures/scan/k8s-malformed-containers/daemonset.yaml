@@ -1,0 +1,31 @@
+# Real shape, from argo-cd's resource_customizations testdata: the author omitted
+# the list dash, so `containers:` is a mapping rather than a list of containers.
+# Kubernetes would reject this, but it sits in a repository we are asked to scan,
+# and iterating it used to throw and abort the entire scan.
+#
+# Expected: this document contributes nothing, and the valid one below is still
+# extracted.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: rdma-device-plugin
+spec:
+  template:
+    spec:
+      containers:
+          image: 'my-k8s-rdmaplugin'
+          name: k8s-rdma-device-plugin
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: healthy-api
+spec:
+  template:
+    spec:
+      containers:
+        - name: healthy-api
+          image: example/healthy-api:1.0.0
+          env:
+            - name: DATABASE_URL
+              value: postgres://db:5432/app

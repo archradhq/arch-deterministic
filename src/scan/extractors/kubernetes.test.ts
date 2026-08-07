@@ -49,6 +49,24 @@ describe('scanCodebase — kubernetes extractor', () => {
     expect(routeEdge?.to).toBe('service_api');
   });
 
+  it('survives a containers mapping that should have been a list', async () => {
+    // argo-cd ships such a manifest in testdata. Iterating the mapping threw a
+    // TypeError out of the extractor, so one malformed file anywhere in a repo
+    // produced no scan at all.
+    const result = await scanCodebase({
+      from: `${FIXTURE_ROOT}k8s-malformed-containers`,
+      extractors: ['kubernetes'],
+    });
+    const g = graphOf(result.ir);
+
+    // The valid document in the same file is still extracted.
+    expect(g.nodes.map((n) => n.id)).toContain('service_healthy_api');
+    // The malformed workload still becomes a node: it is a real declared
+    // DaemonSet, and only its container list is unreadable. We drop what we
+    // cannot parse, not the component it belongs to.
+    expect(g.nodes.map((n) => n.id)).toContain('service_rdma_device_plugin');
+  });
+
   it('types StatefulSet by image (postgres) and CronJob as worker regardless of image', async () => {
     const result = await scanCodebase({ from: `${FIXTURE_ROOT}k8s-basic`, extractors: ['kubernetes'] });
     const g = graphOf(result.ir);

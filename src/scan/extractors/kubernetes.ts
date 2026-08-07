@@ -128,16 +128,31 @@ function podLabelsOf(doc: K8sDoc): Record<string, string> {
   return doc.spec?.template?.metadata?.labels ?? {};
 }
 
+/**
+ * The containers of a pod spec, but only if the YAML actually gave us a list.
+ *
+ * Hand-written manifests drop the list dash — `containers:` followed directly by
+ * `image:`/`name:` parses as a mapping, and iterating it threw, aborting the
+ * whole scan over one bad file. A scanner reads other people's repositories:
+ * malformed input is normal, and the only safe response is to skip the shape we
+ * cannot read and keep going.
+ */
+function containersOf(doc: K8sDoc): NonNullable<PodSpec['containers']> {
+  const containers = podSpecOf(doc)?.containers;
+  return Array.isArray(containers) ? containers.filter((c) => c && typeof c === 'object') : [];
+}
+
 function primaryImage(doc: K8sDoc): string | undefined {
-  return podSpecOf(doc)?.containers?.[0]?.image;
+  return containersOf(doc)[0]?.image;
 }
 
 /** Every env var across all containers, flattened (later containers win on key collision). Raw — value or valueFrom. */
 function podEnvVars(doc: K8sDoc): Record<string, EnvVar> {
   const env: Record<string, EnvVar> = {};
-  for (const c of podSpecOf(doc)?.containers ?? []) {
-    for (const e of c.env ?? []) {
-      if (typeof e.name === 'string') env[e.name] = e;
+  for (const c of containersOf(doc)) {
+    if (!Array.isArray(c.env)) continue;
+    for (const e of c.env) {
+      if (e && typeof e.name === 'string') env[e.name] = e;
     }
   }
   return env;
@@ -150,8 +165,10 @@ function podEnvVars(doc: K8sDoc): Record<string, EnvVar> {
  */
 function podArgValues(doc: K8sDoc): string[] {
   const out: string[] = [];
-  for (const c of podSpecOf(doc)?.containers ?? []) {
-    for (const token of [...(c.command ?? []), ...(c.args ?? [])]) {
+  for (const c of containersOf(doc)) {
+    const command = Array.isArray(c.command) ? c.command : [];
+    const args = Array.isArray(c.args) ? c.args : [];
+    for (const token of [...command, ...args]) {
       if (typeof token !== 'string') continue;
       const eq = token.indexOf('=');
       out.push(eq === -1 ? token : token.slice(eq + 1));

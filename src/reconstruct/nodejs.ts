@@ -35,8 +35,33 @@ function hostnameFromUrl(url: string): string {
   }
 }
 
+/**
+ * Whether a hostname points back at the machine making the call.
+ *
+ * A loopback URL is not an external dependency — it is the service talking to
+ * itself, or a test harness talking to the thing under test. immich's
+ * `e2e/vitest.config.ts` pings `http://127.0.0.1:2285/...`, which used to become
+ * a component the app depended on.
+ */
+function isLoopbackHost(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  return (
+    h === 'localhost' ||
+    h.endsWith('.localhost') ||
+    h === '::1' ||
+    h === '0.0.0.0' ||
+    /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h)
+  );
+}
+
+/** IPv4 literal — "10.0.0.5" is an address, not a dotted domain name. */
+const IPV4_RE = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+
 /** Convert a hostname like "api.stripe.com" to a short service label "stripe". */
 function labelFromHostname(hostname: string): string {
+  // An address has no domain structure to strip: splitting "10.0.0.5" on "." and
+  // keeping the first part labels it "10". Keep every octet instead.
+  if (IPV4_RE.test(hostname)) return hostname.replace(/\./g, '-');
   // Strip www. / api. / auth. prefixes
   const stripped = hostname.replace(/^(?:www|api|auth|cdn|static|assets|s3|storage)\./i, '');
   // Take first two parts: "stripe.com" → "stripe", "auth0.com" → "auth0"
@@ -440,6 +465,7 @@ export function analyzeNodejsFile(file: ScannedFile): DetectedArtifact[] {
     const url = m[1];
     if (!url) continue;
     const hostname = hostnameFromUrl(url);
+    if (isLoopbackHost(hostname)) continue;
     const label = labelFromHostname(hostname);
     if (seenDestinations.has(label)) continue;
     seenDestinations.add(label);
