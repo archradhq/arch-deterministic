@@ -192,6 +192,20 @@ describe('scanCodebase — manifest extractor, pom.xml (maven)', () => {
     expect(component.name).not.toBe('spring-boot-starter-parent');
   });
 
+  it('never names a component after a <repository>, which also carries a <name>', async () => {
+    // Found by scanning spring-petclinic-microservices: its genai module declares
+    // no <name> of its own, so the first <name> in the file — "Spring Milestones",
+    // an artifact repository — became a component, complete with a driver edge.
+    const result = await scanCodebase({
+      from: `${FIXTURE_ROOT}manifest-maven-repos`,
+      extractors: ['manifest'],
+    });
+    const names = graphOf(result.ir).nodes.map((n) => n.name);
+    expect(names).not.toContain('Spring Milestones');
+    expect(names).not.toContain('Spring Snapshots');
+    expect(names).toContain('spring-petclinic-genai-service');
+  });
+
   it('matches the committed golden byte-for-byte and is deterministic', async () => {
     const a = await scanCodebase({ from: `${FIXTURE_ROOT}manifest-maven` });
     const b = await scanCodebase({ from: `${FIXTURE_ROOT}manifest-maven` });

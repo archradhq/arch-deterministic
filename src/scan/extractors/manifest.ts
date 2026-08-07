@@ -144,14 +144,26 @@ function mavenHits(text: string): Hit[] {
  * and it is what deployment resources are conventionally named after, so it
  * aligns with the compose/Kubernetes tiers' view of the same component. Falls
  * back to the project's own `<artifactId>`, which is always present.
+ *
+ * Both lookups are confined to the project's own header, before `<dependencies>`
+ * and with artifact-repository blocks removed. `<repository>` carries a `<name>`
+ * too — `<name>Spring Milestones</name>` is where Maven fetches jars from, not a
+ * component — and a pom with no `<name>` of its own would otherwise be named
+ * after it.
  */
 function mavenComponentName(text: string): string | null {
-  const withoutParent = text.replace(/<parent>[\s\S]*?<\/parent>/g, '');
-  const displayName = withoutParent.match(/<name>([^<]+)<\/name>/)?.[1]?.trim();
+  const header =
+    text
+      // Comments first: a pom that merely MENTIONS <repositories> in a comment
+      // would otherwise have everything up to the real closing tag stripped.
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/<parent>[\s\S]*?<\/parent>/g, '')
+      .replace(/<pluginRepositories>[\s\S]*?<\/pluginRepositories>/g, '')
+      .replace(/<repositories>[\s\S]*?<\/repositories>/g, '')
+      .split(/<dependencies>/)[0] ?? '';
+  const displayName = header.match(/<name>([^<]+)<\/name>/)?.[1]?.trim();
   if (displayName && !displayName.includes('${')) return displayName;
-  // Stop before <dependencies> so a dependency's artifactId can never win.
-  const beforeDeps = withoutParent.split(/<dependencies>/)[0] ?? withoutParent;
-  return beforeDeps.match(/<artifactId>([^<]+)<\/artifactId>/)?.[1]?.trim() || null;
+  return header.match(/<artifactId>([^<]+)<\/artifactId>/)?.[1]?.trim() || null;
 }
 
 /** Derive a component name for a manifest that has no explicit name field. */

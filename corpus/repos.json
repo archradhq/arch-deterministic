@@ -132,6 +132,27 @@
       }
     },
     {
+      "name": "petclinic-micro",
+      "url": "https://github.com/spring-petclinic/spring-petclinic-microservices.git",
+      "commit": "305a1f13e4f961001d4e6cb50a9db51dc3fc5967",
+      "why": "Multi-module Maven + compose, wired through Spring Cloud Config and Eureka. The corpus entry for the service-discovery gap, and the guard for naming a component from an artifact-repository <name>.",
+      "expectedNodes": 16,
+      "expected": {
+        "IR-LINT-NO-HEALTHCHECK-003": 1,
+        "IR-LINT-ISOLATED-NODE-005": 3,
+        "IR-LINT-MULTIPLE-HTTP-ENTRIES-009": 1,
+        "IR-LINT-MISSING-AUTH-010": 9
+      },
+      "notes": {
+        "REPOSITORY-NAME-FIXED": "Why this repo was added. spring-petclinic-genai-service/pom.xml declares no project <name>, and its <repositories> block at :148 does — so 'Spring Milestones', a Maven artifact repository, became a component AND drew a driver edge to mysql. A node by that name here means the fix regressed. Same class as the <parent> bug: the name must come from the project's own header.",
+        "IR-LINT-ISOLATED-NODE-005": "3, all TRUE as stated. grafana-server and prometheus-server build from ./docker/* and have no depends_on; tracing-server (zipkin) likewise. Services really do report to zipkin, but only via config served by config-server at runtime — nothing in the compose file declares it, so the honest answer is that we cannot see it.",
+        "service-discovery": "The documented gap, visible here in its mildest form. depends_on gives us every service -> config-server / discovery-server edge, so the graph is connected — but the service-to-service calls that Eureka resolves at runtime (api-gateway -> customers/vets/visits) are absent, and nothing in the manifests could tell us about them. The 9 MULTIPLE-HTTP-ENTRIES are that absence showing through.",
+        "IR-LINT-MISSING-AUTH-010": "9, the whole-app-node weakness. Every compose service is one node standing in for a Spring Boot application, so the rule asserts against components whose auth we cannot see.",
+        "IR-LINT-NO-HEALTHCHECK-003": "TRUE as stated, low value. The compose healthchecks probe `/` (docker-compose.yml:10, :25), not a health path, and Spring Boot's /actuator/health lives in Java code we have no analyser for.",
+        "cross-tier": "Compose `customers-service` and Maven `spring-petclinic-customers-service` stay separate nodes. Adjudicated as acceptable rather than correct: the two tiers genuinely disagree on the name, and guessing they are the same component is exactly the kind of inference this scanner is supposed to refuse. It is why the node count is 16 rather than ~12."
+      }
+    },
+    {
       "name": "podinfo",
       "url": "https://github.com/stefanprodan/podinfo.git",
       "commit": "eec06d1ea459af4cb4e10e806f8be7c7bd58b361",
