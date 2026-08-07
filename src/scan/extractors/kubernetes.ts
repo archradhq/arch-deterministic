@@ -22,6 +22,8 @@ import {
   inferTypeFromImage,
   connectionUrlHost,
   composePlainEnvHostname,
+  addressEnvHost,
+  ADDRESS_SHAPED_KEY,
   CONNECTION_ENV_KEYS,
   HOST_ONLY_ENV_KEYS,
 } from '../../init/docker-compose.js';
@@ -322,7 +324,6 @@ export const kubernetesExtractor: Extractor = {
       // unrecognised value can never invent a component. The extra requirement of
       // an explicit port (or an address-shaped key) keeps incidental values like
       // `CACHE_TYPE: redis` from being read as a reference to the redis workload.
-      const ADDRESS_SHAPED_KEY = /(_ADDR|_ADDRESS|_ENDPOINT|_SERVICE|_TARGET|_UPSTREAM|_BACKEND)$/i;
       // Seeded with whatever the two keyed loops above already linked, so the
       // value-matched rules below cannot restate an edge under a second id.
       const linkedTargets = new Set<string>(
@@ -332,9 +333,10 @@ export const kubernetesExtractor: Extractor = {
         if (CONNECTION_KEY_SET.has(key)) continue; // already handled above
         const resolved = resolveEnvValue(ev, configMapData);
         if (!resolved) continue;
-        const hasExplicitPort = /^[^\s/\\]+:\d{1,5}$/.test(resolved.trim());
+        const hasExplicitPort = /:\d{1,5}(?:$|\/)/.test(resolved.trim());
         if (!hasExplicitPort && !ADDRESS_SHAPED_KEY.test(key)) continue;
-        const host = composePlainEnvHostname(resolved);
+        // Shared with the compose tier: reads `svc:7070` AND `http://svc:4317`.
+        const host = addressEnvHost(resolved);
         if (!host) continue;
         for (const toId of resolveHostToIds(host, workloadIdsByServiceName, workloadIdByName)) {
           if (toId === fromId || linkedTargets.has(toId)) continue;

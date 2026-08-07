@@ -414,6 +414,53 @@ export function connectionUrlHost(raw: string): string | null {
   return null;
 }
 
+/**
+ * Every `command`/`entrypoint` token of a compose service, with a leading
+ * `--flag=` stripped so both spellings reduce to the bare value. Compose accepts
+ * either a shell string or an argv list for each.
+ */
+export function composeArgTokens(serviceDef: Record<string, unknown>): string[] {
+  const out: string[] = [];
+  for (const field of ['command', 'entrypoint'] as const) {
+    const raw = serviceDef[field];
+    const tokens = Array.isArray(raw)
+      ? raw.map((t) => String(t))
+      : typeof raw === 'string'
+        ? raw.split(/\s+/)
+        : [];
+    for (const token of tokens) {
+      const eq = token.indexOf('=');
+      out.push(eq === -1 ? token : token.slice(eq + 1));
+    }
+  }
+  return out;
+}
+
+/**
+ * Env keys whose NAME alone marks the value as an address, for the generic
+ * service-to-service rules. Deliberately excludes `_URL`: it is the most common
+ * env suffix there is and carries no promise of naming a peer, so it is admitted
+ * only when the value itself has an explicit port.
+ */
+export const ADDRESS_SHAPED_KEY = /(_ADDR|_ADDRESS|_ENDPOINT|_SERVICE|_TARGET|_UPSTREAM|_BACKEND)$/i;
+
+/**
+ * Hostname from an address-shaped value in either spelling: a bare `host:port`
+ * pair (`cartservice:7070`) or a full URL (`http://otel:4317`, `tcp://cache:6379`).
+ *
+ * {@link composePlainEnvHostname} handles only the first and returns null for
+ * anything with a scheme — correct for the datastore-key rules it was written
+ * for, but it silently dropped every URL-valued peer address, which is how
+ * `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel:4317` reached neither tier.
+ */
+export function addressEnvHost(raw: string): string | null {
+  const plain = composePlainEnvHostname(raw);
+  if (plain) return plain;
+  const url = connectionUrlHost(raw);
+  if (!url) return null;
+  return /^(localhost|127\.0\.0\.1|0\.0\.0\.0|::1)$/i.test(url) ? null : url;
+}
+
 export const CONNECTION_ENV_KEYS = [
   'DATABASE_URL',
   'POSTGRES_URL',
@@ -764,6 +811,50 @@ export function dockerComposeToCanonicalIr(
       }
       if (!targetId) continue;
       pushEdge(id, targetId, `${key}`);
+    }
+
+    // ---- Generic service-to-service wiring, by VALUE rather than key name ----
+    // The two loops above match a fixed list of datastore keys, which covers
+    // `DATABASE_URL`→db but not the way services name each other: arbitrary keys
+    // (`OTEL_EXPORTER_OTLP_ENDPOINT`) and command-line flags (`--backend-url`).
+    // Compose files wired that way extracted as unconnected services and were
+    // then reported as disconnected subgraphs — the same blind spot the
+    // Kubernetes tier already closed, stated as the user's defect.
+    //
+    // Safety property, identical to that tier: an edge is emitted only when the
+    // host resolves to a service declared in THIS compose file, so an
+    // unrecognised value can never invent a component. Address-shaped values
+    // that name something external simply produce nothing.
+    const resolveComposeHost = (host: string): string | undefined => {
+      for (const [sn, sid] of idByServiceName) {
+        if (host === sn.toLowerCase() || host === sid.toLowerCase()) return sid;
+      }
+      return undefined;
+    };
+
+    for (const [key, val] of Object.entries(env)) {
+      if (CONNECTION_ENV_KEYS.includes(key as never) || HOST_ONLY_ENV_KEYS.includes(key as never)) continue;
+      if (!val) continue;
+      // An explicit port, or a key that says "this is an address" — otherwise an
+      // incidental value like `CACHE_TYPE: redis` would read as a reference.
+      const hasExplicitPort = /:\d{1,5}(?:$|\/)/.test(val.trim());
+      if (!hasExplicitPort && !ADDRESS_SHAPED_KEY.test(key)) continue;
+      const host = addressEnvHost(val);
+      if (!host) continue;
+      const targetId = resolveComposeHost(host);
+      if (!targetId || targetId === id) continue;
+      pushEdge(id, targetId, `${key}`);
+    }
+
+    // `command:`/`entrypoint:` flags, in either the `--flag=value` or two-token
+    // spelling. A URL scheme is required here, which is what makes a flag-name
+    // list unnecessary: `--port 9899` and `--level=info` carry none.
+    for (const raw of composeArgTokens(serviceDef)) {
+      const host = connectionUrlHost(raw);
+      if (!host || /^(localhost|127\.0\.0\.1|0\.0\.0\.0|::1)$/i.test(host)) continue;
+      const targetId = resolveComposeHost(host);
+      if (!targetId || targetId === id) continue;
+      pushEdge(id, targetId, 'command');
     }
 
     const deps = normalizeDependsOn(serviceDef.depends_on);

@@ -6,6 +6,8 @@ import {
   composeDependsOnDefaultServiceKey,
   composeHealthcheckToLintHints,
   composePlainEnvHostname,
+  addressEnvHost,
+  composeArgTokens,
   connectionUrlHost,
   enumerateTraefikHttpBackendRefs,
   dockerComposeToCanonicalIr,
@@ -159,6 +161,105 @@ describe('enumerateTraefikHttpBackendRefs', () => {
       'traefik.http.routers.web.service': 'api_svc',
     });
     expect([...s].sort()).toEqual(['api_svc']);
+  });
+});
+
+describe('addressEnvHost', () => {
+  it('reads a bare host:port pair, as composePlainEnvHostname already did', () => {
+    expect(addressEnvHost('cartservice:7070')).toBe('cartservice');
+  });
+
+  it('reads a URL value, which composePlainEnvHostname rejects outright', () => {
+    // The gap that hid OTEL_EXPORTER_OTLP_ENDPOINT from both tiers.
+    expect(composePlainEnvHostname('http://otel:4317')).toBeNull();
+    expect(addressEnvHost('http://otel:4317')).toBe('otel');
+    expect(addressEnvHost('tcp://cache:6379')).toBe('cache');
+  });
+
+  it('never resolves loopback, in either spelling', () => {
+    expect(addressEnvHost('http://localhost:4317')).toBeNull();
+    expect(addressEnvHost('127.0.0.1:5432')).toBeNull();
+  });
+
+  it('returns null only for values that cannot name a host', () => {
+    expect(addressEnvHost('')).toBeNull();
+    expect(addressEnvHost('${_PGHOST}')).toBeNull();
+    expect(addressEnvHost('/var/run/app.sock')).toBeNull();
+    // A BARE word is a legitimate compose DNS name, so it resolves here by
+    // design. Nothing is admitted on that alone: the callers additionally
+    // require an explicit port or an address-shaped key, and then require the
+    // host to match a service declared in the same file.
+    expect(addressEnvHost('info')).toBe('info');
+  });
+});
+
+describe('composeArgTokens', () => {
+  it('strips a leading --flag= and keeps bare tokens, for list and string forms', () => {
+    expect(composeArgTokens({ command: ['./app', '--backend-url=http://backend:9899'] })).toContain(
+      'http://backend:9899',
+    );
+    expect(composeArgTokens({ command: './app --backend-url http://backend:9899' })).toContain(
+      'http://backend:9899',
+    );
+  });
+
+  it('reads entrypoint as well as command, and nothing when neither is set', () => {
+    expect(composeArgTokens({ entrypoint: ['tcp://cache:6379'] })).toContain('tcp://cache:6379');
+    expect(composeArgTokens({ image: 'nginx' })).toEqual([]);
+  });
+});
+
+describe('dockerComposeToCanonicalIr — generic service-to-service wiring', () => {
+  const YAML = `
+services:
+  frontend:
+    build: .
+    command: ./app --port 9898 --level=info --backend-url http://backend:9899/status/200
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel:4317
+      - CACHE_TYPE=redis
+      - EXTERNAL_ENDPOINT=http://not-in-this-file:8080
+  backend:
+    build: .
+    command: ./app --port 9899
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel:4317
+  otel:
+    image: otel/opentelemetry-collector-contrib:0.116.1
+  redis:
+    image: redis:7-alpine
+`;
+  const edgesOf = () => {
+    const { ir } = dockerComposeToCanonicalIr(YAML);
+    return (ir.graph as { edges: { from: string; to: string; metadata?: Record<string, unknown> }[] }).edges;
+  };
+
+  it('links an arbitrarily-keyed env var whose value names a service in this file', () => {
+    const edges = edgesOf();
+    expect(edges.some((e) => e.from.includes('frontend') && e.to.includes('otel'))).toBe(true);
+    expect(edges.some((e) => e.from.includes('backend') && e.to.includes('otel'))).toBe(true);
+  });
+
+  it('links a peer named in a command flag', () => {
+    expect(edgesOf().some((e) => e.from.includes('frontend') && e.to.includes('backend'))).toBe(true);
+  });
+
+  it('does not read an incidental value that happens to name a service', () => {
+    // `CACHE_TYPE=redis` names the redis service but has no port and no
+    // address-shaped key, so it must not become an edge.
+    expect(edgesOf().some((e) => e.to.includes('redis'))).toBe(false);
+  });
+
+  it('invents nothing from an address pointing outside this file', () => {
+    const { ir } = dockerComposeToCanonicalIr(YAML);
+    const nodes = (ir.graph as { nodes: { id: string }[] }).nodes;
+    expect(nodes.map((n) => n.id).join(' ')).not.toContain('not_in_this_file');
+    expect(nodes).toHaveLength(4);
+  });
+
+  it('produces structurally valid IR', () => {
+    const { ir } = dockerComposeToCanonicalIr(YAML);
+    expect(hasIrStructuralErrors(validateIrStructural(ir))).toBe(false);
   });
 });
 
