@@ -25,6 +25,7 @@ import {
   CONNECTION_ENV_KEYS,
   HOST_ONLY_ENV_KEYS,
 } from '../../init/docker-compose.js';
+import { isDbLikeType, isQueueLikeNodeType } from '../../graphPredicates.js';
 
 const JSON_SCHEMA = yaml.JSON_SCHEMA;
 
@@ -224,6 +225,12 @@ export const kubernetesExtractor: Extractor = {
       nodes.push(withProvenance({ id, type: nodeType, name, config: { k8sKind: w.kind } }, prov(file, line)));
     }
 
+    /** Node type by id, for choosing an edge relation that matches what the target is. */
+    const nodeTypeById = new Map<string, string>();
+    for (const n of nodes) {
+      if (typeof n.id === 'string') nodeTypeById.set(n.id, typeof n.type === 'string' ? n.type : '');
+    }
+
     // ---- Pass 3: Service -> workload(s) alias, across the whole scan ----
     const workloadIdsByServiceName = new Map<string, string[]>();
     for (const { doc: s } of services) {
@@ -286,6 +293,51 @@ export const kubernetesExtractor: Extractor = {
           );
         }
       }
+      // ---- Service-address env vars (`CART_SERVICE_ADDR: cartservice:7070`) ----
+      // The loops above match on a fixed KEY list, which covers datastores but not
+      // the service-to-service convention every k8s microservice fleet uses: each
+      // caller names its callees in arbitrarily-keyed env vars. Missing them left
+      // whole fleets extracted as unconnected workloads, then reported as
+      // "disconnected subgraph" — our gap described as the user's defect.
+      //
+      // Matched by VALUE, not key name: an edge is emitted only when the host
+      // resolves to a Service or workload found in this same scan, so an
+      // unrecognised value can never invent a component. The extra requirement of
+      // an explicit port (or an address-shaped key) keeps incidental values like
+      // `CACHE_TYPE: redis` from being read as a reference to the redis workload.
+      const ADDRESS_SHAPED_KEY = /(_ADDR|_ADDRESS|_ENDPOINT|_SERVICE|_TARGET|_UPSTREAM|_BACKEND)$/i;
+      const linkedTargets = new Set<string>();
+      for (const [key, ev] of Object.entries(envVars)) {
+        if (CONNECTION_KEY_SET.has(key)) continue; // already handled above
+        const resolved = resolveEnvValue(ev, configMapData);
+        if (!resolved) continue;
+        const hasExplicitPort = /^[^\s/\\]+:\d{1,5}$/.test(resolved.trim());
+        if (!hasExplicitPort && !ADDRESS_SHAPED_KEY.test(key)) continue;
+        const host = composePlainEnvHostname(resolved);
+        if (!host) continue;
+        for (const toId of resolveHostToIds(host, workloadIdsByServiceName, workloadIdByName)) {
+          if (toId === fromId || linkedTargets.has(toId)) continue;
+          linkedTargets.add(toId);
+          const targetType = String(nodeTypeById.get(toId) ?? '');
+          // A datastore reached this way is still a connection; anything else is a call.
+          const relation =
+            isDbLikeType(targetType) || isQueueLikeNodeType(targetType) || targetType === 'cache'
+              ? 'connectionUrl'
+              : 'serviceCall';
+          edges.push(
+            withProvenance(
+              {
+                id: `e_${fromId}_${toId}_${key}`,
+                from: fromId,
+                to: toId,
+                metadata: { relation, protocol: 'tcp', async: false, env: key },
+              },
+              prov(loc.file, loc.line),
+            ),
+          );
+        }
+      }
+
       // Any other connection-shaped key wired through a Secret is worth flagging too,
       // even outside the known key list — same honesty rationale, lower specificity.
       for (const [key, ev] of Object.entries(envVars)) {

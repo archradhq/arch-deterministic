@@ -135,3 +135,48 @@ describe('scanCodebase — kubernetes extractor, resolution across files', () =>
     expect(hasIrStructuralErrors(validateIrStructural(result.ir))).toBe(false);
   });
 });
+
+describe('scanCodebase — kubernetes extractor, service-address env vars', () => {
+  it('links services wired by *_SERVICE_ADDR host:port env values', async () => {
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}k8s-service-addr`, extractors: ['kubernetes'] });
+    const g = graphOf(result.ir);
+    const edge = g.edges.find(
+      (e) => String(e.from).includes('frontend') && String(e.to).includes('cartservice'),
+    );
+    expect(edge).toBeDefined();
+    // App-to-app, so a call rather than a datastore connection.
+    expect((edge!.metadata as Record<string, unknown>).relation).toBe('serviceCall');
+  });
+
+  it('names the relation from what the target actually is', async () => {
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}k8s-service-addr`, extractors: ['kubernetes'] });
+    const g = graphOf(result.ir);
+    const toCache = g.edges.find((e) => String(e.to).includes('redis'));
+    expect(toCache).toBeDefined();
+    expect((toCache!.metadata as Record<string, unknown>).relation).toBe('connectionUrl');
+  });
+
+  it('does not invent an edge from an incidental value that happens to name a workload', async () => {
+    // `CACHE_TYPE: redis` names the redis workload but carries no port and no
+    // address-shaped key, so it must not be read as a reference to it.
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}k8s-service-addr`, extractors: ['kubernetes'] });
+    const g = graphOf(result.ir);
+    const fromFrontendToRedis = g.edges.filter(
+      (e) => String(e.from).includes('frontend') && String(e.to).includes('redis'),
+    );
+    expect(fromFrontendToRedis).toHaveLength(0);
+  });
+
+  it('leaves the graph connected — no isolated workloads in a fully wired fixture', async () => {
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}k8s-service-addr`, extractors: ['kubernetes'] });
+    const g = graphOf(result.ir);
+    const touched = new Set(g.edges.flatMap((e) => [String(e.from), String(e.to)]));
+    for (const n of g.nodes) expect(touched.has(String(n.id))).toBe(true);
+  });
+
+  it('is deterministic', async () => {
+    const a = await scanCodebase({ from: `${FIXTURE_ROOT}k8s-service-addr` });
+    const b = await scanCodebase({ from: `${FIXTURE_ROOT}k8s-service-addr` });
+    expect(canonicalIrToJsonString(a.ir)).toBe(canonicalIrToJsonString(b.ir));
+  });
+});

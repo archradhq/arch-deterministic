@@ -454,6 +454,14 @@ export function composePlainEnvHostname(val: string): string | null {
   const raw = val.trim().replace(/^['"]|['"]$/g, '');
   if (!raw) return null;
   if (/[\s$`]|^#|%\{|%\(/.test(raw)) return null;
+  // A bare `host:port` is checked BEFORE the URL-scheme guard below, because a
+  // service is routinely named after the engine it runs: `redis:6379` and
+  // `mysql:3306` are host/port pairs, not `redis://` URLs, and the scheme guard
+  // alone would discard exactly the values a DNS-named cluster produces.
+  if (/^[a-zA-Z0-9][a-zA-Z0-9._-]*:\d{1,5}$/.test(raw)) {
+    const host = raw.slice(0, raw.lastIndexOf(':')).toLowerCase();
+    return /^(localhost|127\.0\.0\.1|0\.0\.0\.0|::1)$/i.test(host) ? null : host;
+  }
   if (/^(https?:|jdbc:|postgres(?:ql)?:|mysql:|mongodb(?:\+srv)?:|redis:|amqp|amqps:)/i.test(raw)) return null;
   if (raw.includes('/') || raw.includes('\\')) return null;
 

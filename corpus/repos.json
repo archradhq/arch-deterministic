@@ -116,13 +116,19 @@
       "why": "Kubernetes-native polyglot. Tracks the *_SERVICE_ADDR extraction gap — the largest known scan-quality deficit.",
       "expectedNodes": 19,
       "expected": {
+        "IR-LINT-SYNC-CHAIN-001": 1,
         "IR-LINT-NO-HEALTHCHECK-003": 1,
-        "IR-LINT-ISOLATED-NODE-005": 12,
+        "IR-LINT-HIGH-FANOUT-004": 2,
+        "IR-LINT-ISOLATED-NODE-005": 2,
         "IR-LINT-MISSING-AUTH-010": 1,
-        "IR-LINT-DEAD-NODE-011": 2
+        "IR-LINT-DEAD-NODE-011": 6
       },
       "notes": {
-        "KNOWN-GAP": "The 12 isolated nodes are OUR gap, not their architecture. frontend.yaml wires siblings via CART_SERVICE_ADDR / PRODUCT_CATALOG_SERVICE_ADDR and similar host:port env values that the Kubernetes extractor does not turn into edges. When that is fixed this count should collapse toward 0 — the harness failing here is the intended signal."
+        "resolved-2026-08": "Was 12 isolated nodes, caused by the Kubernetes extractor ignoring *_SERVICE_ADDR wiring. With those edges extracted the graph is the real Online Boutique topology (21 edges), and the counts below were re-adjudicated against it.",
+        "IR-LINT-ISOLATED-NODE-005": "TRUE, both of them. opentelemetrycollector is referenced by no env address anywhere in the manifests, and the terraform state bucket is genuinely standalone infrastructure.",
+        "IR-LINT-HIGH-FANOUT-004": "TRUE. frontend calls 8 services and checkoutservice calls 6; that is the actual shape of this application and worth surfacing.",
+        "IR-LINT-SYNC-CHAIN-001": "TRUE. ingress → frontend → checkoutservice → leaf is a real 4-hop synchronous chain.",
+        "IR-LINT-DEAD-NODE-011": "Rose from 2 to 6 because the graph is now connected: adservice, emailservice, paymentservice and currencyservice are leaf gRPC services that legitimately terminate. Same known weakness as auth nodes — the rule fires on anything that receives without emitting. Not a regression from this change."
       }
     }
   ]

@@ -1,0 +1,76 @@
+# Service-to-service wiring via address env vars — the convention every k8s
+# microservice fleet uses, and one the fixed CONNECTION_ENV_KEYS list cannot cover
+# because each caller names its callees arbitrarily.
+#
+# Also pins the guards: `CACHE_TYPE: redis` names a real workload here but has no
+# port and no address-shaped key, so it must NOT become an edge.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    app: frontend
+spec:
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - image: gcr.io/example/frontend:v1
+          env:
+            - name: CART_SERVICE_ADDR
+              value: "cartservice:7070"
+            - name: LOG_LEVEL
+              value: "debug"
+            - name: CACHE_TYPE
+              value: "redis"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cartservice
+spec:
+  selector:
+    app: cartservice
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cartservice
+  labels:
+    app: cartservice
+spec:
+  template:
+    metadata:
+      labels:
+        app: cartservice
+    spec:
+      containers:
+        - image: gcr.io/example/cartservice:v1
+          env:
+            - name: REDIS_ADDR
+              value: "redis:6379"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  selector:
+    app: redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  labels:
+    app: redis
+spec:
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - image: redis:7-alpine
