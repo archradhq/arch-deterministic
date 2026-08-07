@@ -132,6 +132,27 @@
       }
     },
     {
+      "name": "podinfo",
+      "url": "https://github.com/stefanprodan/podinfo.git",
+      "commit": "eec06d1ea459af4cb4e10e806f8be7c7bd58b361",
+      "why": "Go + Kubernetes + compose + a committed OpenAPI spec. The first corpus entry where services are wired through CONTAINER ARGS rather than env vars, and the first to exercise CronJob workloads and the OpenAPI API-node fan-out.",
+      "expectedNodes": 43,
+      "expected": {
+        "IR-LINT-HIGH-FANOUT-004": 1,
+        "IR-LINT-ISOLATED-NODE-005": 14,
+        "IR-LINT-MULTIPLE-HTTP-ENTRIES-009": 1,
+        "IR-LINT-MISSING-AUTH-010": 7
+      },
+      "notes": {
+        "ARGS-WIRING-GAP": "The dominant defect this repo exposes, and the reason to keep it. podinfo wires every service through container `command:` args, never env: deploy/bases/frontend/deployment.yaml:44 `--backend-url=http://backend:9898/echo` and :45 `--cache-server=tcp://cache:6379`, deploy/bases/backend/deployment.yaml:45 `--cache-server=tcp://cache:6379`, repeated in deploy/webapp/frontend/deployment.yaml:45 and deploy/secure/. The Kubernetes extractor reads only `env`, so none of these become edges. Fixing that should connect frontend->backend, frontend->cache and backend->cache, dropping ISOLATED-NODE by at least 2 — an improvement, not a regression.",
+        "IR-LINT-ISOLATED-NODE-005": "14, of which only 5 are TRUE. TRUE: database-primary and database-replica (nothing anywhere in the repo declares a connection to either — they are a demo topology with no client), and backup-daily / rollup-daily / rollup-weekly (their containers run a mounted shell script and carry only scalar env like BACKUP_EXIT=1, so there is genuinely no address to read). FALSE POSITIVES, by cause: (a) args-wiring gap above — service_backend, service_frontend, gateway_podinfo_frontend, gateway_podinfo_backend; (b) compose has no generic address-env rule — gateway_otel is named by OTEL_EXPORTER_OTLP_ENDPOINT=http://otel:4317 at otel/docker-compose.yaml:8 and :15, a key the Kubernetes ADDRESS_SHAPED_KEY rule would match but CONNECTION_ENV_KEYS does not; (c) warm-cache carries FRONTEND_URL=http://frontend at deploy/bases/frontend/cronjob-warm-cache.yaml:33 — `_URL` is not in ADDRESS_SHAPED_KEY and the value has no explicit port, so it fails both halves of the test; (d) grafana, loki and jaeger are really connected — otel/grafana-datasources.yaml:6 and :10 point Grafana at both — but that is a Grafana provisioning file mounted as a volume, not a topology manifest, and is legitimately out of scope.",
+        "IR-LINT-HIGH-FANOUT-004": "Known limitation, kept deliberately. Fires on gateway_podinfo_api with 26 outgoing edges, which is simply the 26 operations of pkg/api/http/docs/swagger.yaml hanging off the API node the openapi tier creates to front them. That is spec size, not architectural fan-out. First corpus repo to trip this, and the reason it is worth pinning.",
+        "IR-LINT-MISSING-AUTH-010": "7, all technically true, most low value. swagger.yaml declares no securityDefinitions and no per-operation `security:` block, so podinfo-api is unauthenticated as specified — though /token and /token/validate (swagger.yaml:419, :434) mint and check JWTs, an auth capability we do not model as an auth node. grafana is the one worth saying out loud: otel/docker-compose.yaml:35 sets GF_AUTH_ANONYMOUS_ENABLED=true with ORG_ROLE=Admin. jaeger, loki and otel are an unauthenticated local observability stack — factually true, not advice.",
+        "IR-LINT-MULTIPLE-HTTP-ENTRIES-009": "Downstream of the gaps above rather than independently meaningful: 7 entries only because nothing incoming was extracted for otel or the two compose podinfo services. Expect this to fall when the wiring gaps close.",
+        "cross-tier": "gateway_podinfo_api (from the spec title 'Podinfo API') stays separate from service_podinfo (the kustomize/ Deployment). Correct as adjudicated — nothing in either file declares that this workload serves that spec, so unifying them would be a guess."
+      }
+    },
+    {
       "name": "terraform-aws-eks",
       "url": "https://github.com/terraform-aws-modules/terraform-aws-eks.git",
       "commit": "d386adc021dc370efe1bceb7991fbed6e9787c84",
