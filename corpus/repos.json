@@ -1,0 +1,129 @@
+{
+  "$comment": [
+    "Adjudicated corpus for `archrad scan` + `validate`.",
+    "",
+    "Every repository here was read by a human, and every expected finding below was",
+    "checked against the source and judged correct-as-stated. Commits are PINNED so a",
+    "drift in this corpus means OUR behaviour changed, never that upstream did.",
+    "",
+    "`expected` lists finding codes with their occurrence count. `notes` records WHY a",
+    "finding is expected — several are known false positives kept deliberately, so that",
+    "when one is fixed the harness fails and forces this file to be updated rather than",
+    "letting the fix pass unnoticed.",
+    "",
+    "Run: node scripts/scan-corpus.mjs         (compare against expectations)",
+    "     node scripts/scan-corpus.mjs --update (rewrite expectations after review)"
+  ],
+  "repos": [
+    {
+      "name": "node-express-boilerplate",
+      "url": "https://github.com/hagopj13/node-express-boilerplate.git",
+      "commit": "179ae84efec61b14206d0305d941daed6c6d07f9",
+      "why": "Express + Mongoose + Passport monolith with compose override files. Exercises compose-override unification and Maven-free manifest naming.",
+      "expectedNodes": 4,
+      "expected": {
+        "IR-LINT-DIRECT-DB-ACCESS-002": 1,
+        "IR-LINT-NO-HEALTHCHECK-003": 1
+      },
+      "notes": {
+        "IR-LINT-DIRECT-DB-ACCESS-002": "Known limitation, kept: the app is one gateway node, so this reports 'no service layer visible' rather than asserting a defect. The repo IS layered (controllers -> services -> models).",
+        "IR-LINT-NO-HEALTHCHECK-003": "TRUE. src/routes/v1 has auth, user and docs routes only; no health endpoint anywhere."
+      }
+    },
+    {
+      "name": "lokalise-node-service-template",
+      "url": "https://github.com/lokalise/node-service-template.git",
+      "commit": "fac7c6e292c6c5b7361246c0e46b28c2893a3c55",
+      "why": "Fastify + drizzle + @fastify/jwt. Regression guard for object-form route detection and scoped auth-plugin detection.",
+      "expectedNodes": 6,
+      "expected": {
+        "IR-LINT-DIRECT-DB-ACCESS-002": 1,
+        "IR-LINT-ISOLATED-NODE-005": 1
+      },
+      "notes": {
+        "IR-LINT-DIRECT-DB-ACCESS-002": "Manifest-only edge, so it arrives low-confidence and hedged.",
+        "IR-LINT-ISOLATED-NODE-005": "fauxqs, a local SQS/SNS emulator, genuinely has no depends_on. Factually true, low value.",
+        "absent-NO-HEALTHCHECK": "Must NOT fire: /live is declared via app.route({ url }) and is detected since the Fastify object-form fix.",
+        "absent-MISSING-AUTH": "Must NOT fire: @fastify/jwt is detected as an auth node."
+      }
+    },
+    {
+      "name": "spring-petclinic",
+      "url": "https://github.com/spring-projects/spring-petclinic.git",
+      "commit": "88e37c15cf6fc8490b01bc3e8e2c800cec1ac272",
+      "why": "Java: pom.xml + compose + k8s, no code analyser. Guards Maven parent-POM naming, whose fix also unifies the manifest and Kubernetes views by canonical id.",
+      "expectedNodes": 3,
+      "expected": {},
+      "notes": {
+        "clean": "Zero findings. The component must be named 'petclinic' from <name>, never 'spring-boot-starter-parent' from the inherited <parent> block."
+      }
+    },
+    {
+      "name": "example-voting-app",
+      "url": "https://github.com/dockersamples/example-voting-app",
+      "commit": "63e9150ca17af4ed05880d4245e486481f73fcb4",
+      "why": "Polyglot monorepo, compose + k8s, several services built from subdirectories. Guards against over-eager scan-root merging.",
+      "expectedNodes": 10,
+      "expected": {
+        "IR-LINT-DIRECT-DB-ACCESS-002": 3,
+        "IR-LINT-NO-HEALTHCHECK-003": 1,
+        "IR-LINT-MISSING-AUTH-010": 1
+      },
+      "notes": {
+        "sut-must-stay-separate": "The `sut` test harness builds from ./tests/ and must NOT fold into the app root. An earlier build-context heuristic wrongly merged it.",
+        "IR-LINT-MISSING-AUTH-010": "Known limitation: fires on the whole-app node, which carries the same weakness DIRECT-DB-ACCESS shed."
+      }
+    },
+    {
+      "name": "full-stack-fastapi-template",
+      "url": "https://github.com/tiangolo/full-stack-fastapi-template.git",
+      "commit": "f8b7926d1cec1e81ea9b99b3c498022071ca85cd",
+      "why": "Python + compose with an override that re-declares `db` without an image. Direct regression guard for the type-specificity bug that relabelled Postgres as a gateway.",
+      "expectedNodes": 7,
+      "expected": {
+        "IR-LINT-DIRECT-DB-ACCESS-002": 2,
+        "IR-LINT-NO-HEALTHCHECK-003": 1,
+        "IR-LINT-ISOLATED-NODE-005": 2,
+        "IR-LINT-MULTIPLE-HTTP-ENTRIES-009": 1,
+        "IR-LINT-MISSING-AUTH-010": 3
+      },
+      "notes": {
+        "db-must-be-postgres": "compose.yml declares `db: image: postgres:18`; compose.override.yml re-declares `db` with only ports. The identified postgres type must win over the guessed gateway.",
+        "known-noise": "adminer / proxy / traefik are dev tooling promoted to gateways on published ports; the MISSING-AUTH and ISOLATED-NODE counts reflect that unresolved limitation."
+      }
+    },
+    {
+      "name": "eShopOnWeb",
+      "url": "https://github.com/dotnet-architecture/eShopOnWeb.git",
+      "commit": "4da8212117e87d808d4bbc7da6286fd2147ce606",
+      "why": ".NET + compose. Only corpus entry exercising the C# analyser path.",
+      "expectedNodes": 7,
+      "expected": {
+        "IR-LINT-DIRECT-DB-ACCESS-002": 3,
+        "IR-LINT-NO-HEALTHCHECK-003": 1,
+        "IR-LINT-MULTIPLE-HTTP-ENTRIES-009": 1,
+        "IR-LINT-MISSING-AUTH-010": 2,
+        "IR-LINT-DEAD-NODE-011": 1
+      },
+      "notes": {
+        "known-noise": "An [Authorize] auth node IS detected but is not connected to the compose-derived gateways, so MISSING-AUTH fires anyway. Fixing that linkage should drop these to 0 and update this entry."
+      }
+    },
+    {
+      "name": "microservices-demo",
+      "url": "https://github.com/GoogleCloudPlatform/microservices-demo.git",
+      "commit": "6bece005bb4460e1ae252ba8f7de5fd3ae2cb62d",
+      "why": "Kubernetes-native polyglot. Tracks the *_SERVICE_ADDR extraction gap — the largest known scan-quality deficit.",
+      "expectedNodes": 19,
+      "expected": {
+        "IR-LINT-NO-HEALTHCHECK-003": 1,
+        "IR-LINT-ISOLATED-NODE-005": 12,
+        "IR-LINT-MISSING-AUTH-010": 1,
+        "IR-LINT-DEAD-NODE-011": 2
+      },
+      "notes": {
+        "KNOWN-GAP": "The 12 isolated nodes are OUR gap, not their architecture. frontend.yaml wires siblings via CART_SERVICE_ADDR / PRODUCT_CATALOG_SERVICE_ADDR and similar host:port env values that the Kubernetes extractor does not turn into edges. When that is fixed this count should collapse toward 0 — the harness failing here is the intended signal."
+      }
+    }
+  ]
+}

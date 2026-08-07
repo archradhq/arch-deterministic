@@ -9,3 +9,6 @@ archlora/.apis-guru-cache/
 archlora/.so-cache/
 archlora/__pycache__/
 /test-ir.json
+
+# Shallow clones fetched by scripts/scan-corpus.mjs — reproducible from corpus/repos.json
+.corpus-cache/

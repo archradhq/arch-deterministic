@@ -70,6 +70,7 @@
     "lint": "biome check ./src",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "generate-corpus": "node scripts/generate-corpus.mjs",
+    "scan-corpus": "node scripts/scan-corpus.mjs",
     "smoke:mcp": "node scripts/smoke-mcp.mjs",
     "record:demo:payment-retry": "vhs scripts/record-demo-payment-retry.tape",
     "record:demo:drift": "vhs scripts/record-demo-drift.tape",
