@@ -32,6 +32,26 @@ describe('scanCodebase — test-material directories', () => {
   });
 });
 
+describe('scanCodebase — empty result messaging', () => {
+  it('names Helm as the reason instead of claiming there is no architecture', async () => {
+    // prometheus-community/helm-charts is 46 charts and 568 manifests, and
+    // scanned to zero nodes under a warning that read "no structural signals
+    // found" — which sounds like a verdict on the repository rather than on us.
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}helm-only` });
+    // A templated name parses as a mapping; stringifying it produced a node
+    // literally called "[object Object]".
+    expect(graphOf(result.ir).nodes.map((n) => n.name)).not.toContain('[object Object]');
+    expect(graphOf(result.ir).nodes).toHaveLength(0);
+
+    const warning = result.warnings.find((w) => w.includes('Helm chart'));
+    expect(warning).toBeDefined();
+    expect(warning).toContain('1 Helm chart');
+    expect(warning).toContain('helm template');
+    // The bare, uninformative phrasing is not what a Helm repo gets.
+    expect(result.warnings.some((w) => w.includes('no structural signals'))).toBe(false);
+  });
+});
+
 describe('scanCodebase — compose extractor', () => {
   it('emits a draft IR with canonical node ids and provenance on every element', async () => {
     const result = await scanCodebase({ from: `${FIXTURE_ROOT}compose-basic` });

@@ -76,9 +76,23 @@ export async function scanCodebase(opts: ScanOptions): Promise<ScanResult> {
   const unified = unifyDraft(merged.nodes, merged.edges, order);
 
   if (unified.nodes.length === 0) {
-    warnings.push(
-      `archrad scan: no structural signals found in ${root} (extractors: ${order.join(', ') || 'none'}).`,
-    );
+    // "No structural signals" is true of what we parsed, but read alone it says
+    // "your repository has no architecture". A Helm chart repository is the case
+    // that exposes it: prometheus-community/helm-charts is 46 charts and 568
+    // manifests, every one of them Go-templated and unreadable without
+    // rendering. Name the reason when we can see it.
+    const chartCount = tree.files.filter((f) => /(^|\/)Chart\.yaml$/.test(f.relPath)).length;
+    if (chartCount > 0) {
+      warnings.push(
+        `archrad scan: found ${chartCount} Helm chart${chartCount === 1 ? '' : 's'} in ${root} but no readable manifests. ` +
+          `Chart templates are Go templates, not YAML, and archrad does not render them. ` +
+          `Run \`helm template\` and scan the output instead.`,
+      );
+    } else {
+      warnings.push(
+        `archrad scan: no structural signals found in ${root} (extractors: ${order.join(', ') || 'none'}).`,
+      );
+    }
   }
 
   const ir: Record<string, unknown> = {

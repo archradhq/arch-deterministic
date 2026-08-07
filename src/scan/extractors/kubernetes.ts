@@ -107,7 +107,12 @@ function loadK8sDocs(text: string, relPath: string): Entry[] {
       !Array.isArray(d) &&
       typeof (d as K8sDoc).kind === 'string' &&
       typeof (d as K8sDoc).apiVersion === 'string' &&
-      RECOGNIZED_KINDS.has((d as K8sDoc).kind as string)
+      RECOGNIZED_KINDS.has((d as K8sDoc).kind as string) &&
+      // A Helm template's `name: {{ include "chart.fullname" . }}` parses as a
+      // flow mapping, not a string, and stringifying it named the component
+      // "[object Object]". If we cannot read a document's name we cannot
+      // identify what it describes, so we do not pretend to.
+      typeof (d as K8sDoc).metadata?.name === 'string'
     ) {
       out.push({ doc: d as K8sDoc, file: relPath, line: starts[i] ?? 1 });
     }

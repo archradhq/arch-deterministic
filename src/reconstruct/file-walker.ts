@@ -8,6 +8,9 @@ import { join, extname } from 'node:path';
 
 const EXCLUDED_DIRS = new Set([
   'node_modules',
+  // Yarn Berry vendors its own release bundle and dependency cache in-repo.
+  '.yarn',
+  '.pnp',
   '__pycache__',
   '.git',
   '.svn',

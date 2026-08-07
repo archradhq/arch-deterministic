@@ -132,6 +132,47 @@
       }
     },
     {
+      "name": "helm-charts",
+      "url": "https://github.com/prometheus-community/helm-charts.git",
+      "commit": "4fa56e1c264a2a7e8030af068dcccd4400dd620c",
+      "why": "46 Helm charts, 568 templated manifests, and no readable YAML at all. The corpus entry for saying nothing honestly: zero nodes is the correct answer here, and the warning has to explain why.",
+      "expectedNodes": 0,
+      "expected": {},
+      "expectedStructural": 1,
+      "notes": {
+        "ZERO-IS-CORRECT": "Zero nodes is the RIGHT result. Chart templates are Go templates, not YAML — `name: {{ include \"chart.fullname\" . }}` is not something we can read without rendering. Any node appearing here is a regression, almost certainly a templated document being half-parsed.",
+        "OBJECT-OBJECT-FIXED": "Why this repo was added. A templated `metadata.name` parses as a flow mapping rather than a string, and stringifying it produced a component literally named '[object Object]'. The kubernetes extractor now requires metadata.name to be a string before it will accept a document.",
+        "WARNING-MUST-NAME-HELM": "The other half of the fix. This used to warn 'no structural signals found', which reads as a verdict on the repository rather than on us — a user would reasonably conclude their charts contain no architecture. The warning now counts the charts and points at `helm template`.",
+        "no-lint-findings": "An empty graph produces one structural error (EMPTY_GRAPH) and no lint findings, which is why `expected` is empty."
+      }
+    },
+    {
+      "name": "calcom",
+      "url": "https://github.com/calcom/cal.com.git",
+      "commit": "b2c28a23ab5b53f2e3729657d23cccb50f64e18a",
+      "why": "Large TypeScript monorepo with ~90 third-party app integrations and a vendored Yarn release. The guard for three naming defects, all of which produced components that do not exist.",
+      "expectedNodes": 153,
+      "expected": {
+        "IR-LINT-DIRECT-DB-ACCESS-002": 3,
+        "IR-LINT-HIGH-FANOUT-004": 2,
+        "IR-LINT-NO-HEALTHCHECK-003": 1,
+        "IR-LINT-ISOLATED-NODE-005": 1,
+        "IR-LINT-DATASTORE-NO-INCOMING-008": 2,
+        "IR-LINT-MULTIPLE-HTTP-ENTRIES-009": 1,
+        "IR-LINT-MISSING-AUTH-010": 2,
+        "IR-LINT-DEAD-NODE-011": 15
+      },
+      "notes": {
+        "NUMERIC-LABEL-FIXED": "Why this repo was added, part one. packages/app-store/basecamp3 calls https://3.basecampapi.com/... and the label was taken from the first dot-separated part, producing a dependency named '3'. Expect 'basecampapi'; a node named '3' is the regression.",
+        "YARN-BUNDLE-FIXED": "Part two. .yarn/releases/yarn-4.12.0.cjs is 2.9 MB of vendored, minified Yarn that the code extractor read as application source, inventing a postgres node named 'TypeORM' from a string inside Yarn itself. A 'postgres_typeorm' node means .yarn is being walked again.",
+        "TEMPLATED-HOST-FIXED": "Part three. packages/app-store/feishucalendar calls https://${FEISHU_HOST}/... — an unexpanded placeholder names no host we can know, and it became a component called '--feishu-host-'.",
+        "IR-LINT-DEAD-NODE-011": "15, and this is KNOWN NOISE rather than signal — see docs/SCAN_COVERAGE.md. Every one is a third-party API cal.com integrates with (stripe, zoom, intercom, basecampapi, retellai, dub). An external service is a leaf by definition: we see the outbound call and nothing beyond it, so 'receives edges but has no outgoing edges' is guaranteed true and tells the reader nothing. Do not repeat these as findings.",
+        "IR-LINT-HIGH-FANOUT-004": "2, both TRUE and both the known OpenAPI shape. cal-diy-api-v2 fronts 121 operations from one spec; the calcom node has 23.",
+        "postgres_db and postgres_is_ready": "Both real. postgres_db comes from apps/web/test/docker-compose.yml — a nested test/ directory, which we deliberately do not exclude because the name is only trustworthy at the repository root. postgres_is_ready is genuinely a compose service cal.com declares (packages/prisma/docker-compose.yml:20), a helper container that waits for postgres to become healthy; it is not an artifact of parsing the pg_isready healthcheck above it.",
+        "IR-LINT-DIRECT-DB-ACCESS-002": "3, TRUE as stated and the known whole-app-node weakness — the Next.js app is one node, so Prisma access sits at the same node as the HTTP entry with no visible layer between."
+      }
+    },
+    {
       "name": "argo-cd",
       "url": "https://github.com/argoproj/argo-cd.git",
       "commit": "4f07b36fd7c321c2bf932a2c854b7084ad42e989",

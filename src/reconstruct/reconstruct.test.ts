@@ -918,6 +918,40 @@ app.listen(3000);
     // A routable address is still a real dependency — it keeps every octet.
     expect(names).toContain('10-20-30-40');
   });
+
+  it('skips a numeric leading label and a templated host', async () => {
+    const root = await makeTmp();
+    await writeFiles(root, {
+      'package.json': '{ "name": "calcom-ish" }',
+      // Both from cal.com's app-store integrations.
+      'src/basecamp.ts': `
+export async function mutate(id: string) {
+  return fetch('https://3.basecampapi.com/' + id + '/projects.json');
+}
+`,
+      'src/feishu.ts': `
+export async function resend() {
+  return fetch(\`https://\${process.env.FEISHU_HOST}/open-apis/auth/v3/app_ticket/resend\`);
+}
+`,
+      'src/app.ts': `
+import express from 'express';
+const app = express();
+app.get('/healthz', (_req, res) => res.json({ ok: true }));
+app.listen(3000);
+`,
+    });
+
+    const result = await reconstructIrFromCodebase({ from: root, language: 'nodejs' });
+    const names = (result.ir.graph as { nodes: { name: string }[] }).nodes.map((n) => n.name);
+
+    // "3.basecampapi.com" is Basecamp's API version, not a service called "3".
+    expect(names).not.toContain('3');
+    expect(names).toContain('basecampapi');
+    // An unexpanded ${FEISHU_HOST} names no host we can know.
+    expect(names).not.toContain('--feishu-host-');
+    expect(names.some((n) => n.includes('feishu-host'))).toBe(false);
+  });
 });
 
 // ---- D5. Monolithic app — negative case (no forced decomposition) ----------

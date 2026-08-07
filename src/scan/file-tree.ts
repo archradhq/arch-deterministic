@@ -35,6 +35,14 @@ const EXCLUDED_DIRS = new Set([
   '.venv',
   'venv',
   'vendor',
+  // Yarn Berry vendors its own release and its dependency cache into the repo.
+  // cal.com commits .yarn/releases/yarn-4.12.0.cjs — 2.9 MB of minified bundle
+  // that the code extractor happily read, inventing a "TypeORM" postgres node
+  // out of a string inside Yarn itself.
+  '.yarn',
+  '.pnp',
+  '.gradle',
+  '.terraform',
 ]);
 
 /**

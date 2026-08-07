@@ -120,22 +120,30 @@ for (const repo of repos) {
   if (UPDATE) {
     repo.expectedNodes = nodeCount;
     repo.expected = counts;
+    if (structuralCount > 0) repo.expectedStructural = structuralCount;
     console.log(`   updated: ${nodeCount} nodes, ${Object.keys(counts).length} finding codes (${ms}ms)`);
     continue;
   }
 
   const drift = diffCounts(repo.expected ?? {}, counts);
   const nodeDrift = repo.expectedNodes !== undefined && repo.expectedNodes !== nodeCount;
-  if (structuralCount > 0) {
-    console.error(`   ✗ ${structuralCount} STRUCTURAL finding(s) — draft IR should always be structurally valid`);
-    failed += 1;
+  // A draft IR should be structurally valid, so the default expectation is zero
+  // and a repo must opt out explicitly. The one legitimate exception so far is a
+  // repository we can read nothing from: a Helm chart collection scans to an
+  // empty graph, which is the honest answer and still trips EMPTY_GRAPH.
+  const expectedStructural = repo.expectedStructural ?? 0;
+  const structuralDrift = structuralCount !== expectedStructural;
+  if (structuralDrift) {
+    console.error(
+      `   ✗ ${structuralCount} STRUCTURAL finding(s), expected ${expectedStructural} — draft IR should always be structurally valid`,
+    );
   }
   if (nodeDrift) {
     console.error(`   ✗ node count: expected ${repo.expectedNodes}, got ${nodeCount}`);
   }
   for (const d of drift) console.error(`   ✗ ${d}`);
 
-  if (!nodeDrift && drift.length === 0 && structuralCount === 0) {
+  if (!nodeDrift && drift.length === 0 && !structuralDrift) {
     console.log(`   ✓ ${nodeCount} nodes, findings match adjudication (${ms}ms)`);
   } else {
     failed += 1;

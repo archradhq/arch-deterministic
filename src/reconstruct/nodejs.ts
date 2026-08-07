@@ -65,8 +65,23 @@ function labelFromHostname(hostname: string): string {
   // Strip www. / api. / auth. prefixes
   const stripped = hostname.replace(/^(?:www|api|auth|cdn|static|assets|s3|storage)\./i, '');
   // Take first two parts: "stripe.com" → "stripe", "auth0.com" → "auth0"
-  const parts = stripped.split('.');
-  return (parts[0] ?? stripped).toLowerCase().replace(/[^a-z0-9-]/g, '-');
+  // Skip leading labels with no identity of their own: cal.com calls
+  // `3.basecampapi.com`, whose first label is a version number, and taking it
+  // produced a dependency named "3".
+  const parts = stripped.split('.').filter((p) => p.length > 0);
+  const named = parts.find((p) => !/^\d+$/.test(p)) ?? parts[0] ?? stripped;
+  return named.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+}
+
+/**
+ * Whether a URL still carries an unexpanded template placeholder in its host.
+ *
+ * `https://${FEISHU_HOST}/open-apis/...` names no host we can know without
+ * running the program; it became a component called "--feishu-host-".
+ */
+function hasUnresolvedHostPlaceholder(url: string): boolean {
+  const beforePath = url.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').split('/')[0] ?? '';
+  return /\$\{|\{\{|<%|%s|\{[a-z_]/i.test(beforePath);
 }
 
 // ---- HTTP route patterns ----------------------------------------------------
@@ -464,6 +479,7 @@ export function analyzeNodejsFile(file: ScannedFile): DetectedArtifact[] {
   for (const m of matchAll(content, EXTERNAL_URL_CALL_RE.source)) {
     const url = m[1];
     if (!url) continue;
+    if (hasUnresolvedHostPlaceholder(url)) continue;
     const hostname = hostnameFromUrl(url);
     if (isLoopbackHost(hostname)) continue;
     const label = labelFromHostname(hostname);
