@@ -113,7 +113,14 @@ function goModHits(text: string): Hit[] {
 function goModComponentName(text: string): string | null {
   const m = text.match(/^module\s+(\S+)/m);
   if (!m) return null;
-  const segments = m[1]!.split('/');
+  const segments = m[1]!.split('/').filter(Boolean);
+  // Go encodes major versions from v2 onward in the module path itself:
+  // `module github.com/argoproj/argo-cd/v3`. The last segment is then the
+  // version, not the module, and naming from it produced a component called
+  // "v3". Anything at v0/v1 has no such suffix and is unaffected.
+  while (segments.length > 1 && /^v\d+$/.test(segments[segments.length - 1]!)) {
+    segments.pop();
+  }
   return segments[segments.length - 1] || null;
 }
 

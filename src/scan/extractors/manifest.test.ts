@@ -192,6 +192,19 @@ describe('scanCodebase — manifest extractor, pom.xml (maven)', () => {
     expect(component.name).not.toBe('spring-boot-starter-parent');
   });
 
+  it('never names a Go component after its major-version suffix', async () => {
+    // Predicted from the pattern behind the "127"/"3" labelling bugs, then
+    // confirmed: Go puts major versions v2+ in the module path itself, and
+    // argo-cd's own go.mod is `module github.com/argoproj/argo-cd/v3`.
+    const result = await scanCodebase({
+      from: `${FIXTURE_ROOT}manifest-gomod-major`,
+      extractors: ['manifest'],
+    });
+    const names = graphOf(result.ir).nodes.map((n) => n.name);
+    expect(names).not.toContain('v3');
+    expect(names).toContain('argo-cd');
+  });
+
   it('never names a component after a <repository>, which also carries a <name>', async () => {
     // Found by scanning spring-petclinic-microservices: its genai module declares
     // no <name> of its own, so the first <name> in the file — "Spring Milestones",
