@@ -521,6 +521,12 @@ export function composePlainEnvHostname(val: string): string | null {
 
   if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(hostPart)) return null;
   if (/^(localhost|127\.0\.0\.1|0\.0\.0\.0|::1)$/i.test(hostPart)) return null;
+  // A value that is only digits and dots is a port, a count, or a version — not
+  // a host. Hardening rather than a live fix: a bare `8125` still has to resolve
+  // to a component in the same scan, and nothing is named `8125`. It is here
+  // because the same "a number is not an identity" mistake produced components
+  // called "127", "3" and "v3" elsewhere.
+  if (/^[\d.]+$/.test(hostPart)) return null;
   return hostPart.toLowerCase();
 }
 
