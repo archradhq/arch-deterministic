@@ -79,7 +79,7 @@
       "url": "https://github.com/tiangolo/full-stack-fastapi-template.git",
       "commit": "f8b7926d1cec1e81ea9b99b3c498022071ca85cd",
       "why": "Python + compose with an override that re-declares `db` without an image. Direct regression guard for the type-specificity bug that relabelled Postgres as a gateway.",
-      "expectedNodes": 7,
+      "expectedNodes": 8,
       "expected": {
         "IR-LINT-DIRECT-DB-ACCESS-002": 2,
         "IR-LINT-NO-HEALTHCHECK-003": 1,
@@ -89,7 +89,9 @@
       },
       "notes": {
         "db-must-be-postgres": "compose.yml declares `db: image: postgres:18`; compose.override.yml re-declares `db` with only ports. The identified postgres type must win over the guessed gateway.",
-        "known-noise": "adminer / proxy / traefik are dev tooling promoted to gateways on published ports; the MISSING-AUTH and ISOLATED-NODE counts reflect that unresolved limitation."
+        "known-noise": "adminer / proxy / traefik are dev tooling promoted to gateways on published ports; the MISSING-AUTH and ISOLATED-NODE counts reflect that unresolved limitation.",
+        "pyproject-must-be-read": "The 8th node, service_app -> postgres_db, is the manifest tier finally reading backend/pyproject.toml. This repo has NO requirements.txt, so for as long as that was the only Python manifest we recognised it sat here passing green with its psycopg dependency unread. A drop back to 7 means pyproject support regressed.",
+        "app-and-backend-not-unified": "service_app (from [project] name = \"app\") and gateway_backend (the compose service) are the same component under two names, and stay separate. Adjudicated as acceptable on the same grounds as petclinic-micro: the tiers genuinely disagree on the name, and guessing they match is the inference this scanner refuses to make."
       }
     },
     {

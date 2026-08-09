@@ -60,6 +60,10 @@ export const NPM_LIB_MAP: Record<string, InfraTarget> = {
 export const PIP_LIB_MAP: Record<string, InfraTarget> = {
   psycopg2: DB('postgres', 'postgres'),
   'psycopg2-binary': DB('postgres', 'postgres'),
+  // psycopg 3 is its own package, not a psycopg2 release. Both Python projects
+  // in the corpus declare `psycopg[binary]`, and neither was recognised.
+  psycopg: DB('postgres', 'postgres'),
+  'psycopg-binary': DB('postgres', 'postgres'),
   asyncpg: DB('postgres', 'postgres'),
   pymysql: DB('mysql', 'mysql'),
   mysqlclient: DB('mysql', 'mysql'),

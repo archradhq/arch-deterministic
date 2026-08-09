@@ -192,6 +192,44 @@ describe('scanCodebase — manifest extractor, pom.xml (maven)', () => {
     expect(component.name).not.toBe('spring-boot-starter-parent');
   });
 
+  it('reads PEP 621 pyproject.toml, which is what Python projects actually ship', async () => {
+    // full-stack-fastapi-template sat in the corpus passing green while its
+    // psycopg dependency went unread: requirements.txt was the only Python
+    // manifest recognised, and neither Python repo in the corpus has one.
+    const result = await scanCodebase({
+      from: `${FIXTURE_ROOT}manifest-pyproject`,
+      extractors: ['manifest'],
+    });
+    const g = graphOf(result.ir);
+    const types = g.nodes.map((n) => n.type).sort();
+
+    expect(g.nodes.map((n) => n.name)).toContain('shop-api');
+    // Extras (`psycopg[binary]`) and a dependency containing "z" listed before
+    // the drivers both used to swallow the whole list.
+    expect(types).toContain('postgres');
+    expect(types).toContain('cache');
+    // Declared under [project.optional-dependencies].
+    expect(types).toContain('search');
+    // Declared under [dependency-groups], which is test tooling, not runtime.
+    expect(types).not.toContain('mongodb');
+  });
+
+  it('reads Poetry pyproject.toml, where dependencies are table keys', async () => {
+    const result = await scanCodebase({
+      from: `${FIXTURE_ROOT}manifest-pyproject-poetry`,
+      extractors: ['manifest'],
+    });
+    const g = graphOf(result.ir);
+
+    expect(g.nodes.map((n) => n.name)).toContain('billing-worker');
+    expect(g.nodes.map((n) => n.type)).toContain('postgres');
+    expect(g.nodes.map((n) => n.type)).toContain('cache');
+    // The `python = "^3.12"` constraint is not a dependency, and the dev group
+    // is not runtime infrastructure.
+    expect(g.nodes.map((n) => n.name)).not.toContain('python');
+    expect(g.nodes.map((n) => n.type)).not.toContain('mongodb');
+  });
+
   it('never names a Go component after its major-version suffix', async () => {
     // Predicted from the pattern behind the "127"/"3" labelling bugs, then
     // confirmed: Go puts major versions v2+ in the module path itself, and

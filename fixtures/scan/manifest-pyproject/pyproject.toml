@@ -1,0 +1,34 @@
+# PEP 621 layout, the shape both Python repositories in the corpus actually use.
+# requirements.txt was the only Python manifest we read, and neither has one.
+[build-system]
+requires = ["hatchling"]
+
+[project]
+name = "shop-api"
+version = "1.0.0"
+# An inline table array before the dependencies: its brackets and quotes must
+# not be mistaken for the start of the dependency list.
+authors = [{ name = "A Maintainer", email = "maintainer@example.com" }]
+requires-python = ">=3.12"
+dependencies = [
+    # "azure-common" is here on purpose: it holds the first "z" in the table, and
+    # a lookahead written as \z (a Perl anchor JS does not have) truncated the
+    # table body at that letter, hiding every dependency below it.
+    "azure-common>=1.1.28,<2",
+    "django>=5.2",
+    # Extras brackets close a naive non-greedy [...] match halfway through the
+    # first entry, which yielded no dependencies at all.
+    "psycopg[binary]>=3.3.4,<4",
+    "redis>=5.0.1,<6",
+]
+
+[project.optional-dependencies]
+search = ["elasticsearch>=8.0"]
+
+# Test and tooling requirements. A project that installs a driver to run its
+# test suite does not thereby depend on that datastore, so these are not read.
+[dependency-groups]
+dev = ["pymongo>=4.0", "pytest>=8.0"]
+
+[tool.ruff]
+line-length = 100

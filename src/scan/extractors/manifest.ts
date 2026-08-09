@@ -1,6 +1,6 @@
 /**
- * Manifest extractor: package.json / requirements.txt / go.mod / pom.xml →
- * PartialIR (confidence: low).
+ * Manifest extractor: package.json / requirements.txt / pyproject.toml / go.mod
+ * / pom.xml → PartialIR (confidence: low).
  *
  * Maps *driver-level* client libraries to infrastructure edges via
  * {@link NPM_LIB_MAP} / {@link PIP_LIB_MAP} / {@link GO_LIB_MAP} /
@@ -79,6 +79,120 @@ function pipHits(text: string): Hit[] {
     if (target) hits.push({ lib: name, target, line: i + 1 });
   }
   return hits;
+}
+
+/**
+ * The body of a TOML table, from its header to the next table header.
+ *
+ * A targeted reader rather than a TOML parse, matching how pom.xml is handled in
+ * this file: we need three specific tables, not the language. `[project]` stops
+ * at `[project.urls]` because any `[` at column zero ends the table — which is
+ * what TOML means, and what keeps `dependencies` from leaking across sections.
+ */
+function tomlTable(text: string, header: string): string | null {
+  const lines = text.split(/\r?\n/);
+  const start = lines.findIndex((l) => l.trim() === `[${header}]`);
+  if (start === -1) return null;
+
+  const body: string[] = [];
+  for (let i = start + 1; i < lines.length; i++) {
+    const trimmed = lines[i]!.trim();
+    // A table ends at the next header. Matched on the whole line rather than a
+    // leading bracket, so an array element or an inline table cannot end it.
+    if (trimmed.startsWith('[') && trimmed.endsWith(']') && !trimmed.includes('"')) break;
+    body.push(lines[i]!);
+  }
+  return body.join('\n');
+}
+
+/**
+ * Every string in every `key = [ ... ]` array in a TOML table body.
+ *
+ * Bracket matching has to be quote-aware: a requirement may carry extras, and
+ * `"fastapi[standard]>=0.141.1"` closes a naive non-greedy `\[...\]` match
+ * halfway through the first dependency, which silently yielded nothing at all.
+ * Only quotes are tracked, since a requirement string cannot contain a newline
+ * and TOML's multi-line strings do not appear in dependency arrays.
+ */
+function tomlArrayStrings(body: string): string[] {
+  const out: string[] = [];
+  for (const start of body.matchAll(/(?:^|\n)[ \t]*[A-Za-z0-9_.-]+[ \t]*=[ \t]*\[/g)) {
+    let depth = 1;
+    let quote: string | null = null;
+    let buf = '';
+    for (let i = start.index + start[0].length; i < body.length && depth > 0; i++) {
+      const ch = body[i]!;
+      if (quote) {
+        if (ch === quote) {
+          if (buf) out.push(buf);
+          buf = '';
+          quote = null;
+        } else buf += ch;
+        continue;
+      }
+      if (ch === '"' || ch === "'") quote = ch;
+      else if (ch === '[') depth++;
+      else if (ch === ']') depth--;
+    }
+  }
+  return out;
+}
+
+/**
+ * Parse pyproject.toml into recognized infra hits.
+ *
+ * `requirements.txt` was the only Python manifest we read, and neither Python
+ * repository in the corpus has one — PEP 621 `pyproject.toml` is the standard
+ * now. full-stack-fastapi-template sat in the corpus passing green while its
+ * `psycopg` dependency went unread.
+ *
+ * Runtime dependencies only: `[project] dependencies` and its optional extras,
+ * or Poetry's equivalent. Deliberately NOT `[dependency-groups]` or Poetry's dev
+ * groups — those are test and tooling requirements, and a project that pulls in
+ * a database driver to run its test suite is not thereby depending on a
+ * database.
+ */
+function pyprojectHits(text: string): Hit[] {
+  const requirements: string[] = [];
+
+  const project = tomlTable(text, 'project');
+  if (project) requirements.push(...tomlArrayStrings(project));
+  const extras = tomlTable(text, 'project.optional-dependencies');
+  if (extras) requirements.push(...tomlArrayStrings(extras));
+
+  // Poetry states dependencies as table keys (`redis = "^5.0"`), not as strings.
+  for (const header of ['tool.poetry.dependencies', 'tool.poetry.dev-dependencies']) {
+    const body = tomlTable(text, header);
+    if (!body) continue;
+    for (const line of body.split(/\r?\n/)) {
+      const key = line.replace(/#.*$/, '').trim().match(/^([A-Za-z0-9][A-Za-z0-9._-]*)\s*=/);
+      if (key?.[1] && key[1].toLowerCase() !== 'python') requirements.push(key[1]);
+    }
+  }
+
+  const hits: Hit[] = [];
+  const seen = new Set<string>();
+  for (const req of requirements) {
+    // parseRequirementLine stops at the first non-name character, so the extras
+    // and specifiers in `psycopg[binary]>=3.3.4,<4` reduce to `psycopg`.
+    const name = parseRequirementLine(req);
+    if (!name || seen.has(name)) continue;
+    const target = PIP_LIB_MAP[name];
+    if (!target) continue;
+    seen.add(name);
+    hits.push({ lib: name, target, line: lineOf(text, req) });
+  }
+  return hits;
+}
+
+/** Component name from pyproject.toml's `[project] name` (or Poetry's). */
+function pyprojectComponentName(text: string): string | null {
+  for (const header of ['project', 'tool.poetry']) {
+    const body = tomlTable(text, header);
+    const m = body?.match(/^\s*name\s*=\s*["']([^"']+)["']/m);
+    if (m?.[1]?.trim()) return m[1].trim();
+  }
+  return null;
 }
 
 /** Strip a trailing Go module major-version suffix (`/v2`, `/v5`, …) before lookup. */
@@ -191,6 +305,7 @@ export const manifestExtractor: Extractor = {
       const ecosystem =
         base === 'package.json' ? 'npm'
         : base === 'requirements.txt' ? 'pip'
+        : base === 'pyproject.toml' ? 'pyproject'
         : base === 'go.mod' ? 'go'
         : base === 'pom.xml' ? 'maven'
         : null;
@@ -202,12 +317,14 @@ export const manifestExtractor: Extractor = {
       const hits =
         ecosystem === 'npm' ? npmHits(text)
         : ecosystem === 'pip' ? pipHits(text)
+        : ecosystem === 'pyproject' ? pyprojectHits(text)
         : ecosystem === 'go' ? goModHits(text)
         : mavenHits(text);
       if (hits.length === 0) continue; // no infra signal → skip this manifest
 
       const explicitName =
         ecosystem === 'npm' ? npmComponentName(text)
+        : ecosystem === 'pyproject' ? pyprojectComponentName(text)
         : ecosystem === 'go' ? goModComponentName(text)
         : ecosystem === 'maven' ? mavenComponentName(text)
         : null;
