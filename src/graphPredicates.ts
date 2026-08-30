@@ -78,5 +78,5 @@ export function isInfraLeafSinkLintType(t: string): boolean {
     .trim()
     .toLowerCase();
   if (!s) return false;
-  return s === 'cache' || s === 'dns' || s === 'search' || s === 'storage' || s === 'smtp';
+  return s === 'cache' || s === 'dns' || s === 'search' || s === 'storage' || s === 'smtp' || s === 'observability';
 }

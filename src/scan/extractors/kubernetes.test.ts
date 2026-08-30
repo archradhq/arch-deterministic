@@ -154,6 +154,40 @@ describe('scanCodebase — kubernetes extractor, resolution across files', () =>
   });
 });
 
+describe('scanCodebase — kubernetes envFrom namespace isolation', () => {
+  it('resolves same-named ConfigMaps and Services only inside the workload namespace', async () => {
+    const result = await scanCodebase({
+      from: `${FIXTURE_ROOT}k8s-envfrom-namespaces`,
+      extractors: ['kubernetes'],
+    });
+    const edges = graphOf(result.ir).edges.filter((edge) =>
+      (edge.metadata as Record<string, unknown>)?.env === 'DATABASE_URL',
+    );
+    expect(edges).toHaveLength(2);
+    expect(edges).toEqual(expect.arrayContaining([
+      expect.objectContaining({ from: 'service_app_a', to: 'postgres_db_a' }),
+      expect.objectContaining({ from: 'service_app_b', to: 'postgres_db_b' }),
+    ]));
+    expect(edges.some((edge) => edge.from === 'service_app_a' && edge.to === 'postgres_db_b')).toBe(false);
+    for (const edge of edges) expect(readProvenance(edge)).toHaveLength(2);
+  });
+});
+
+describe('scanCodebase — Kustomize namespace inheritance', () => {
+  it('applies the nearest Kustomization namespace before resolving ConfigMaps and DNS', async () => {
+    const result = await scanCodebase({
+      from: `${FIXTURE_ROOT}k8s-kustomize-namespace`,
+      extractors: ['kubernetes'],
+    });
+    const edge = graphOf(result.ir).edges.find((candidate) =>
+      candidate.from === 'service_app' && candidate.to === 'service_backend',
+    );
+    expect(edge).toBeDefined();
+    expect((edge!.metadata as Record<string, unknown>).env).toBe('BACKEND_URL');
+    expect(readProvenance(edge!)).toHaveLength(2);
+  });
+});
+
 describe('scanCodebase — kubernetes extractor, service-address env vars', () => {
   it('links services wired by *_SERVICE_ADDR host:port env values', async () => {
     const result = await scanCodebase({ from: `${FIXTURE_ROOT}k8s-service-addr`, extractors: ['kubernetes'] });

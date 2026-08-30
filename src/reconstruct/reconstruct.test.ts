@@ -386,6 +386,7 @@ app.get('/integration-route', () => {});
   it('shouldExclude correctly flags test files and directories', () => {
     expect(shouldExclude('src/routes.test.ts')).toBe(true);
     expect(shouldExclude('src/routes.spec.ts')).toBe(true);
+    expect(shouldExclude('src/components/Menu.stories.tsx')).toBe(true);
     expect(shouldExclude('__tests__/foo.ts')).toBe(true);
     expect(shouldExclude('tests/integration.ts')).toBe(true);
     expect(shouldExclude('src/routes.ts')).toBe(false);

@@ -52,7 +52,7 @@ function selectExtractors(requested?: string[]): Extractor[] {
 export async function scanCodebase(opts: ScanOptions): Promise<ScanResult> {
   const root = resolve(opts.from);
   const extractors = selectExtractors(opts.extractors);
-  const tree = buildScanFileTree(root, opts.exclude ?? []);
+  const tree = buildScanFileTree(root, opts.exclude ?? [], opts.scope ?? 'all');
 
   const partials = [];
   const warnings: string[] = [];

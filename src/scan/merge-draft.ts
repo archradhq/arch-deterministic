@@ -197,6 +197,19 @@ function isScanRoot(node: Record<string, unknown>): boolean {
   );
 }
 
+function scanAliases(node: Record<string, unknown>): string[] {
+  const aliases = new Set<string>();
+  if (typeof node.name === 'string' && node.name.trim()) aliases.add(node.name.trim().toLowerCase());
+  const config = node.config;
+  if (config && typeof config === 'object' && !Array.isArray(config)) {
+    const raw = (config as Record<string, unknown>).scanAliases;
+    if (Array.isArray(raw)) {
+      for (const alias of raw) if (typeof alias === 'string' && alias.trim()) aliases.add(alias.trim().toLowerCase());
+    }
+  }
+  return [...aliases].sort();
+}
+
 /** Infra types that realistically have ONE instance within a single scanned unit. */
 const SINGLETON_INFRA_TYPES = new Set([
   'postgres', 'mysql', 'mongodb', 'cassandra', 'sqlserver', 'search', 'smtp', 'firestore', 'cache',
@@ -241,7 +254,19 @@ function collapseGroup(
     ...readProvenance(survivor),
     ...losers.flatMap((r) => readProvenance(r.node)),
   ]);
-  const mergedSurvivor = withMergedProvenance(survivor, mergedProv);
+  const withProv = withMergedProvenance(survivor, mergedProv);
+  const survivorConfig = withProv.config && typeof withProv.config === 'object' && !Array.isArray(withProv.config)
+    ? withProv.config as Record<string, unknown>
+    : {};
+  const aliases = [...new Set(validGroup.flatMap(scanAliases))].sort();
+  const mergedSurvivor = {
+    ...withProv,
+    config: {
+      ...survivorConfig,
+      ...(validGroup.some(isScanRoot) ? { scanRoot: true } : {}),
+      ...(aliases.length ? { scanAliases: aliases } : {}),
+    },
+  };
 
   const keptNodes = allNodes
     .filter((n) => !loserIds.has(n.id as string))
@@ -293,6 +318,105 @@ export function unifyScanRoots(
   return collapseGroup(roots, nodes, edges, priority);
 }
 
+function compactComponentName(node: Record<string, unknown>): string {
+  return typeof node.name === 'string' ? node.name.toLowerCase().replace(/[^a-z0-9]+/g, '') : '';
+}
+
+/**
+ * Merge same-type components whose declared names differ only by separators or
+ * display spacing (for example Maven "Balance Reader" and Kubernetes
+ * "balancereader"). Refuse a group when one extractor produced multiple nodes,
+ * since that is evidence of genuinely distinct components.
+ */
+export function unifyEquivalentComponentNames(
+  nodes: Record<string, unknown>[],
+  edges: Record<string, unknown>[],
+  priority: string[],
+): { nodes: Record<string, unknown>[]; edges: Record<string, unknown>[] } {
+  const groups = new Map<string, Record<string, unknown>[]>();
+  for (const node of nodes) {
+    const name = compactComponentName(node);
+    const type = typeof node.type === 'string' ? node.type.toLowerCase() : '';
+    if (!name || !['service', 'worker'].includes(type)) continue;
+    const key = `${type}\0${name}`;
+    (groups.get(key) ?? groups.set(key, []).get(key)!).push(node);
+  }
+
+  let curNodes = nodes;
+  let curEdges = edges;
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const seenExtractors = new Set<string>();
+    let unsafe = false;
+    for (const node of group) {
+      for (const extractor of new Set(readProvenance(node).map((record) => record.extractor))) {
+        if (seenExtractors.has(extractor)) unsafe = true;
+        seenExtractors.add(extractor);
+      }
+    }
+    if (unsafe || seenExtractors.size < 2) continue;
+    const result = collapseGroup(group, curNodes, curEdges, priority);
+    curNodes = result.nodes;
+    curEdges = result.edges;
+  }
+  return { nodes: curNodes, edges: curEdges };
+}
+
+function infraNeighbours(
+  nodeId: string,
+  nodes: Record<string, unknown>[],
+  edges: Record<string, unknown>[],
+): Set<string> {
+  const typeById = new Map(nodes.map((node) => [String(node.id), String(node.type ?? '')]));
+  return new Set(edges
+    .filter((edge) => edge.from === nodeId)
+    .map((edge) => String(edge.to))
+    .filter((target) => {
+      const type = typeById.get(target) ?? '';
+      return isDbLikeType(type) || isQueueLikeNodeType(type) || isInfraLeafSinkLintType(type);
+    }));
+}
+
+/**
+ * Fold extractor-specific views into the single proven scan root. Exact aliases
+ * are strong identity evidence; otherwise require two shared infrastructure
+ * neighbours so a generic service name alone can never trigger a merge.
+ */
+export function unifyCorroboratedApps(
+  nodes: Record<string, unknown>[],
+  edges: Record<string, unknown>[],
+  priority: string[],
+): { nodes: Record<string, unknown>[]; edges: Record<string, unknown>[] } {
+  const roots = nodes.filter(isScanRoot);
+  if (roots.length !== 1) return { nodes, edges };
+  const root = roots[0]!;
+  const rootId = String(root.id);
+  const aliases = new Set(scanAliases(root));
+  const rootInfra = infraNeighbours(rootId, nodes, edges);
+  const rootExtractors = new Set(readProvenance(root).map((p) => p.extractor));
+  const appTypes = new Set(['gateway', 'bff', 'grpc', 'service']);
+
+  const matches = nodes.filter((candidate) => {
+    if (candidate === root || isScanRoot(candidate) || !appTypes.has(String(candidate.type ?? '').toLowerCase())) return false;
+    const candidateExtractors = new Set(readProvenance(candidate).map((p) => p.extractor));
+    if ([...candidateExtractors].some((extractor) => rootExtractors.has(extractor))) return false;
+    // A declared interface title matching a package/root alias is strong
+    // cross-tier evidence. A Compose service name alone is not: many repos have
+    // multiple deployable services named after the package.
+    if (candidateExtractors.has('openapi') && scanAliases(candidate).some((alias) => aliases.has(alias))) return true;
+    const sharedInfra = [...infraNeighbours(String(candidate.id), nodes, edges)]
+      .filter((target) => rootInfra.has(target));
+    const composeFiles = new Set(readProvenance(candidate)
+      .filter((record) => record.extractor === 'compose')
+      .map(provenanceFile));
+    // Shared dependencies become identity evidence only when multiple Compose
+    // variants independently describe the same service. One compose file can
+    // legitimately contain several apps using the same DB and cache.
+    return sharedInfra.length >= 2 && composeFiles.size >= 2;
+  });
+  return collapseGroup([root, ...matches], nodes, edges, priority);
+}
+
 /**
  * Unify same-type infra nodes across extractors even when their names differ
  * (manifest's `firestore` vs code's `firestore_firebase_admin`). Skips a type
@@ -334,8 +458,10 @@ export function unifySingletonInfra(
 
 /** Remove the internal `config.scanRoot` bookkeeping tag before nodes reach the public IR. */
 function stripScanRootTag(node: Record<string, unknown>): Record<string, unknown> {
-  if (!isScanRoot(node)) return node;
-  const { scanRoot: _scanRoot, ...rest } = node.config as Record<string, unknown>;
+  const config = node.config;
+  if (!config || typeof config !== 'object' || Array.isArray(config)) return node;
+  const { scanRoot: _scanRoot, scanAliases: _scanAliases, ...rest } = config as Record<string, unknown>;
+  if (_scanRoot === undefined && _scanAliases === undefined) return node;
   return { ...node, config: rest };
 }
 
@@ -490,10 +616,14 @@ export function unifyDraft(
   priority: string[],
 ): { nodes: Record<string, unknown>[]; edges: Record<string, unknown>[] } {
   const afterOverrides = unifyComposeOverrides(nodes, edges, priority);
-  const afterRoots = unifyScanRoots(afterOverrides.nodes, afterOverrides.edges, priority);
+  const afterNames = unifyEquivalentComponentNames(afterOverrides.nodes, afterOverrides.edges, priority);
+  const afterRoots = unifyScanRoots(afterNames.nodes, afterNames.edges, priority);
+  // Align infrastructure ids before using shared neighbours as application
+  // identity evidence; code and Compose often name the same database differently.
   const afterInfra = unifySingletonInfra(afterRoots.nodes, afterRoots.edges, priority);
+  const afterApps = unifyCorroboratedApps(afterInfra.nodes, afterInfra.edges, priority);
   // Edge de-duplication runs last: node unification is what makes parallel infra
   // links land on the same (from, to) pair in the first place.
-  const dedupedEdges = unifyRedundantEdges(afterInfra.nodes, afterInfra.edges);
-  return { nodes: afterInfra.nodes.map(stripScanRootTag), edges: dedupedEdges };
+  const dedupedEdges = unifyRedundantEdges(afterApps.nodes, afterApps.edges);
+  return { nodes: afterApps.nodes.map(stripScanRootTag), edges: dedupedEdges };
 }

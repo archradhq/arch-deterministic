@@ -36,6 +36,8 @@ const cases: Record<string, [file: string, content: string]> = {
   'env as a mapping': ['d.yaml', pod('      containers:\n        - name: c\n          image: i\n          env:\n            KEY: value\n')],
   'env item without a name': ['d.yaml', pod('      containers:\n        - name: c\n          image: i\n          env:\n            - value: v\n')],
   'env name is a mapping': ['d.yaml', pod('      containers:\n        - name: c\n          image: i\n          env:\n            - name: {a: b}\n              value: v\n')],
+  'envFrom as a mapping': ['d.yaml', pod('      containers:\n        - name: c\n          image: i\n          envFrom:\n            configMapRef:\n              name: cfg\n')],
+  'envFrom item a scalar': ['d.yaml', pod('      containers:\n        - name: c\n          image: i\n          envFrom:\n            - cfg\n')],
   'args as a mapping': ['d.yaml', pod('      containers:\n        - name: c\n          image: i\n          args:\n            flag: v\n')],
   'args item a mapping': ['d.yaml', pod('      containers:\n        - name: c\n          image: i\n          args:\n            - {a: b}\n')],
 

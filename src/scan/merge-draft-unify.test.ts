@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   unifyScanRoots,
+  unifyCorroboratedApps,
+  unifyEquivalentComponentNames,
   unifySingletonInfra,
   unifyComposeOverrides,
   unifyRedundantEdges,
@@ -48,6 +50,62 @@ describe('unifyScanRoots', () => {
     const edges = [{ id: 'e0', from: 'gateway_x', to: 'service_x', metadata: { relation: 'selfRef' }, config: { provenance: [prov('code', 'a:1')] } }];
     const result = unifyScanRoots(nodes, edges, ['manifest', 'code']);
     expect(result.edges).toHaveLength(0);
+  });
+});
+
+describe('unifyCorroboratedApps', () => {
+  it('folds exact alias and two-shared-infra views into the proven scan root', () => {
+    const nodes = [
+      node('gateway_code', 'gateway', { name: 'repo-folder', config: { scanRoot: true, scanAliases: ['immich'], provenance: [prov('code', 'src/app.ts:1')] } }),
+      node('gateway_openapi', 'gateway', { name: 'immich', config: { provenance: [prov('openapi', 'openapi.json:1', 'medium')] } }),
+      node('gateway_compose', 'gateway', { name: 'immich-server', config: { provenance: [
+        prov('compose', 'docker-compose.yml:1', 'high'),
+        prov('compose', 'docker-compose.prod.yml:1', 'high'),
+      ] } }),
+      node('db', 'postgres'),
+      node('redis', 'cache'),
+    ];
+    const edges = [
+      { from: 'gateway_code', to: 'db' },
+      { from: 'gateway_code', to: 'redis' },
+      { from: 'gateway_compose', to: 'db' },
+      { from: 'gateway_compose', to: 'redis' },
+    ];
+    const result = unifyCorroboratedApps(nodes, edges, ['compose', 'openapi', 'code']);
+    expect(result.nodes.filter((candidate) => candidate.type === 'gateway')).toHaveLength(1);
+    expect([...new Set(readProvenance(result.nodes.find((candidate) => candidate.type === 'gateway')!).map((p) => p.extractor))].sort())
+      .toEqual(['code', 'compose', 'openapi']);
+  });
+
+  it('does not merge a service sharing only one infrastructure dependency', () => {
+    const nodes = [
+      node('root', 'gateway', { config: { scanRoot: true, provenance: [prov('code', 'src/app.ts:1')] } }),
+      node('worker', 'service', { config: { provenance: [prov('compose', 'compose.yml:1', 'high')] } }),
+      node('db', 'postgres'),
+    ];
+    const edges = [{ from: 'root', to: 'db' }, { from: 'worker', to: 'db' }];
+    expect(unifyCorroboratedApps(nodes, edges, ['compose', 'code']).nodes).toHaveLength(3);
+  });
+});
+
+describe('unifyEquivalentComponentNames', () => {
+  it('merges same-type cross-extractor names that differ only by display spacing', () => {
+    const nodes = [
+      node('service_balance_reader', 'service', { name: 'Balance Reader', config: { provenance: [prov('manifest', 'pom.xml:1')] } }),
+      node('service_balancereader', 'service', { name: 'balancereader', config: { provenance: [prov('kubernetes', 'deployment.yaml:1', 'high')] } }),
+    ];
+    const result = unifyEquivalentComponentNames(nodes, [], ['kubernetes', 'manifest']);
+    expect(result.nodes).toHaveLength(1);
+    expect([...new Set(readProvenance(result.nodes[0]!).map((record) => record.extractor))].sort())
+      .toEqual(['kubernetes', 'manifest']);
+  });
+
+  it('does not merge compact-name collisions emitted by the same extractor', () => {
+    const nodes = [
+      node('service_a', 'service', { name: 'order-api', config: { provenance: [prov('kubernetes', 'a.yaml:1', 'high')] } }),
+      node('service_b', 'service', { name: 'order api', config: { provenance: [prov('kubernetes', 'b.yaml:1', 'high')] } }),
+    ];
+    expect(unifyEquivalentComponentNames(nodes, [], ['kubernetes']).nodes).toHaveLength(2);
   });
 });
 

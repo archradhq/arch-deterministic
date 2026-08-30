@@ -49,6 +49,73 @@ describe('inferTypeFromImage', () => {
     expect(inferTypeFromImage('quay.io/keycloak/keycloak:24').type).toBe('keycloak');
     expect(inferTypeFromImage('maildev/maildev').type).toBe('smtp');
     expect(inferTypeFromImage('coredns/coredns:2').type).toBe('dns');
+    expect(inferTypeFromImage('otel/opentelemetry-collector-contrib:0.120.0').type).toBe('observability');
+    expect(inferTypeFromImage('prom/prometheus@sha256:abc').type).toBe('observability');
+    expect(inferTypeFromImage('grafana/grafana:12.4.7-ubuntu@sha256:abc').type).toBe('observability');
+  });
+
+  it('accepts Compose reset and override control tags', () => {
+    const yaml = `
+services:
+  api:
+    image: acme/api
+    profiles: !reset []
+    command: !override ["serve"]
+`;
+    const { ir } = dockerComposeToCanonicalIr(yaml);
+    const nodes = (ir.graph as { nodes: { name: string }[] }).nodes;
+    expect(nodes.map((node) => node.name)).toEqual(['api']);
+  });
+
+  it('omits underscore-profile services used only as extends templates', () => {
+    const yaml = `
+services:
+  app-base:
+    profiles: [_base]
+    volumes: [".:/app"]
+  api:
+    extends:
+      service: app-base
+    image: acme/api
+`;
+    const { ir } = dockerComposeToCanonicalIr(yaml);
+    const nodes = (ir.graph as { nodes: { name: string }[] }).nodes;
+    expect(nodes.map((node) => node.name)).toEqual(['api']);
+  });
+
+  it('marks an explicitly non-restarting service as a one-shot lifecycle job', () => {
+    const yaml = `
+services:
+  init:
+    image: acme/init
+    restart: "no"
+`;
+    const { ir } = dockerComposeToCanonicalIr(yaml);
+    const node = (ir.graph as { nodes: { config: { compose: { oneShot?: boolean } } }[] }).nodes[0]!;
+    expect(node.config.compose.oneShot).toBe(true);
+  });
+
+  it('applies YAML merge anchors before extracting inherited dependencies and environment', () => {
+    const yaml = `
+x-worker: &worker
+  image: acme/worker
+  depends_on:
+    db: { condition: service_healthy }
+  environment:
+    DATABASE_URL: postgres://db:5432/app
+services:
+  consumer:
+    <<: *worker
+    command: [consume]
+  db:
+    image: postgres:16
+`;
+    const { ir } = dockerComposeToCanonicalIr(yaml);
+    const graph = ir.graph as { nodes: { id: string; name: string; config: { compose?: { envKeys?: string[] } } }[]; edges: { from: string; to: string }[] };
+    const consumer = graph.nodes.find((node) => node.name === 'consumer')!;
+    const db = graph.nodes.find((node) => node.name === 'db')!;
+    expect(consumer.config.compose?.envKeys).toContain('DATABASE_URL');
+    expect(graph.edges.filter((edge) => edge.from === consumer.id && edge.to === db.id)).toHaveLength(1);
   });
 
   it('maps datastores the IR models to their own type, not the generic postgres bucket', () => {
@@ -280,6 +347,23 @@ services:
     expect(
       edges.some((e) => e.metadata?.relation === 'traefikIngress' && e.metadata?.traefikBackend === 'api_svc'),
     ).toBe(true);
+  });
+
+  it('does not treat a locally declared Traefik backend alias as a missing Compose service', () => {
+    const yaml = `
+services:
+  dashboard:
+    image: netbirdio/dashboard:latest
+    labels:
+      - traefik.http.services.netbird-dashboard.loadbalancer.server.port=80
+      - traefik.http.routers.dashboard.service=netbird-dashboard
+`;
+    const { ir, warnings } = dockerComposeToCanonicalIr(yaml);
+    const edges = (ir.graph as { edges: { metadata?: Record<string, unknown> }[] }).edges;
+    expect(warnings ?? []).not.toContain(
+      'traefik labels: unknown backend service "netbird-dashboard" (referenced from "dashboard")',
+    );
+    expect(edges.some((edge) => edge.metadata?.relation === 'traefikIngress')).toBe(false);
   });
 
   it('expands interpolateFrom for depends_on hyphen-default (${DB_HOST-db})', () => {

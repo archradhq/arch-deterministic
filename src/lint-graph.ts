@@ -27,6 +27,15 @@ export function edgeEndpoints(e: Record<string, unknown>): { from: string; to: s
   return { from, to };
 }
 
+/** Compose startup ordering is operational topology, not proof of a runtime call. */
+export function edgeIsDeploymentOrdering(e: Record<string, unknown>): boolean {
+  const meta = e.metadata;
+  const relation = meta && typeof meta === 'object' && !Array.isArray(meta)
+    ? (meta as Record<string, unknown>).relation
+    : undefined;
+  return relation === 'depends_on';
+}
+
 /**
  * Strongest scan-provenance confidence recorded on a node or edge, or null when
  * the element carries no provenance at all.
@@ -113,7 +122,7 @@ export function buildSyncAdjacencyForLint(g: ParsedLintGraph): Map<string, strin
   for (const e of g.edges) {
     if (!e || typeof e !== 'object') continue;
     const rec = e as Record<string, unknown>;
-    if (edgeRepresentsAsyncBoundary(rec, g)) continue;
+    if (edgeIsDeploymentOrdering(rec) || edgeRepresentsAsyncBoundary(rec, g)) continue;
     const { from, to } = edgeEndpoints(rec);
     if (!from || !to || !g.nodeById.has(from) || !g.nodeById.has(to)) continue;
     m.get(from)!.push(to);

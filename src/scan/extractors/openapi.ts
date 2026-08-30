@@ -72,10 +72,42 @@ export const openapiExtractor: Extractor = {
         .map((n) => (typeof n.id === 'string' ? n.id : ''))
         .filter((id): id is string => id.length > 0);
 
+      // The synthetic gateway represents the API surface as a whole, so carry
+      // the security declared by its operations onto that gateway.  Without
+      // this, the operation nodes correctly retain OpenAPI `security`, but the
+      // gateway is the entry node inspected by IR-LINT-MISSING-AUTH-010 and is
+      // falsely reported as unauthenticated (Backstage and Keycloak both expose
+      // this shape).  A mix of protected and explicitly public operations (for
+      // example `/health`) is still an authenticated API surface; only mark the
+      // gateway public when every operation explicitly opts out.
+      const securitySchemes = new Set<string>();
+      let everyOperationExplicitlyPublic = rawNodes.length > 0;
+      for (const node of rawNodes) {
+        const config = node.config && typeof node.config === 'object' && !Array.isArray(node.config)
+          ? node.config as Record<string, unknown>
+          : {};
+        if (Array.isArray(config.security)) {
+          for (const scheme of config.security) {
+            if (typeof scheme === 'string' && scheme.trim()) securitySchemes.add(scheme.trim());
+          }
+        }
+        if (config.authRequired !== false) everyOperationExplicitlyPublic = false;
+      }
+      const gatewaySecurity = securitySchemes.size > 0
+        ? { security: [...securitySchemes].sort() }
+        : everyOperationExplicitlyPublic
+          ? { authRequired: false }
+          : {};
+
       const apiNodes = operationIds.length
         ? [
             withProvenance(
-              { id: apiId, type: 'gateway', name: apiName, config: { openapi: { spec: file.relPath } } },
+              {
+                id: apiId,
+                type: 'gateway',
+                name: apiName,
+                config: { openapi: { spec: file.relPath }, ...gatewaySecurity },
+              },
               prov(),
             ),
           ]

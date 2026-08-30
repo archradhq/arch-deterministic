@@ -2,6 +2,7 @@
 /**
  * scan-corpus.mjs — run `scan` + `validate` over a pinned corpus of real
  * repositories and fail when the findings drift from what a human adjudicated.
+ * Loads both corpus/repos.json and corpus/repos-regression-complex.json.
  *
  * Why this exists: every scan-quality bug in this package was found by scanning a
  * real repository and reading the result by hand. That does not scale, and it
@@ -14,6 +15,7 @@
  *   node scripts/scan-corpus.mjs              compare against corpus/repos.json
  *   node scripts/scan-corpus.mjs --update     rewrite expectations (review the diff!)
  *   node scripts/scan-corpus.mjs --only NAME  restrict to one repo
+ *   node scripts/scan-corpus.mjs --registry complex  run the complex regression set
  *   node scripts/scan-corpus.mjs --cache DIR  where to keep clones (default: .corpus-cache)
  *
  * Clones are shallow, fetched once and reused, so repeat runs are offline.
@@ -26,6 +28,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CORPUS_PATH = join(ROOT, 'corpus', 'repos.json');
+const REGRESSION_CORPUS_PATH = join(ROOT, 'corpus', 'repos-regression-complex.json');
 
 function arg(flag, fallback) {
   const i = process.argv.indexOf(flag);
@@ -33,7 +36,13 @@ function arg(flag, fallback) {
 }
 const UPDATE = process.argv.includes('--update');
 const ONLY = arg('--only', null);
+const REGISTRY = arg('--registry', 'all');
 const CACHE = resolve(arg('--cache', join(ROOT, '.corpus-cache')));
+
+if (!['all', 'core', 'complex'].includes(REGISTRY)) {
+  console.error('scan-corpus: --registry must be all, core, or complex');
+  process.exit(2);
+}
 
 const DIST = join(ROOT, 'dist', 'index.js');
 if (!existsSync(DIST)) {
@@ -70,8 +79,8 @@ function ensureCheckout(repo) {
 }
 
 /** Findings for one checkout, counted by rule code. */
-async function findingsFor(dir) {
-  const result = await scanCodebase({ from: dir });
+async function findingsFor(dir, scope = 'all') {
+  const result = await scanCodebase({ from: dir, scope });
   const structural = validateIrStructural(result.ir);
   const lint = hasIrStructuralErrors(structural) ? [] : validateIrLint(result.ir);
   const counts = {};
@@ -95,7 +104,13 @@ function diffCounts(expected, actual) {
 }
 
 const corpus = JSON.parse(readFileSync(CORPUS_PATH, 'utf8'));
-const repos = corpus.repos.filter((r) => !ONLY || r.name === ONLY);
+const regressionCorpus = JSON.parse(readFileSync(REGRESSION_CORPUS_PATH, 'utf8'));
+const registryRepos = REGISTRY === 'core'
+  ? corpus.repos
+  : REGISTRY === 'complex'
+    ? regressionCorpus.repos
+    : [...corpus.repos, ...regressionCorpus.repos];
+const repos = registryRepos.filter((r) => !ONLY || r.name === ONLY);
 if (repos.length === 0) {
   console.error(`scan-corpus: no repo matched --only ${ONLY}`);
   process.exit(2);
@@ -114,7 +129,7 @@ for (const repo of repos) {
   }
 
   const started = Date.now();
-  const { nodeCount, counts, structuralCount } = await findingsFor(dir);
+  const { nodeCount, counts, structuralCount } = await findingsFor(dir, repo.scope ?? 'all');
   const ms = Date.now() - started;
 
   if (UPDATE) {
@@ -154,6 +169,7 @@ for (const repo of repos) {
 
 if (UPDATE) {
   writeFileSync(CORPUS_PATH, `${JSON.stringify(corpus, null, 2)}\n`);
+  writeFileSync(REGRESSION_CORPUS_PATH, `${JSON.stringify(regressionCorpus, null, 2)}\n`);
   console.log(`\nscan-corpus: expectations rewritten. Review the diff before committing —\nan expectation changed without a reason is a regression you just blessed.`);
   process.exit(0);
 }
@@ -162,7 +178,7 @@ if (failed > 0) {
   console.error(
     `\nscan-corpus: ${failed} repo(s) drifted from adjudication.\n` +
       `If the new behaviour is CORRECT, re-run with --update and explain the change in the\n` +
-      `commit message and in corpus/repos.json notes. If it is not, you have a regression.`,
+    `commit message and in the matching corpus registry notes. If it is not, you have a regression.`,
   );
   process.exit(1);
 }

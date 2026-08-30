@@ -15,6 +15,7 @@
  */
 
 import yaml from 'js-yaml';
+import { basename } from 'node:path';
 import type { Extractor, PartialIR } from '../types.js';
 import { canonicalizeIds } from '../node-id.js';
 import { provenanceEntry, withProvenance } from '../provenance.js';
@@ -42,11 +43,13 @@ type EnvVar = {
     secretKeyRef?: { name?: string; key?: string };
   };
 };
-type PodSpec = { containers?: { image?: string; env?: EnvVar[]; command?: string[]; args?: string[] }[] };
+type EnvFromSource = { configMapRef?: { name?: string }; secretRef?: { name?: string } };
+type Probe = { httpGet?: { path?: string }; grpc?: { port?: number }; tcpSocket?: { port?: number | string } };
+type PodSpec = { containers?: { image?: string; env?: EnvVar[]; envFrom?: EnvFromSource[]; command?: string[]; args?: string[]; readinessProbe?: Probe; livenessProbe?: Probe; startupProbe?: Probe }[] };
 type K8sDoc = {
   kind?: string;
   apiVersion?: string;
-  metadata?: { name?: string; labels?: Record<string, string> };
+  metadata?: { name?: string; namespace?: string; labels?: Record<string, string> };
   data?: Record<string, string>;
   stringData?: Record<string, string>;
   spec?: {
@@ -58,7 +61,30 @@ type K8sDoc = {
 };
 
 /** One recognized k8s document, tagged with where it came from. */
-type Entry = { doc: K8sDoc; file: string; line: number };
+type Entry = { doc: K8sDoc; file: string; line: number; namespace: string };
+type ResolvedEnvVar = { raw: EnvVar; value?: string; configMaps: Entry[] };
+
+const declaredNamespace = (doc: K8sDoc): string | undefined =>
+  typeof doc.metadata?.namespace === 'string' && doc.metadata.namespace.trim()
+    ? doc.metadata.namespace.trim()
+    : undefined;
+const resourceKey = (namespace: string, name: string): string => `${namespace}\0${name}`;
+
+function parentPath(relPath: string): string {
+  const normalized = relPath.replace(/\\/g, '/');
+  const index = normalized.lastIndexOf('/');
+  return index < 0 ? '.' : normalized.slice(0, index);
+}
+
+function inheritedKustomizeNamespace(file: string, namespacesByDir: Map<string, string>): string | undefined {
+  let dir = parentPath(file);
+  while (true) {
+    const namespace = namespacesByDir.get(dir);
+    if (namespace) return namespace;
+    if (dir === '.') return undefined;
+    dir = parentPath(dir);
+  }
+}
 
 function isYamlFile(relPath: string): boolean {
   return /\.ya?ml$/i.test(relPath);
@@ -114,7 +140,7 @@ function loadK8sDocs(text: string, relPath: string): Entry[] {
       // identify what it describes, so we do not pretend to.
       typeof (d as K8sDoc).metadata?.name === 'string'
     ) {
-      out.push({ doc: d as K8sDoc, file: relPath, line: starts[i] ?? 1 });
+      out.push({ doc: d as K8sDoc, file: relPath, line: starts[i] ?? 1, namespace: declaredNamespace(d as K8sDoc) ?? 'default' });
     }
   });
   return out;
@@ -151,13 +177,75 @@ function primaryImage(doc: K8sDoc): string | undefined {
   return containersOf(doc)[0]?.image;
 }
 
+function healthSignals(doc: K8sDoc): string[] {
+  const signals = new Set<string>();
+  for (const container of containersOf(doc)) {
+    for (const probe of [container.readinessProbe, container.livenessProbe, container.startupProbe]) {
+      if (!probe) continue;
+      if (typeof probe.httpGet?.path === 'string') signals.add(probe.httpGet.path);
+      else if (probe.grpc) signals.add('grpc-probe');
+      else if (probe.tcpSocket) signals.add('tcp-probe');
+    }
+  }
+  return [...signals].sort();
+}
+
 /** Every env var across all containers, flattened (later containers win on key collision). Raw — value or valueFrom. */
-function podEnvVars(doc: K8sDoc): Record<string, EnvVar> {
-  const env: Record<string, EnvVar> = {};
+function unambiguousConfigMapValues(entries: Entry[]): Map<string, { value: string; sources: Entry[] }> {
+  const candidates = new Map<string, { values: Set<string>; sources: Entry[] }>();
+  for (const entry of entries) {
+    const values = { ...(entry.doc.data ?? {}), ...(entry.doc.stringData ?? {}) };
+    for (const [key, value] of Object.entries(values)) {
+      if (typeof value !== 'string') continue;
+      const item = candidates.get(key) ?? { values: new Set<string>(), sources: [] };
+      item.values.add(value);
+      item.sources.push(entry);
+      candidates.set(key, item);
+    }
+  }
+  const resolved = new Map<string, { value: string; sources: Entry[] }>();
+  for (const [key, item] of candidates) {
+    if (item.values.size === 1) resolved.set(key, { value: [...item.values][0]!, sources: item.sources });
+  }
+  return resolved;
+}
+
+/** Resolve envFrom first, then explicit env entries (Kubernetes precedence). */
+function podEnvVars(
+  doc: K8sDoc,
+  namespace: string,
+  configMapsByResource: Map<string, Entry[]>,
+): Record<string, ResolvedEnvVar> {
+  const env: Record<string, ResolvedEnvVar> = {};
   for (const c of containersOf(doc)) {
+    if (Array.isArray(c.envFrom)) {
+      for (const source of c.envFrom) {
+        const name = source?.configMapRef?.name;
+        if (typeof name !== 'string' || !name) continue;
+        const entries = configMapsByResource.get(resourceKey(namespace, name)) ?? [];
+        for (const [key, resolved] of unambiguousConfigMapValues(entries)) {
+          env[key] = {
+            raw: { name: key, value: resolved.value },
+            value: resolved.value,
+            configMaps: resolved.sources,
+          };
+        }
+      }
+    }
     if (!Array.isArray(c.env)) continue;
     for (const e of c.env) {
-      if (e && typeof e.name === 'string') env[e.name] = e;
+      if (!e || typeof e.name !== 'string') continue;
+      let value = typeof e.value === 'string' ? e.value : undefined;
+      let configMaps: Entry[] = [];
+      const ref = e.valueFrom?.configMapKeyRef;
+      if (value === undefined && typeof ref?.name === 'string' && typeof ref.key === 'string') {
+        const resolved = unambiguousConfigMapValues(
+          configMapsByResource.get(resourceKey(namespace, ref.name)) ?? [],
+        ).get(ref.key);
+        value = resolved?.value;
+        configMaps = resolved?.sources ?? [];
+      }
+      env[e.name] = { raw: e, value, configMaps };
     }
   }
   return env;
@@ -190,12 +278,16 @@ function selectorMatches(selector: Record<string, string> | undefined, labels: R
 /** k8s in-cluster DNS is `<service>.<namespace>.svc.cluster.local`; bare short names also resolve. */
 function resolveHostToIds(
   host: string,
+  callerNamespace: string,
   workloadIdsByServiceName: Map<string, string[]>,
-  workloadIdByName: Map<string, string>,
+  workloadIdByResource: Map<string, string>,
 ): string[] {
-  const shortName = host.split('.')[0] ?? host;
-  if (workloadIdsByServiceName.has(shortName)) return workloadIdsByServiceName.get(shortName)!;
-  const direct = workloadIdByName.get(shortName);
+  const parts = host.split('.');
+  const shortName = parts[0] ?? host;
+  const namespace = parts.length >= 2 && parts[1] !== 'svc' ? parts[1]! : callerNamespace;
+  const key = resourceKey(namespace, shortName);
+  if (workloadIdsByServiceName.has(key)) return workloadIdsByServiceName.get(key)!;
+  const direct = workloadIdByResource.get(key);
   return direct ? [direct] : [];
 }
 
@@ -206,23 +298,29 @@ function resolveHostToIds(
  * `undefined` when unresolvable (including every `secretKeyRef` — see the
  * module doc / SPEC §3.1 for why that's deliberate, not an oversight).
  */
-function resolveEnvValue(
-  ev: EnvVar,
-  configMapData: Map<string, Record<string, string>>,
-): string | undefined {
-  if (typeof ev.value === 'string') return ev.value;
-  const ref = ev.valueFrom?.configMapKeyRef;
-  if (ref?.name && ref.key) {
-    return configMapData.get(ref.name)?.[ref.key];
-  }
-  return undefined;
-}
 
 export const kubernetesExtractor: Extractor = {
   name: 'kubernetes',
   defaultConfidence: 'high',
   extract(tree): PartialIR[] {
     const warnings: string[] = [];
+
+    // Kustomize applies `namespace:` at render time, so the resource YAML often
+    // has no metadata.namespace. Capture the nearest enclosing kustomization;
+    // explicit resource namespaces still win below.
+    const kustomizeNamespacesByDir = new Map<string, string>();
+    for (const file of tree.files) {
+      if (!/^kustomization\.ya?ml$/i.test(basename(file.relPath))) continue;
+      try {
+        const parsed = yaml.load(tree.read(file.relPath), { schema: JSON_SCHEMA });
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) continue;
+        const record = parsed as Record<string, unknown>;
+        if (record.kind !== 'Kustomization' || typeof record.namespace !== 'string' || !record.namespace.trim()) continue;
+        kustomizeNamespacesByDir.set(parentPath(file.relPath), record.namespace.trim());
+      } catch {
+        // An unreadable kustomization must not suppress otherwise valid manifests.
+      }
+    }
 
     // ---- Pass 1: collect every recognized document across the whole tree ----
     const allEntries: Entry[] = [];
@@ -232,6 +330,11 @@ export const kubernetesExtractor: Extractor = {
       if (!text.trim()) continue;
       allEntries.push(...loadK8sDocs(text, file.relPath));
     }
+    for (const entry of allEntries) {
+      if (!declaredNamespace(entry.doc)) {
+        entry.namespace = inheritedKustomizeNamespace(entry.file, kustomizeNamespacesByDir) ?? 'default';
+      }
+    }
     if (allEntries.length === 0) return [];
 
     const workloads = allEntries.filter((e) => WORKLOAD_KINDS.has(e.doc.kind as string));
@@ -240,11 +343,15 @@ export const kubernetesExtractor: Extractor = {
     const configMaps = allEntries.filter((e) => e.doc.kind === 'ConfigMap');
     if (workloads.length === 0 && ingresses.length === 0) return [];
 
-    const configMapData = new Map<string, Record<string, string>>();
-    for (const { doc: cm } of configMaps) {
+    const configMapsByResource = new Map<string, Entry[]>();
+    for (const entry of configMaps) {
+      const cm = entry.doc;
       const name = cm.metadata?.name;
       if (!name) continue;
-      configMapData.set(name, { ...(cm.data ?? {}), ...(cm.stringData ?? {}) });
+      const key = resourceKey(entry.namespace, name);
+      const group = configMapsByResource.get(key) ?? [];
+      group.push(entry);
+      configMapsByResource.set(key, group);
     }
 
     const nodes: Record<string, unknown>[] = [];
@@ -252,18 +359,22 @@ export const kubernetesExtractor: Extractor = {
     const prov = (file: string, line: number) => provenanceEntry('kubernetes', file, line, 'high');
 
     // ---- Pass 2: workload nodes ----
-    const workloadIdByName = new Map<string, string>();
+    const workloadIdByResource = new Map<string, string>();
     const workloadLoc = new Map<string, { file: string; line: number }>();
-    for (const { doc: w, file, line } of workloads) {
+    for (const { doc: w, file, line, namespace } of workloads) {
       const name = w.metadata?.name;
       if (!name) continue;
       const image = primaryImage(w);
       const isBatch = w.kind === 'Job' || w.kind === 'CronJob';
       const nodeType = isBatch ? 'worker' : image ? inferTypeFromImage(image).type : 'service';
       const id = `k8s_${name}`; // pre-canonical placeholder; canonicalizeIds() below assigns the real id
-      workloadIdByName.set(name, id);
+      workloadIdByResource.set(resourceKey(namespace, name), id);
       workloadLoc.set(id, { file, line });
-      nodes.push(withProvenance({ id, type: nodeType, name, config: { k8sKind: w.kind } }, prov(file, line)));
+      const probes = healthSignals(w);
+      nodes.push(withProvenance({
+        id, type: nodeType, name,
+        config: { k8sKind: w.kind, ...(probes.length ? { healthSignals: probes } : {}) },
+      }, prov(file, line)));
     }
 
     /** Node type by id, for choosing an edge relation that matches what the target is. */
@@ -274,40 +385,41 @@ export const kubernetesExtractor: Extractor = {
 
     // ---- Pass 3: Service -> workload(s) alias, across the whole scan ----
     const workloadIdsByServiceName = new Map<string, string[]>();
-    for (const { doc: s } of services) {
+    for (const serviceEntry of services) {
+      const s = serviceEntry.doc;
       const name = s.metadata?.name;
       if (!name) continue;
       const matched = workloads
-        .filter(({ doc: w }) => selectorMatches(s.spec?.selector, podLabelsOf(w)))
-        .map(({ doc: w }) => workloadIdByName.get(w.metadata?.name ?? ''))
+        .filter((workload) => workload.namespace === serviceEntry.namespace && selectorMatches(s.spec?.selector, podLabelsOf(workload.doc)))
+        .map((workload) => workloadIdByResource.get(resourceKey(workload.namespace, workload.doc.metadata?.name ?? '')))
         .filter((id): id is string => !!id);
-      if (matched.length > 0) workloadIdsByServiceName.set(name, matched);
+      if (matched.length > 0) workloadIdsByServiceName.set(resourceKey(serviceEntry.namespace, name), matched);
     }
 
     // ---- Pass 4: connection edges from workload env vars ----
     const CONNECTION_KEY_SET = new Set<string>([...CONNECTION_ENV_KEYS, ...HOST_ONLY_ENV_KEYS]);
-    for (const { doc: w } of workloads) {
-      const fromId = workloadIdByName.get(w.metadata?.name ?? '');
+    for (const { doc: w, namespace } of workloads) {
+      const fromId = workloadIdByResource.get(resourceKey(namespace, w.metadata?.name ?? ''));
       if (!fromId) continue;
       const loc = workloadLoc.get(fromId)!;
-      const envVars = podEnvVars(w);
+      const envVars = podEnvVars(w, namespace, configMapsByResource);
 
       for (const key of CONNECTION_ENV_KEYS) {
         const ev = envVars[key];
         if (!ev) continue;
-        const resolved = resolveEnvValue(ev, configMapData);
+        const resolved = ev.value;
         const host = resolved ? connectionUrlHost(resolved) : null;
         if (host) {
-          for (const toId of resolveHostToIds(host, workloadIdsByServiceName, workloadIdByName)) {
+          for (const toId of resolveHostToIds(host, namespace, workloadIdsByServiceName, workloadIdByResource)) {
             if (toId === fromId) continue;
-            edges.push(
-              withProvenance(
+            let edge = withProvenance(
                 { id: `e_${fromId}_${toId}_${key}`, from: fromId, to: toId, metadata: { relation: 'connectionUrl', protocol: 'tcp', async: false, env: key } },
                 prov(loc.file, loc.line),
-              ),
-            );
+              );
+            for (const source of ev.configMaps) edge = withProvenance(edge, prov(source.file, source.line));
+            edges.push(edge);
           }
-        } else if (!resolved && ev.valueFrom?.secretKeyRef) {
+        } else if (!resolved && ev.raw.valueFrom?.secretKeyRef) {
           warnings.push(
             `${loc.file}:${loc.line}: "${w.metadata?.name}" env "${key}" is wired via a Secret — connection likely present but not detectable from the manifest`,
           );
@@ -316,19 +428,19 @@ export const kubernetesExtractor: Extractor = {
       for (const key of HOST_ONLY_ENV_KEYS) {
         const ev = envVars[key];
         if (!ev) continue;
-        const resolved = resolveEnvValue(ev, configMapData);
+        const resolved = ev.value;
         const host = resolved ? composePlainEnvHostname(resolved) : null;
         if (host) {
-          for (const toId of resolveHostToIds(host, workloadIdsByServiceName, workloadIdByName)) {
+          for (const toId of resolveHostToIds(host, namespace, workloadIdsByServiceName, workloadIdByResource)) {
             if (toId === fromId) continue;
-            edges.push(
-              withProvenance(
+            let edge = withProvenance(
                 { id: `e_${fromId}_${toId}_${key}`, from: fromId, to: toId, metadata: { relation: 'connectionUrl', protocol: 'tcp', async: false, env: key } },
                 prov(loc.file, loc.line),
-              ),
-            );
+              );
+            for (const source of ev.configMaps) edge = withProvenance(edge, prov(source.file, source.line));
+            edges.push(edge);
           }
-        } else if (!resolved && ev.valueFrom?.secretKeyRef) {
+        } else if (!resolved && ev.raw.valueFrom?.secretKeyRef) {
           warnings.push(
             `${loc.file}:${loc.line}: "${w.metadata?.name}" env "${key}" is wired via a Secret — connection likely present but not detectable from the manifest`,
           );
@@ -353,14 +465,14 @@ export const kubernetesExtractor: Extractor = {
       );
       for (const [key, ev] of Object.entries(envVars)) {
         if (CONNECTION_KEY_SET.has(key)) continue; // already handled above
-        const resolved = resolveEnvValue(ev, configMapData);
+        const resolved = ev.value;
         if (!resolved) continue;
         const hasExplicitPort = /:\d{1,5}(?:$|\/)/.test(resolved.trim());
         if (!hasExplicitPort && !ADDRESS_SHAPED_KEY.test(key)) continue;
         // Shared with the compose tier: reads `svc:7070` AND `http://svc:4317`.
         const host = addressEnvHost(resolved);
         if (!host) continue;
-        for (const toId of resolveHostToIds(host, workloadIdsByServiceName, workloadIdByName)) {
+        for (const toId of resolveHostToIds(host, namespace, workloadIdsByServiceName, workloadIdByResource)) {
           if (toId === fromId || linkedTargets.has(toId)) continue;
           linkedTargets.add(toId);
           const targetType = String(nodeTypeById.get(toId) ?? '');
@@ -369,8 +481,7 @@ export const kubernetesExtractor: Extractor = {
             isDbLikeType(targetType) || isQueueLikeNodeType(targetType) || targetType === 'cache'
               ? 'connectionUrl'
               : 'serviceCall';
-          edges.push(
-            withProvenance(
+          let edge = withProvenance(
               {
                 id: `e_${fromId}_${toId}_${key}`,
                 from: fromId,
@@ -378,8 +489,9 @@ export const kubernetesExtractor: Extractor = {
                 metadata: { relation, protocol: 'tcp', async: false, env: key },
               },
               prov(loc.file, loc.line),
-            ),
-          );
+            );
+          for (const source of ev.configMaps) edge = withProvenance(edge, prov(source.file, source.line));
+          edges.push(edge);
         }
       }
 
@@ -397,7 +509,7 @@ export const kubernetesExtractor: Extractor = {
       for (const raw of podArgValues(w)) {
         const host = connectionUrlHost(raw);
         if (!host) continue;
-        for (const toId of resolveHostToIds(host, workloadIdsByServiceName, workloadIdByName)) {
+        for (const toId of resolveHostToIds(host, namespace, workloadIdsByServiceName, workloadIdByResource)) {
           if (toId === fromId || linkedTargets.has(toId)) continue;
           linkedTargets.add(toId);
           const targetType = String(nodeTypeById.get(toId) ?? '');
@@ -423,7 +535,7 @@ export const kubernetesExtractor: Extractor = {
       // even outside the known key list — same honesty rationale, lower specificity.
       for (const [key, ev] of Object.entries(envVars)) {
         if (CONNECTION_KEY_SET.has(key)) continue; // already handled above
-        if (!ev.valueFrom?.secretKeyRef) continue;
+        if (!ev.raw.valueFrom?.secretKeyRef) continue;
         if (!/url|uri|host|connection/i.test(key)) continue;
         warnings.push(
           `${loc.file}:${loc.line}: "${w.metadata?.name}" env "${key}" is wired via a Secret — connection likely present but not detectable from the manifest`,
@@ -432,7 +544,7 @@ export const kubernetesExtractor: Extractor = {
     }
 
     // ---- Pass 5: Ingress -> backend edges, across the whole scan ----
-    for (const { doc: ing, file, line } of ingresses) {
+    for (const { doc: ing, file, line, namespace } of ingresses) {
       const name = ing.metadata?.name;
       if (!name) continue;
       const gwId = `k8s_ing_${name}`;
@@ -446,7 +558,7 @@ export const kubernetesExtractor: Extractor = {
         }
       }
       for (const svcName of backendNames) {
-        for (const toId of workloadIdsByServiceName.get(svcName) ?? []) {
+        for (const toId of workloadIdsByServiceName.get(resourceKey(namespace, svcName)) ?? []) {
           edges.push(
             withProvenance(
               { id: `e_${gwId}_${toId}`, from: gwId, to: toId, metadata: { relation: 'routes', protocol: 'http', async: false } },

@@ -25,6 +25,9 @@
           "openapi": {
             "spec": "openapi.yaml"
           },
+          "security": [
+            "BearerAuth"
+          ],
           "provenance": [
             {
               "inferred_from": "openapi.yaml:1",

@@ -321,7 +321,7 @@ function buildIrFromGroups(
         id: extId,
         type: 'service',
         name: dest,
-        config: { source: 'reconstructed', note: `External: ${a.detail}` },
+        config: { source: 'reconstructed', external: true, note: `External: ${a.detail}` },
       });
       edges.push({
         id: `e_${group.id}_${extId}_${edgeCounter++}`,
@@ -340,7 +340,7 @@ function buildIrFromGroups(
           id: genericExtNodeId,
           type: 'service',
           name: 'external-service',
-          config: { source: 'reconstructed', note: 'HTTP/gRPC outbound call detected' },
+          config: { source: 'reconstructed', external: true, note: 'HTTP/gRPC outbound call detected' },
         });
       }
       const alreadyEdged = edges.some((e) => e.from === group.id && e.to === genericExtNodeId);
@@ -486,7 +486,7 @@ function buildLegacyIr(
       id: extId,
       type: 'service',
       name: dest,
-      config: { source: 'reconstructed', note: `External: ${a.detail}` },
+      config: { source: 'reconstructed', external: true, note: `External: ${a.detail}` },
     });
     edges.push({
       id: `e_${serviceId}_${extId}_${edgeCounter++}`,
@@ -503,7 +503,7 @@ function buildLegacyIr(
       id: extId,
       type: 'service',
       name: 'external-service',
-      config: { source: 'reconstructed', note: 'HTTP/gRPC outbound call detected' },
+      config: { source: 'reconstructed', external: true, note: 'HTTP/gRPC outbound call detected' },
     });
     edges.push({
       id: `e_${serviceId}_${extId}_${edgeCounter++}`,

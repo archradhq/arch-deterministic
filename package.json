@@ -27,7 +27,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/archradhq/arch-deterministic.git"
+    "url": "git+https://github.com/archradhq/arch-deterministic.git"
   },
   "publishConfig": {
     "access": "public"
@@ -42,8 +42,8 @@
     }
   },
   "bin": {
-    "archrad": "./dist/cli.js",
-    "archrad-mcp": "./dist/mcp-server.js"
+    "archrad": "dist/cli.js",
+    "archrad-mcp": "dist/mcp-server.js"
   },
   "files": [
     "dist",
@@ -71,6 +71,7 @@
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "generate-corpus": "node scripts/generate-corpus.mjs",
     "scan-corpus": "node scripts/scan-corpus.mjs",
+    "scan-corpus:complex": "node scripts/scan-corpus.mjs --registry complex",
     "smoke:mcp": "node scripts/smoke-mcp.mjs",
     "record:demo:payment-retry": "vhs scripts/record-demo-payment-retry.tape",
     "record:demo:drift": "vhs scripts/record-demo-drift.tape",

@@ -103,6 +103,7 @@ highest-confidence body and all contributing provenance.
 | **`-o, --out <path>`** | Write draft IR JSON (default: print to **stdout**). |
 | **`--extractors <list>`** | Comma-separated extractors to enable (default: all four). |
 | **`--exclude <pattern>`** | Path fragment to exclude from scanning (repeatable). |
+| **`--scope production\|all`** | **`production`** (default) excludes conventional tests, examples, docs, demos, Storybook stories, and spec/test source files. Use **`all`** when those artifacts are intentionally part of the architecture under review. |
 | **`--dry-run`** | Print draft IR JSON to **stdout**; do not write a file. |
 | **`--verbose`** | Print per-extractor and warning details to **stderr**. |
 
@@ -110,6 +111,7 @@ highest-confidence body and all contributing provenance.
 archrad scan . --dry-run
 archrad scan ./server --out draft.ir.json --verbose
 archrad scan . --extractors compose,manifest
+archrad scan . --scope all --out full-repository-draft.ir.json
 ```
 
 ---

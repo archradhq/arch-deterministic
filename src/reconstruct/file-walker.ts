@@ -46,6 +46,7 @@ const EXCLUDED_PATH_PATTERNS: RegExp[] = [
   /[/\\](tests?|specs?|__tests?__)[/\\]/i,
   /[/\\](examples?|samples?|docs?|fixtures?)[/\\]/i,
   /\.(test|spec)\.[jt]sx?$/i,
+  /\.stories?\.[jt]sx?$/i,
   /\.(test|spec)\.py$/i,
   /[/\\]test_[^/\\]+\.py$/i,
   /_test\.py$/i,

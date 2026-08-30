@@ -52,6 +52,16 @@ describe('scanCodebase — openapi extractor', () => {
     ]);
   });
 
+  it('propagates operation security to the synthetic API gateway', async () => {
+    const result = await scanCodebase({ from: `${FIXTURE_ROOT}openapi-basic`, extractors: ['openapi'] });
+    const gateway = nodesOf(result.ir).find((n) => n.id === 'gateway_orders_api');
+
+    // The spec has globally protected order routes plus an explicitly public
+    // health route.  The API surface is protected even though one operation is
+    // intentionally public.
+    expect(gateway?.config).toMatchObject({ security: ['BearerAuth'] });
+  });
+
   it('matches the committed golden draft IR byte-for-byte', async () => {
     const result = await scanCodebase({ from: `${FIXTURE_ROOT}openapi-basic` });
     const golden = readFileSync(`${FIXTURE_ROOT}openapi-basic.expected-ir.json`, 'utf8');

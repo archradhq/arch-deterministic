@@ -92,6 +92,10 @@ function composeImageInferredAsNonHttpService(imageRef: string): boolean {
     /\bfauxqs\b|\bwiremock\b|mockserver|\bmountebank\b|\bhoverfly\b|\bmoto\b|\bgcs-emulator\b|firebase-tools|\bfake-gcs-server\b|azurite|dynamodb-local|\bsmocker\b|\bprism\b/;
   if (emulators.test(p)) return true;
 
+  // Known compute backends may expose an internal HTTP port to sibling
+  // containers, but that does not make them a northbound API gateway.
+  if (/immich-machine-learning/.test(p)) return true;
+
   return false;
 }
 
@@ -108,6 +112,10 @@ export function inferTypeFromImage(imageRef: string): { type: string; warning?: 
     /keycloak\b|dexidp\/dex|authentik\/|quay\.io\/keycloak|bitnami\/keycloak|^oryd\/hydra/.test(hay);
   if (idp) {
     return { type: 'keycloak' };
+  }
+
+  if (/opentelemetry|otelcol|otel-collector|jaeger|zipkin|(?:^|\/)prometheus(?:$|\/)|(?:^|\/)grafana(?:$|\/)/.test(hay)) {
+    return { type: 'observability' };
   }
 
   if (/\bcoredns\b|coredns\/|kube-dns/.test(hay) || /\bcoredns\b|kube-dns/.test(last)) {
@@ -316,6 +324,15 @@ export function enumerateTraefikHttpBackendRefs(labels: Record<string, string>):
     }
   }
   return refs;
+}
+
+function declaredTraefikHttpBackends(labels: Record<string, string>): Set<string> {
+  const declared = new Set<string>();
+  for (const key of Object.keys(labels)) {
+    const match = /^traefik\.http\.services\.([^.\s]+)\.loadbalancer/i.exec(key.trim());
+    if (match?.[1]) declared.add(match[1].trim());
+  }
+  return declared;
 }
 
 function composeServiceNameForTraefikRef(ref: string, names: readonly string[]): string | undefined {
@@ -644,7 +661,20 @@ function resolveImage(serviceName: string, serviceDef: Record<string, unknown>):
   return `${serviceName}:latest`;
 }
 
-const JSON_SCHEMA = yaml.JSON_SCHEMA;
+const YAML_MERGE_TYPE = (yaml as unknown as {
+  types: { merge: InstanceType<typeof yaml.Type> };
+}).types.merge;
+
+const JSON_SCHEMA = yaml.JSON_SCHEMA.extend({
+  implicit: [YAML_MERGE_TYPE],
+  explicit: [
+    ...(['scalar', 'sequence', 'mapping'] as const).flatMap((kind) =>
+    ['!reset', '!override'].map(
+      (tag) => new yaml.Type(tag, { kind, construct: (value: unknown) => value }),
+    ),
+    ),
+  ],
+});
 
 /**
  * Load Compose YAML: supports multi-document files (leading `---` / empty first doc)
@@ -704,7 +734,24 @@ export function dockerComposeToCanonicalIr(
   }
 
   const services = servicesRaw as Record<string, unknown>;
-  const names = Object.keys(services).filter((k) => !k.startsWith('x-'));
+  const extendedServices = new Set<string>();
+  for (const raw of Object.values(services)) {
+    if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) continue;
+    const ext = (raw as Record<string, unknown>).extends;
+    if (ext && typeof ext === 'object' && !Array.isArray(ext)) {
+      const target = (ext as Record<string, unknown>).service;
+      if (typeof target === 'string' && target.trim()) extendedServices.add(target.trim());
+    }
+  }
+  const isExtensionOnlyHelper = (name: string): boolean => {
+    if (!extendedServices.has(name)) return false;
+    const raw = services[name];
+    if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return false;
+    const profiles = (raw as Record<string, unknown>).profiles;
+    return Array.isArray(profiles) && profiles.length > 0 &&
+      profiles.every((profile) => typeof profile === 'string' && profile.startsWith('_'));
+  };
+  const names = Object.keys(services).filter((k) => !k.startsWith('x-') && !isExtensionOnlyHelper(k));
   if (names.length === 0) {
     throw new DockerComposeInitError('No services found in compose file.');
   }
@@ -771,6 +818,7 @@ export function dockerComposeToCanonicalIr(
         ...lintHints,
         compose: {
           image,
+          ...(String(serviceDef.restart ?? '').toLowerCase() === 'no' ? { oneShot: true } : {}),
           // Local build context (`.` = this compose file's own directory) rather
           // than a pulled image — factual metadata `scan` uses to recognise which
           // service is the app under scan.
@@ -882,11 +930,16 @@ export function dockerComposeToCanonicalIr(
     const serviceDef = def as Record<string, unknown>;
     const labels = parseLabelsExpanded(serviceDef, iv);
     const refs = enumerateTraefikHttpBackendRefs(labels);
+    const locallyDeclaredBackends = declaredTraefikHttpBackends(labels);
     if (refs.size === 0) continue;
     const fromId = idByServiceName.get(fromName)!;
     for (const ref of refs) {
       const toName = composeServiceNameForTraefikRef(ref, names);
       if (!toName) {
+        // Under Traefik's Docker provider, a load-balancer service declared on
+        // a container is an alias for that same container, not a Compose
+        // service name. There is no cross-component edge to emit.
+        if (locallyDeclaredBackends.has(ref)) continue;
         warnings.push(`traefik labels: unknown backend service "${ref}" (referenced from "${fromName}")`);
         continue;
       }

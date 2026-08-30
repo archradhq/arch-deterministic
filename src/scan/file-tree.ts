@@ -61,6 +61,32 @@ const EXCLUDED_DIRS = new Set([
  */
 const TEST_DIRS = new Set(['testdata', 'test-data', '__tests__', '__fixtures__', '__mocks__', 'fixtures']);
 
+/** Unambiguous non-production path segments used only by the opt-in production view. */
+const NON_PRODUCTION_DIRS = new Set([
+  'test',
+  'tests',
+  'e2e',
+  'examples',
+  'example',
+  'docs',
+  'doc',
+  'dev',
+  'demo',
+  'demos',
+  'sample',
+  'samples',
+  'storybook',
+]);
+
+function isProductionExcludedDir(name: string): boolean {
+  const lower = name.toLowerCase();
+  return NON_PRODUCTION_DIRS.has(lower) || /(?:^|[-_])(tests?|examples?|fixtures?)$/.test(lower);
+}
+
+function isProductionExcludedFile(name: string): boolean {
+  return /\.(?:stories?|spec|test)\.[^.]+$/i.test(name);
+}
+
 /**
  * Whether `name` is a test directory in a position that makes it one.
  *
@@ -81,7 +107,11 @@ function toPosix(p: string): string {
  * Build a {@link ScanFileTree} for `rootDir`. `extraExclude` fragments exclude
  * any relPath that contains them (substring match, POSIX-normalized).
  */
-export function buildScanFileTree(rootDir: string, extraExclude: string[] = []): ScanFileTree {
+export function buildScanFileTree(
+  rootDir: string,
+  extraExclude: string[] = [],
+  scope: 'all' | 'production' = 'all',
+): ScanFileTree {
   const root = resolve(rootDir);
   const files: ScanFile[] = [];
 
@@ -100,12 +130,14 @@ export function buildScanFileTree(rootDir: string, extraExclude: string[] = []):
       const rel = toPosix(full.slice(root.length).replace(/^[/\\]/, ''));
       if (ent.isDirectory()) {
         if (EXCLUDED_DIRS.has(ent.name.toLowerCase())) continue;
+        if (scope === 'production' && isProductionExcludedDir(ent.name)) continue;
         // `rel` is the directory itself, so its parent is what decides whether
         // a bare `test`/`e2e` sits at the repository root.
         const parentRel = rel.slice(0, Math.max(0, rel.length - ent.name.length - 1));
         if (isTestDir(ent.name.toLowerCase(), parentRel)) continue;
         walk(full);
       } else if (ent.isFile()) {
+        if (scope === 'production' && isProductionExcludedFile(ent.name)) continue;
         if (extraExclude.some((frag) => frag && rel.includes(frag))) continue;
         files.push({ relPath: rel, absPath: full });
       }

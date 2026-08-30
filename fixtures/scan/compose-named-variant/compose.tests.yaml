@@ -1,0 +1,6 @@
+services:
+  test-runner:
+    image: acme/tests
+    depends_on:
+      api:
+        condition: service_started

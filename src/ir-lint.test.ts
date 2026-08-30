@@ -64,6 +64,17 @@ describe('validateIrLint', () => {
     expect(f.some((x) => x.code === 'IR-LINT-NO-HEALTHCHECK-003')).toBe(false);
   });
 
+  it('does not flag health when a Kubernetes workload has a declared probe', () => {
+    const ir = { graph: {
+      nodes: [
+        { id: 'ingress', type: 'gateway', config: {} },
+        { id: 'app', type: 'service', config: { k8sKind: 'Deployment', healthSignals: ['/_healthz'] } },
+      ],
+      edges: [{ from: 'ingress', to: 'app', metadata: { relation: 'routes' } }],
+    } };
+    expect(validateIrLint(ir).some((x) => x.code === 'IR-LINT-NO-HEALTHCHECK-003')).toBe(false);
+  });
+
   it('flags high fan-out', () => {
     const nodes = [
       { id: 'hub', type: 'http', config: { url: '/hub', method: 'GET' } },
@@ -72,6 +83,75 @@ describe('validateIrLint', () => {
     const edges = [1, 2, 3, 4, 5].map((i) => ({ from: 'hub', to: `s${i}` }));
     const f = validateIrLint({ graph: { nodes, edges } });
     expect(f.some((x) => x.code === 'IR-LINT-HIGH-FANOUT-004')).toBe(true);
+  });
+
+  it('does not treat Compose startup ordering as runtime fan-out or direct database access', () => {
+    const nodes = [
+      { id: 'app', type: 'gateway' },
+      ...[1, 2, 3, 4, 5].map((i) => ({ id: `db${i}`, type: 'postgres' })),
+    ];
+    const edges = nodes.slice(1).map((node) => ({
+      from: 'app', to: node.id, metadata: { relation: 'depends_on' },
+    }));
+    const findings = validateIrLint({ graph: { nodes, edges } });
+    expect(findings.some((finding) => finding.code === 'IR-LINT-HIGH-FANOUT-004')).toBe(false);
+    expect(findings.some((finding) => finding.code === 'IR-LINT-DIRECT-DB-ACCESS-002')).toBe(false);
+  });
+
+  it('does not count a depends_on-only path as synchronous request depth', () => {
+    const nodes = ['a', 'b', 'c', 'd'].map((id, index) => ({ id, type: index === 0 ? 'gateway' : 'service' }));
+    const edges = [
+      { from: 'a', to: 'b', metadata: { relation: 'depends_on' } },
+      { from: 'b', to: 'c', metadata: { relation: 'depends_on' } },
+      { from: 'c', to: 'd', metadata: { relation: 'depends_on' } },
+    ];
+    expect(validateIrLint({ graph: { nodes, edges } }).some((finding) => finding.code === 'IR-LINT-SYNC-CHAIN-001')).toBe(false);
+  });
+
+  it('still counts Backstage dependsOn relations as dependency fan-out', () => {
+    const nodes = [
+      { id: 'app', type: 'service' },
+      ...[1, 2, 3, 4, 5].map((i) => ({ id: `service${i}`, type: 'service' })),
+    ];
+    const edges = nodes.slice(1).map((node) => ({
+      from: 'app', to: node.id, metadata: { relation: 'dependsOn' },
+    }));
+    const findings = validateIrLint({ graph: { nodes, edges } });
+    expect(findings.some((finding) => finding.code === 'IR-LINT-HIGH-FANOUT-004')).toBe(true);
+  });
+
+  it('does not count OpenAPI endpoint decomposition as dependency fan-out', () => {
+    const nodes = [
+      { id: 'api', type: 'gateway' },
+      ...[1, 2, 3, 4, 5, 6].map((i) => ({ id: `route${i}`, type: 'http', config: { url: `/r${i}` } })),
+    ];
+    const edges = nodes.slice(1).map((node) => ({ from: 'api', to: node.id }));
+    const f = validateIrLint({ graph: { nodes, edges } });
+    expect(f.some((x) => x.code === 'IR-LINT-HIGH-FANOUT-004')).toBe(false);
+  });
+
+  it('does not report an explicitly one-shot Compose job as a dead node', () => {
+    const ir = { graph: {
+      nodes: [
+        { id: 'api', type: 'gateway' },
+        { id: 'init', type: 'service', config: { compose: { oneShot: true } } },
+      ],
+      edges: [{ from: 'api', to: 'init', metadata: { relation: 'depends_on' } }],
+    } };
+    const f = validateIrLint(ir);
+    expect(f.some((x) => x.code === 'IR-LINT-DEAD-NODE-011' && x.nodeId === 'init')).toBe(false);
+  });
+
+  it('does not report a routed Kubernetes workload as a dead node', () => {
+    const ir = { graph: {
+      nodes: [
+        { id: 'ingress', type: 'gateway' },
+        { id: 'frontend', type: 'service', config: { k8sKind: 'Deployment' } },
+      ],
+      edges: [{ from: 'ingress', to: 'frontend', metadata: { relation: 'routes' } }],
+    } };
+    const f = validateIrLint(ir);
+    expect(f.some((x) => x.code === 'IR-LINT-DEAD-NODE-011' && x.nodeId === 'frontend')).toBe(false);
   });
 
   it('flags long sync chain from HTTP entry', () => {
@@ -303,6 +383,40 @@ describe('validateIrLint', () => {
       },
     };
     expect(validateIrLint(ir).some((x) => x.code === 'IR-LINT-DEAD-NODE-011')).toBe(false);
+  });
+
+  it('IR-LINT-DEAD-NODE-011 does not fire on an explicitly external destination', () => {
+    const ir = { graph: {
+      nodes: [
+        { id: 'api', type: 'service', name: 'API' },
+        { id: 'stripe', type: 'service', name: 'Stripe', config: { external: true } },
+      ],
+      edges: [{ from: 'api', to: 'stripe', metadata: { relation: 'serviceCall' } }],
+    } };
+    expect(validateIrLint(ir).some((x) => x.code === 'IR-LINT-DEAD-NODE-011')).toBe(false);
+  });
+
+  it('IR-LINT-DEAD-NODE-011 does not flag a terminal Kubernetes RPC service', () => {
+    const ir = { graph: {
+      nodes: [
+        { id: 'caller', type: 'service', config: { k8sKind: 'Deployment' } },
+        { id: 'email', type: 'service', config: { k8sKind: 'Deployment' } },
+      ],
+      edges: [{ from: 'caller', to: 'email', metadata: { relation: 'serviceCall' } }],
+    } };
+    expect(validateIrLint(ir).some((x) => x.code === 'IR-LINT-DEAD-NODE-011')).toBe(false);
+  });
+
+  it('IR-LINT-ISOLATED-NODE-005 ignores optional observability infrastructure', () => {
+    const ir = { graph: {
+      nodes: [
+        { id: 'api', type: 'service' },
+        { id: 'db', type: 'postgres' },
+        { id: 'otel', type: 'observability' },
+      ],
+      edges: [{ from: 'api', to: 'db' }],
+    } };
+    expect(validateIrLint(ir).some((x) => x.code === 'IR-LINT-ISOLATED-NODE-005' && x.nodeId === 'otel')).toBe(false);
   });
 
   it('IR-LINT-DEAD-NODE-011 does not fire on a wired-up auth node', () => {

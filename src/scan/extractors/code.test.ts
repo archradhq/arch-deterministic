@@ -86,6 +86,9 @@ describe('scanCodebase — code extractor', () => {
     // openapi-basic has only an OpenAPI spec, no source files.
     const result = await scanCodebase({ from: `${FIXTURE_ROOT}openapi-basic`, extractors: ['code'] });
     expect(graphOf(result.ir).nodes).toHaveLength(0);
+    expect(result.warnings).not.toEqual(expect.arrayContaining([
+      expect.stringMatching(/No nodejs files found/),
+    ]));
   });
 
   it('matches the committed golden byte-for-byte', async () => {

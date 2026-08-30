@@ -1,0 +1,6 @@
+services:
+  api:
+    image: acme/api
+    depends_on: [db]
+  db:
+    image: postgres:16

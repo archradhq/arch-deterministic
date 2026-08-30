@@ -5,8 +5,27 @@ import { scanCodebase, registeredExtractorNames } from './scan.js';
 import { canonicalIrToJsonString } from '../yamlToIr.js';
 import { validateIrStructural, hasIrStructuralErrors } from '../ir-structural.js';
 import { readProvenance } from './provenance.js';
+import { isComposeFile, mergeComposeDocuments } from './extractors/compose.js';
 
 const FIXTURE_ROOT = fileURLToPath(new URL('../../fixtures/scan/', import.meta.url));
+
+describe('Compose file discovery', () => {
+  it.each([
+    'docker-compose.yml.tmpl',
+    'infrastructure/docker-compose.yml.tmpl.traefik',
+    'compose.prod.yaml.tmpl',
+  ])('recognizes Compose-specific template %s', (path) => {
+    expect(isComposeFile(path)).toBe(true);
+  });
+
+  it.each([
+    'deployment.yml.tmpl',
+    'compose-config.yml.tmpl',
+    'docker-compose.yml.template',
+  ])('does not broaden discovery to unrelated template %s', (path) => {
+    expect(isComposeFile(path)).toBe(false);
+  });
+});
 
 function graphOf(ir: Record<string, unknown>) {
   const g = ir.graph as { nodes: Record<string, unknown>[]; edges: Record<string, unknown>[]; metadata: Record<string, unknown> };
@@ -29,6 +48,19 @@ describe('scanCodebase — test-material directories', () => {
     // is only a test root at the top level — both are kept on purpose.
     expect(names).toContain('example-guestbook');
     expect(names).toContain('nested-tests-service');
+  });
+
+  it('offers a production scope without changing the backwards-compatible all scope', async () => {
+    const all = await scanCodebase({ from: `${FIXTURE_ROOT}test-dir-exclusion`, scope: 'all' });
+    const production = await scanCodebase({ from: `${FIXTURE_ROOT}test-dir-exclusion`, scope: 'production' });
+    const allNames = graphOf(all.ir).nodes.map((n) => n.name as string);
+    const productionNames = graphOf(production.ir).nodes.map((n) => n.name as string);
+
+    expect(allNames).toContain('example-guestbook');
+    expect(allNames).toContain('nested-tests-service');
+    expect(allNames).toContain('docs-only-service');
+    expect(productionNames).toEqual(['api']);
+    expect(production.fileCount).toBeLessThan(all.fileCount);
   });
 });
 
@@ -53,6 +85,16 @@ describe('scanCodebase — empty result messaging', () => {
 });
 
 describe('scanCodebase — compose extractor', () => {
+  it('honours reset and override tags while merging Compose documents', () => {
+    const merged = mergeComposeDocuments(
+      'services:\n  api:\n    image: acme/api\n    profiles: [base]\n    command: [old]\n',
+      'services:\n  api:\n    profiles: !reset []\n    command: !override [new]\n',
+    );
+    expect(merged).toContain('profiles: []');
+    expect(merged).toContain('- new');
+    expect(merged).not.toContain('- old');
+  });
+
   it('emits a draft IR with canonical node ids and provenance on every element', async () => {
     const result = await scanCodebase({ from: `${FIXTURE_ROOT}compose-basic` });
     const g = graphOf(result.ir);
@@ -92,6 +134,49 @@ describe('scanCodebase — compose extractor', () => {
     const result = await scanCodebase({ from: `${FIXTURE_ROOT}compose-basic` });
     const findings = validateIrStructural(result.ir);
     expect(hasIrStructuralErrors(findings)).toBe(false);
+  });
+
+  it('merges the automatic Compose override before extracting topology', async () => {
+    const result = await scanCodebase({
+      from: `${FIXTURE_ROOT}compose-override`,
+      extractors: ['compose'],
+    });
+    const g = graphOf(result.ir);
+
+    expect(g.nodes.map((n) => n.name).sort()).toEqual(['api', 'db', 'mail', 'worker']);
+    expect(g.edges.some((e) => String(e.from).includes('api') && String(e.to).includes('db'))).toBe(true);
+    expect(g.edges.some((e) => String(e.from).includes('api') && String(e.to).includes('mail'))).toBe(true);
+
+    const api = g.nodes.find((n) => n.name === 'api')!;
+    const sources = readProvenance(api).map((p) => p.inferred_from);
+    expect(sources.some((source) => source.startsWith('docker-compose.yml:'))).toBe(true);
+    expect(sources.some((source) => source.startsWith('docker-compose.override.yml:'))).toBe(true);
+  });
+
+  it('does not emit the paired override as a second partial topology', async () => {
+    const result = await scanCodebase({
+      from: `${FIXTURE_ROOT}compose-override`,
+      extractors: ['compose'],
+    });
+    const names = graphOf(result.ir).nodes.map((n) => n.name);
+    expect(names.filter((name) => name === 'api')).toHaveLength(1);
+    expect(names.filter((name) => name === 'worker')).toHaveLength(1);
+  });
+
+  it('merges a named Compose variant only when it references the sibling base', async () => {
+    const result = await scanCodebase({
+      from: `${FIXTURE_ROOT}compose-named-variant`,
+      extractors: ['compose'],
+    });
+    const g = graphOf(result.ir);
+    const runner = g.nodes.find((node) => node.name === 'test-runner')!;
+    const api = g.nodes.find((node) => node.name === 'api')!;
+    expect(g.edges.some((edge) => edge.from === runner.id && edge.to === api.id)).toBe(true);
+    expect(readProvenance(runner).map((record) => record.inferred_from))
+      .toEqual([expect.stringMatching(/^compose\.tests\.yaml:/)]);
+    // No overlap/reference evidence: this remains an independent topology.
+    expect(g.nodes.some((node) => node.name === 'unrelated')).toBe(true);
+    expect(result.warnings.filter((warning) => warning.includes('api: Unknown image'))).toHaveLength(1);
   });
 
   it('matches the committed golden draft IR byte-for-byte', async () => {

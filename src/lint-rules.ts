@@ -13,6 +13,7 @@ import {
   looksLikeHealthUrl,
   buildSyncAdjacencyForLint,
   edgeRepresentsAsyncBoundary,
+  edgeIsDeploymentOrdering,
   evidenceConfidence,
 } from './lint-graph.js';
 import {
@@ -49,6 +50,7 @@ export function ruleDirectDbAccess(g: ParsedLintGraph): IrStructuralFinding[] {
   const seenPair = new Set<string>();
   g.edges.forEach((e, edgeIndex) => {
     if (!e || typeof e !== 'object') return;
+    if (edgeIsDeploymentOrdering(e as Record<string, unknown>)) return;
     const { from, to } = edgeEndpoints(e as Record<string, unknown>);
     if (!from || !to) return;
     const pairKey = `${from}\0${to}`;
@@ -89,7 +91,20 @@ export function ruleDirectDbAccess(g: ParsedLintGraph): IrStructuralFinding[] {
 export function ruleHighFanout(g: ParsedLintGraph): IrStructuralFinding[] {
   const FANOUT_THRESHOLD = 5;
   const findings: IrStructuralFinding[] = [];
-  for (const [id, deg] of g.outDegree) {
+  const dependencyDegree = new Map<string, number>();
+  for (const edge of g.edges) {
+    if (!edge || typeof edge !== 'object') continue;
+    const { from, to } = edgeEndpoints(edge as Record<string, unknown>);
+    if (!from || !to) continue;
+    if (edgeIsDeploymentOrdering(edge as Record<string, unknown>)) continue;
+    const target = g.nodeById.get(to);
+    // OpenAPI route decomposition represents one API surface as gateway ->
+    // endpoint edges. Routes are not downstream dependencies and must not
+    // inflate architectural fan-out.
+    if (target && isHttpEndpointType(nodeType(target))) continue;
+    dependencyDegree.set(from, (dependencyDegree.get(from) ?? 0) + 1);
+  }
+  for (const [id, deg] of dependencyDegree) {
     if (deg >= FANOUT_THRESHOLD) {
       findings.push({
         code: 'IR-LINT-HIGH-FANOUT-004',
@@ -121,7 +136,7 @@ export function ruleSyncChainFromHttpEntry(g: ParsedLintGraph): IrStructuralFind
   for (const e of edges) {
     if (!e || typeof e !== 'object') continue;
     const rec = e as Record<string, unknown>;
-    if (edgeRepresentsAsyncBoundary(rec, g)) continue;
+    if (edgeIsDeploymentOrdering(rec) || edgeRepresentsAsyncBoundary(rec, g)) continue;
     const { to } = edgeEndpoints(rec);
     if (to) hasIncomingSync.add(to);
   }
@@ -177,10 +192,11 @@ export function ruleNoHealthcheck(g: ParsedLintGraph): IrStructuralFinding[] {
   const httpNodes = [...g.nodeById.entries()].filter(([, n]) => isHttpLikeType(nodeType(n)));
   if (httpNodes.length === 0) return [];
 
-  for (const [, n] of httpNodes) {
+  for (const [, n] of g.nodeById) {
     const cfg = (n.config as Record<string, unknown>) || {};
     const url = String(cfg.url ?? '').trim();
     if (looksLikeHealthUrl(url)) return [];
+    if (Array.isArray(cfg.healthSignals) && cfg.healthSignals.length > 0) return [];
   }
 
   return [
@@ -207,6 +223,8 @@ export function ruleIsolatedNode(g: ParsedLintGraph): IrStructuralFinding[] {
     const out = g.outDegree.get(id) ?? 0;
     const inn = g.inDegree.get(id) ?? 0;
     if (out === 0 && inn === 0) {
+      const node = g.nodeById.get(id)!;
+      if (isInfraLeafSinkLintType(nodeType(node))) continue;
       findings.push({
         code: 'IR-LINT-ISOLATED-NODE-005',
         severity: 'warning',
@@ -399,11 +417,31 @@ export function ruleDeadNode(g: ParsedLintGraph): IrStructuralFinding[] {
     const inn = g.inDegree.get(id) ?? 0;
     if (out > 0 || inn === 0) continue; // has outgoing, or truly isolated (caught elsewhere)
     const t = nodeType(n);
+    const cfg = (n.config ?? {}) as Record<string, unknown>;
+    const compose = cfg.compose && typeof cfg.compose === 'object' && !Array.isArray(cfg.compose)
+      ? cfg.compose as Record<string, unknown>
+      : {};
+    const incoming = g.edges.filter((edge) => {
+      if (!edge || typeof edge !== 'object') return false;
+      return edgeEndpoints(edge as Record<string, unknown>).to === id;
+    });
+    const terminalK8sService = t === 'service' && typeof cfg.k8sKind === 'string' && incoming.length > 0 &&
+      incoming.every((edge) => {
+        const rec = edge as Record<string, unknown>;
+        const meta = (rec.metadata ?? {}) as Record<string, unknown>;
+        return meta.relation === 'serviceCall' || meta.relation === 'routes';
+      });
     if (
       isDbLikeType(t) ||
       isQueueLikeNodeType(t) ||
       isHttpLikeType(t) ||
       isInfraLeafSinkLintType(t) ||
+      // Reconstructed outbound destinations are terminal by definition: the
+      // repository can show the call to Bitbucket/Stripe/etc., but cannot show
+      // the remote system's internals or outgoing edges.
+      cfg.external === true ||
+      compose.oneShot === true ||
+      terminalK8sService ||
       // Auth middleware is a legitimate terminal node in this IR: the graph
       // records "app → auth" but has no vocabulary for "auth guards these
       // routes", so a correctly wired auth node ALWAYS has zero out-edges. The

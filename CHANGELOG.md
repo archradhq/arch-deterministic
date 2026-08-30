@@ -5,12 +5,15 @@ All notable changes to **`@archrad/deterministic`** are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.0] - 2026-07-30
+## [0.7.0] - 2026-08-28
 
 **Theme:** `archrad scan` — draft-IR generation from a real repository, graded by confidence, cited down to the line.
 
 ### Added
 
+- **`archrad demo`** — runs a bundled example end to end with **no arguments, no IR file, and no setup**, from any working directory. Prints the findings, states that the run was deterministic, and points at `scan` / `explain` / `validate` as next steps. Exits `0` so a first run never looks broken.
+  - Fixes a first-run failure: the README previously opened with `archrad validate --ir fixtures/demo-direct-db-violation.json`, which only resolves from a git clone. After `npm install -g` there is no `fixtures/` directory in the caller's CWD, so the documented quick start errored with `--ir file not found`. Bundled assets are now resolved relative to the installed package, not the CWD.
+  - Covered by `src/cli-demo.integration.test.ts`, which runs the command from an unrelated temp directory so the regression cannot recur silently.
 - **`archrad scan [path]`** — points at a repository and emits a **draft IR** (`metadata.status: "draft"`) from six extractors, run in priority order and merged:
   - `compose` (**high** confidence) — `docker-compose.yml` / `compose.yaml`, reusing `dockerComposeToCanonicalIr()`.
   - `kubernetes` (**high**) — Deployment/StatefulSet/DaemonSet/Pod/Job/CronJob/Service/Ingress manifests, detected by content (any `.yaml`/`.yml` with `apiVersion` + a recognized `kind`, not filename). Reuses `inferTypeFromImage()` and the connection-env-var matching from the `compose` path so a Postgres StatefulSet and a Postgres Compose service classify identically. A `Service` is resolved as an alias to the workload(s) it selects, not its own node; an `Ingress` becomes a `gateway` routing to its backends.
@@ -25,14 +28,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cross-tier duplicate unification (`unifyDraft`)** — a second merge pass that catches what id-based merging can't: the same app represented as `gateway` (code) vs a generic `service` (manifest), and the same datastore named differently per tier (e.g. `firestore` vs a client-variable-derived name). Resolved by grouping on an explicit `scanRoot` tag (for the one whole-scanned-unit node each of `manifest`/`code` can produce) and on shared `type` for known singleton infra (postgres, mongodb, cache, firestore, …), with a safety check that skips merging if a single extractor already reports more than one instance of that type.
 - **`reconstructIrFromCodebase` gained `singleService`** (opt-in, default off — existing decomposition behavior is unchanged for direct callers).
 
-### Changed
+### Changed — architecture lint findings
+
+> **Upgrading from 0.6.x:** the rules below now produce **fewer** findings for the same
+> input graph. Every change in this section suppresses a false positive; none of them
+> introduce a new finding. A pipeline that passed on 0.6.x cannot begin failing because
+> of this release. If you assert on exact finding counts, expect them to drop.
+
+- **Compose `depends_on` edges are no longer treated as runtime calls.** Startup ordering is operational topology, not evidence that one component calls another. Edges carrying `metadata.relation: "depends_on"` are now excluded from `IR-LINT-DIRECT-DB-ACCESS-002`, `IR-LINT-SYNC-CHAIN-001`, and the shared sync-adjacency graph. New predicate `edgeIsDeploymentOrdering()` is exported from `lint-graph.ts`.
+- **`IR-LINT-HIGH-FANOUT-004` now counts dependencies, not raw out-degree.** Edges that target an HTTP *endpoint* node are excluded, because OpenAPI ingestion represents a single API surface as gateway→endpoint edges — routes are not downstream dependencies and should not inflate architectural fan-out. `depends_on` edges are excluded too. Effect: gateways fronting more than five documented routes no longer report fan-out. Where several nodes still breach the threshold, their findings may be emitted in a different relative order than in 0.6.x (output remains deterministic for a given input).
+- **`IR-LINT-NO-HEALTHCHECK-003` recognizes health routes on non-HTTP nodes.** The rule still only applies to graphs containing at least one HTTP-like node, but the search for a health path now scans every node rather than only HTTP-like ones — a health route modeled as a `service` node now satisfies it. Also satisfied by a non-empty `config.healthSignals` array, which the Kubernetes extractor populates from probe definitions.
+- **`IR-LINT-ISOLATED-NODE-005` exempts infrastructure leaf sinks.** An inferred cache, DNS, search, storage, SMTP, or observability node with no edges is a normal outcome of manifest-level scanning, not an architecture defect.
+- **`IR-LINT-DEAD-NODE-011` exempts three more legitimately terminal shapes:** reconstructed outbound destinations (`config.external === true` — the repo can show the call to Stripe, never Stripe's internals), one-shot Compose containers (`config.compose.oneShot === true`), and a Kubernetes `Service` node whose only inbound edges are `serviceCall` / `routes` relations.
+- **`isInfraLeafSinkLintType()` now includes `observability`**, which feeds both of the exemptions above.
+
+### Changed — reconstruct and scan
 
 - **Auth-middleware detection now requires usage, not just an import.** A bare `import passport from 'passport'` no longer produces an `auth_middleware` artifact; detection requires `passport.authenticate/initialize/session/use(...)`. Fixes false-positive (and duplicate) auth nodes in `archrad reconstruct` and `archrad scan`.
 - **`dbNodeType` is now exported** from `reconstruct.ts`, and the `code` extractor's provenance attribution now matches each datastore/external-service node to *its own* detected artifact (by inferred type / call destination) instead of the first one found anywhere in the codebase — fixes misattributed `file:line` citations when a codebase has more than one datastore or outbound call destination.
+- **`ScanOptions.scope`** — `'all'` (library default, backwards compatible) or `'production'`, which additionally drops conventional test, example, doc, demo, and story files from the file tree. The CLI defaults to `production` so fixtures and Storybook stories do not become production findings.
+- **Two new cross-tier unification passes** in `merge-draft.ts`, both exported:
+  - `unifyEquivalentComponentNames()` — merges same-type components whose names differ only by separators or display spacing (Maven `Balance Reader` vs Kubernetes `balancereader`). Refuses the merge when a single extractor contributed more than one node in the group, since that is evidence of genuinely distinct components, and requires at least two extractors to agree.
+  - `unifyCorroboratedApps()` — folds extractor-specific views into the single proven scan root. Requires either an exact OpenAPI title/alias match, or two shared infrastructure neighbours corroborated by two independent Compose files. A shared service name alone never triggers a merge.
+- **`config.scanAliases`** is tracked internally through unification and, like `config.scanRoot`, stripped before nodes reach the public IR.
 
 ### Added (tests)
 
-70 new tests under `src/scan/` (six extractors, canonical ids, confidence-aware merge, cross-tier unification, determinism, byte-stable golden fixtures) plus 8 new regression tests in `src/reconstruct/reconstruct.test.ts` for the auth-usage and `singleService` changes. Full suite: 405 passing.
+70 new tests under `src/scan/` (six extractors, canonical ids, confidence-aware merge, cross-tier unification, determinism, byte-stable golden fixtures), 8 new regression tests in `src/reconstruct/reconstruct.test.ts` for the auth-usage and `singleService` changes, and coverage in `src/ir-lint.test.ts` for every lint change listed above. Full suite: **583 passing across 41 files**.
 
 ## [0.6.1] - 2026-05-21
 

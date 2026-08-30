@@ -8,37 +8,51 @@ Your architecture drifts before you write a single line of code. `archrad valida
 
 Define your system as a graph. ArchRAD compiles it, lints it against architecture rules, and tells you exactly what's wrong — with rule codes, not opinions.
 
+> **New in 0.7.0** — `archrad demo` runs a full example with zero setup, and `archrad scan`
+> drafts an IR from any repo with every node cited to `file:line`. Lint findings only
+> decrease in this release; nothing that passed on 0.6.x can start failing.
+> See the [changelog](./CHANGELOG.md).
+
 ---
 
 ## Quick start (60 seconds)
 
 ```bash
-npm install -g @archrad/deterministic
-archrad validate --ir fixtures/demo-direct-db-violation.json
+npx @archrad/deterministic demo
 ```
 
-You should see something like (exact wording may vary slightly by version):
+No install, no IR file, no flags. Lints a bundled example and shows you the findings:
 
 ```
+    orders-api (http)  ──▶  orders-db (postgres)
+
 ⚠️ IR-LINT-DIRECT-DB-ACCESS-002: API node "orders-api" connects directly to datastore node "orders-db"
    Fix: Introduce a service or domain layer between HTTP handlers and persistence.
+⚠️ IR-LINT-MISSING-AUTH-010: HTTP entry node "orders-api" has no auth node or auth config …
+⚠️ IR-LINT-NO-HEALTHCHECK-003: No HTTP node exposes a typical health/readiness path …
 ```
 
-For a smaller graph (single endpoint, no DB edge), try **`fixtures/minimal-graph.json`** — you will get different warnings (e.g. health/auth heuristics), not **`IR-LINT-DIRECT-DB-ACCESS-002`**.
+### Then run it on your own repo
 
-No IR file yet? Cold-start from an existing OpenAPI spec:
+```bash
+npm install -g @archrad/deterministic
+
+archrad scan . --out draft.ir.json    # draft an IR — every node cited to file:line
+archrad validate --ir draft.ir.json   # lint it
+```
+
+`scan` reads your Docker Compose, Kubernetes manifests, Terraform, OpenAPI, package manifests, and source
+code, then grades every node by confidence so you can see what was parsed versus guessed. The output is a
+normal IR file — review it, edit it, commit it.
+
+Already have an OpenAPI spec or a Backstage catalog? Skip the scan:
 
 ```bash
 archrad ingest openapi --spec ./openapi.yaml --out ./graph.json
-archrad validate --ir ./graph.json
+archrad ingest backstage --catalog . --out ./graph.json
 ```
 
-Or point at a real repo and let `archrad scan` draft one for you to review:
-
-```bash
-archrad scan . --out draft.ir.json
-archrad validate --ir ./draft.ir.json
-```
+Once a graph is committed, `archrad validate` is your CI gate — exit 1 blocks the merge.
 
 ---
 
@@ -88,7 +102,13 @@ erroring.
 archrad scan . --dry-run                       # print the draft, write nothing
 archrad scan ./server --out draft.ir.json       # write it
 archrad scan . --extractors compose,manifest    # only run specific extractors
+archrad scan . --scope all                      # include tests, examples, docs, and demos
 ```
+
+CLI scans default to `--scope production` so fixtures, documentation examples,
+Storybook stories, and test-only manifests do not become production findings.
+Use `--scope all` when those artifacts are the subject of the review. Library
+callers retain the backwards-compatible `scope: 'all'` default.
 
 The output is a normal IR file — pipe it straight into `archrad validate` once
 you've reviewed it. Full flags: **`docs/CLI_REFERENCE.md`**.

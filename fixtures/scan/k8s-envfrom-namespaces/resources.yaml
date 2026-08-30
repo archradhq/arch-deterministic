@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: app-config, namespace: team-a }
+data:
+  DATABASE_URL: postgres://db.team-a.svc:5432/app
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: app-config, namespace: team-b }
+data:
+  DATABASE_URL: postgres://db.team-b.svc:5432/app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: app-a, namespace: team-a }
+spec:
+  template:
+    metadata: { labels: { app: app-a } }
+    spec:
+      containers:
+        - name: app
+          image: acme/app
+          envFrom:
+            - configMapRef: { name: app-config }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: app-b, namespace: team-b }
+spec:
+  template:
+    metadata: { labels: { app: app-b } }
+    spec:
+      containers:
+        - name: app
+          image: acme/app
+          envFrom:
+            - configMapRef: { name: app-config }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: { name: db-a, namespace: team-a }
+spec:
+  template:
+    metadata: { labels: { app: db-a } }
+    spec:
+      containers: [{ name: db, image: "postgres:16" }]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: { name: db-b, namespace: team-b }
+spec:
+  template:
+    metadata: { labels: { app: db-b } }
+    spec:
+      containers: [{ name: db, image: "postgres:16" }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: db, namespace: team-a }
+spec:
+  selector: { app: db-a }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: db, namespace: team-b }
+spec:
+  selector: { app: db-b }

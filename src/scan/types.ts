@@ -72,6 +72,12 @@ export type ScanOptions = {
   extractors?: string[];
   /** Extra path fragments to exclude from the file tree (repeatable). */
   exclude?: string[];
+  /**
+   * File-tree scope. `all` preserves every non-build source artifact; `production`
+   * also removes conventional tests, examples, docs, demos, and story files.
+   * Library callers default to `all` for backwards compatibility.
+   */
+  scope?: 'all' | 'production';
 };
 
 export type ScanResult = {

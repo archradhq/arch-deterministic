@@ -33,6 +33,22 @@ const DATASTORE_TYPES = new Set([
   'cache',
 ]);
 
+const SUPPORTED_SOURCE_FILE = /\.(?:[cm]?[jt]sx?|py|cs)$/i;
+
+function rootPackageAliases(tree: Parameters<Extractor['extract']>[0]): string[] {
+  const file = tree.files.find((candidate) => candidate.relPath === 'package.json');
+  if (!file) return [];
+  try {
+    const parsed = JSON.parse(tree.read(file.relPath)) as Record<string, unknown>;
+    if (typeof parsed.name !== 'string' || !parsed.name.trim()) return [];
+    const unscoped = parsed.name.trim().replace(/^@[^/]+\//, '').toLowerCase();
+    const semantic = unscoped.replace(/[-_.](?:monorepo|repository|repo)$/, '');
+    return [...new Set([unscoped, semantic].filter(Boolean))].sort();
+  } catch {
+    return [];
+  }
+}
+
 /** Pick the artifact that best explains a node, for provenance file:line. */
 export function pickArtifact(
   node: Record<string, unknown>,
@@ -71,6 +87,13 @@ export const codeExtractor: Extractor = {
   name: 'code',
   defaultConfidence: 'low',
   async extract(tree): Promise<PartialIR[]> {
+    // Auto-detection defaults an otherwise unknown repository to Node.js. Avoid
+    // invoking reconstruction when the scan tree contains no supported source
+    // files; deployment-only repositories should not receive a misleading
+    // "No nodejs files" warning.
+    if (!tree.files.some((file) => SUPPORTED_SOURCE_FILE.test(file.relPath))) {
+      return [{ extractor: 'code', nodes: [], edges: [], warnings: [] }];
+    }
     const warnings: string[] = [];
     let result;
     try {
@@ -103,6 +126,7 @@ export const codeExtractor: Extractor = {
     if (rawNodes.length === 0) {
       return [{ extractor: 'code', nodes: [], edges: [], warnings }];
     }
+    const packageAliases = rootPackageAliases(tree);
 
     // Compute provenance per original node id, then attach; canonicalize last.
     const provByNodeId = new Map<string, ReturnType<typeof provenanceEntry>>();
@@ -122,7 +146,14 @@ export const codeExtractor: Extractor = {
           tagged.config && typeof tagged.config === 'object' && !Array.isArray(tagged.config)
             ? (tagged.config as Record<string, unknown>)
             : {};
-        tagged = { ...tagged, config: { ...config, scanRoot: true } };
+        tagged = {
+          ...tagged,
+          config: {
+            ...config,
+            scanRoot: true,
+            ...(packageAliases.length ? { scanAliases: packageAliases } : {}),
+          },
+        };
       }
       return tagged;
     });

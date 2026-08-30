@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: app }
+data:
+  BACKEND_URL: http://backend.retail.svc:8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: app }
+spec:
+  template:
+    metadata: { labels: { app: app } }
+    spec:
+      containers:
+        - name: app
+          image: acme/app
+          envFrom:
+            - configMapRef: { name: app }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: backend }
+spec:
+  template:
+    metadata: { labels: { app: backend } }
+    spec:
+      containers: [{ name: backend, image: acme/backend }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: backend }
+spec:
+  selector: { app: backend }

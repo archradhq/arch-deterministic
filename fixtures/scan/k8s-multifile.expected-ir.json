@@ -96,6 +96,11 @@
         "config": {
           "provenance": [
             {
+              "inferred_from": "k8s/configmap.yaml:1",
+              "confidence": "high",
+              "extractor": "kubernetes"
+            },
+            {
               "inferred_from": "k8s/deployment.yaml:1",
               "confidence": "high",
               "extractor": "kubernetes"

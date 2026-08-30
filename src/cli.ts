@@ -6,6 +6,7 @@
 
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Command, Option } from 'commander';
 import { runDeterministicExport } from './exportPipeline.js';
 import { isLocalHostPortFree, normalizeGoldenHostPort } from './hostPort.js';
@@ -70,6 +71,19 @@ import {
 } from './explain.js';
 import { readPackageVersion } from './package-version.js';
 import type { ReconstructResult } from './reconstruct/types.js';
+
+/**
+ * Resolve a path to an asset that ships inside the published package (see
+ * `files` in package.json), independent of the caller's CWD.
+ *
+ * The built entry is `dist/cli.js`, so the package root is one level up. This
+ * is what makes `archrad demo` work from any directory — telling users to run
+ * `--ir fixtures/...` only works from a git clone, not after `npm install -g`.
+ */
+function resolveBundledPath(...segments: string[]): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  return join(here, '..', ...segments);
+}
 
 async function writeTree(baseDir: string, files: Record<string, string>): Promise<void> {
   for (const [rel, content] of Object.entries(files)) {
@@ -182,6 +196,58 @@ program
     'Path to archrad.yml / archrad.yaml (default: walks up from CWD)'
   )
   .option('--no-config', 'Ignore any discovered archrad.yml');
+
+program
+  .command('demo')
+  .description(
+    'Run a bundled example end to end — no IR file, no flags, no setup. Start here.'
+  )
+  .option('--json', 'Print findings as JSON array to stdout')
+  .action(async (cmdOpts: { json?: boolean }) => {
+    const irPath = resolveBundledPath('fixtures', 'demo-direct-db-violation.json');
+    const ir = await readIrJsonFromPath(irPath);
+    if (ir == null) {
+      console.error(
+        'archrad: the bundled demo fixture could not be read. Please report this at\n' +
+          '         https://github.com/archradhq/arch-deterministic/issues'
+      );
+      process.exitCode = 1;
+      return;
+    }
+
+    const structural = validateIrStructural(ir);
+    const lint = hasIrStructuralErrors(structural) ? [] : validateIrLint(ir, {});
+    const findings = sortFindings([...structural, ...lint]);
+
+    if (cmdOpts.json) {
+      console.log(JSON.stringify(findings, null, 2));
+      return;
+    }
+
+    const { errorCount, warningCount } = findingMetrics(findings);
+
+    console.error('archrad demo — linting an example architecture:');
+    console.error('');
+    console.error('    orders-api (http)  ──▶  orders-db (postgres)');
+    console.error('');
+    console.error('An HTTP handler talking straight to a database, with no auth boundary.');
+    console.error('');
+
+    printFindingsPretty(findings, 'Findings:');
+
+    console.error(
+      `${findings.length} finding(s): ${errorCount} error, ${warningCount} warning.`
+    );
+    console.error('');
+    console.error('This was deterministic — no LLM, no network. Same graph in, same findings out.');
+    console.error('');
+    console.error('Next:');
+    console.error('  archrad scan .                     draft an IR from this repo (every node cited)');
+    console.error('  archrad explain <code>             canonical guidance for any rule above');
+    console.error('  archrad validate --ir <file>       gate a real graph (exit 1 blocks your CI)');
+    console.error('');
+    console.error('Docs: https://github.com/archradhq/arch-deterministic');
+  });
 
 program
   .command('init')
@@ -1407,6 +1473,11 @@ program
     (v: string, prev: string[]) => [...prev, v],
     [] as string[]
   )
+  .option(
+    '--scope <scope>',
+    'Scan scope: production excludes conventional tests/examples/docs; all preserves them',
+    'production'
+  )
   .option('--dry-run', 'Print draft IR JSON to stdout; do not write a file')
   .option('--verbose', 'Print per-extractor and warning details to stderr')
   .action(
@@ -1416,6 +1487,7 @@ program
         out?: string;
         extractors?: string;
         exclude?: string[];
+        scope?: string;
         dryRun?: boolean;
         verbose?: boolean;
       },
@@ -1424,6 +1496,12 @@ program
         ? cmdOpts.extractors.split(',').map((s) => s.trim()).filter(Boolean)
         : undefined;
 
+      if (cmdOpts.scope !== 'production' && cmdOpts.scope !== 'all') {
+        console.error('archrad scan: --scope must be "production" or "all"');
+        process.exitCode = 1;
+        return;
+      }
+
       let result;
       try {
         const { scanCodebase } = await import('./scan/scan.js');
@@ -1431,6 +1509,7 @@ program
           from: resolve(path ?? '.'),
           extractors,
           exclude: cmdOpts.exclude,
+          scope: cmdOpts.scope,
         });
       } catch (e) {
         console.error(`archrad scan: ${e instanceof Error ? e.message : String(e)}`);

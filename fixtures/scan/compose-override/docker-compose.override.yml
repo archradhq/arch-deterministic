@@ -1,0 +1,11 @@
+services:
+  api:
+    build: .
+    depends_on:
+      - mail
+    environment:
+      MODE: development
+  mail:
+    image: maildev/maildev:2
+  worker:
+    build: .

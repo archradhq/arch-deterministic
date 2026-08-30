@@ -1,0 +1,181 @@
+{
+  "$comment": [
+    "Pinned complex-repository regressions discovered through public-repo validation.",
+    "baselineHistory records the observed pre-fix output; expected/expectedNodes are the current adjudicated contract.",
+    "The scan-corpus harness loads this file together with repos.json. Do not update expectations without reviewing source provenance."
+  ],
+  "repos": [
+    {
+      "name": "nestjs-boilerplate",
+      "url": "https://github.com/brocoders/nestjs-boilerplate.git",
+      "commit": "9620f159eefe38f47747d02ab162852367c5472c",
+      "scope": "production",
+      "why": "NestJS auth plus alternative Postgres/MongoDB Compose profiles.",
+      "expectedNodes": 10,
+      "expected": {
+        "IR-LINT-DATASTORE-NO-INCOMING-008": 2,
+        "IR-LINT-DIRECT-DB-ACCESS-002": 3,
+        "IR-LINT-HIGH-FANOUT-004": 1,
+        "IR-LINT-ISOLATED-NODE-005": 4,
+        "IR-LINT-MISSING-AUTH-010": 2,
+        "IR-LINT-MULTIPLE-HTTP-ENTRIES-009": 1,
+        "IR-LINT-NO-HEALTHCHECK-003": 1
+      },
+      "baselineHistory": [{
+        "label": "before-production-scope-openapi-auth-external-sink-fixes",
+        "nodes": 10,
+        "findings": {
+          "IR-LINT-DATASTORE-NO-INCOMING-008": 2,
+          "IR-LINT-DIRECT-DB-ACCESS-002": 3,
+          "IR-LINT-HIGH-FANOUT-004": 1,
+          "IR-LINT-ISOLATED-NODE-005": 4,
+          "IR-LINT-MISSING-AUTH-010": 2,
+          "IR-LINT-MULTIPLE-HTTP-ENTRIES-009": 1,
+          "IR-LINT-NO-HEALTHCHECK-003": 1
+        }
+      }],
+      "notes": {
+        "unchanged": "The 14 findings were unchanged by this fix set.",
+        "known-gap": "Alternative database profiles and the code/Compose gateway split remain unresolved. NestJS guards are detected but not linked to the Compose API gateway."
+      }
+    },
+    {
+      "name": "cookiecutter-django",
+      "url": "https://github.com/cookiecutter/cookiecutter-django.git",
+      "commit": "2d3b8809f288187b3014163a3310766b5f962cf9",
+      "scope": "production",
+      "why": "Jinja-templated Django/Compose repository and external-service sink guard.",
+      "expectedNodes": 5,
+      "expected": {
+        "IR-LINT-DIRECT-DB-ACCESS-002": 1,
+        "IR-LINT-NO-HEALTHCHECK-003": 1
+      },
+      "baselineHistory": [{
+        "label": "before-production-scope-openapi-auth-external-sink-fixes",
+        "nodes": 5,
+        "findings": {
+          "IR-LINT-DEAD-NODE-011": 1,
+          "IR-LINT-DIRECT-DB-ACCESS-002": 1,
+          "IR-LINT-NO-HEALTHCHECK-003": 1
+        }
+      }],
+      "notes": {
+        "fixed": "DEAD-NODE dropped from 1 to 0 because reconstructed outbound destinations are explicit terminal nodes.",
+        "known-gap": "Unrendered Cookiecutter/Jinja Compose files are skipped; render the template for complete deployment topology."
+      }
+    },
+    {
+      "name": "wild-workouts",
+      "url": "https://github.com/ThreeDotsLabs/wild-workouts-go-ddd-example.git",
+      "commit": "8ecfcdf05b1462c4757bd2dcac9086c78e9f7791",
+      "scope": "production",
+      "why": "Go DDD microservices with HTTP, gRPC, Firestore, MySQL, CI and local Compose profiles.",
+      "expectedNodes": 16,
+      "expected": {
+        "IR-LINT-DEAD-NODE-011": 1,
+        "IR-LINT-ISOLATED-NODE-005": 3,
+        "IR-LINT-MISSING-AUTH-010": 7,
+        "IR-LINT-MULTIPLE-HTTP-ENTRIES-009": 1,
+        "IR-LINT-NO-HEALTHCHECK-003": 1
+      },
+      "baselineHistory": [{
+        "label": "before-production-scope-openapi-auth-external-sink-fixes",
+        "nodes": 16,
+        "findings": {
+          "IR-LINT-DEAD-NODE-011": 1,
+          "IR-LINT-ISOLATED-NODE-005": 3,
+          "IR-LINT-MISSING-AUTH-010": 7,
+          "IR-LINT-MULTIPLE-HTTP-ENTRIES-009": 1,
+          "IR-LINT-NO-HEALTHCHECK-003": 1
+        }
+      }],
+      "notes": {
+        "unchanged": "The 13 findings were unchanged by this fix set.",
+        "known-gap": "Published gRPC ports are classified as HTTP gateways, CI/local Compose profiles are combined, and Firebase/JWT auth is not linked to every Compose gateway."
+      }
+    },
+    {
+      "name": "backstage",
+      "url": "https://github.com/backstage/backstage.git",
+      "commit": "7fba55a177c047c0f8860216ceecf229f4902cd4",
+      "scope": "production",
+      "why": "Large TypeScript monorepo; primary guard for production scope, Storybook filtering, external sinks, and OpenAPI security propagation.",
+      "expectedNodes": 76,
+      "expected": {
+        "IR-LINT-DIRECT-DB-ACCESS-002": 1,
+        "IR-LINT-HIGH-FANOUT-004": 1,
+        "IR-LINT-ISOLATED-NODE-005": 1,
+        "IR-LINT-MULTIPLE-HTTP-ENTRIES-009": 1
+      },
+      "baselineHistory": [{
+        "label": "before-production-scope-openapi-auth-external-sink-fixes-temporary-checkout",
+        "nodes": 90,
+        "findings": {
+          "IR-LINT-DEAD-NODE-011": 7,
+          "IR-LINT-DIRECT-DB-ACCESS-002": 1,
+          "IR-LINT-HIGH-FANOUT-004": 1,
+          "IR-LINT-ISOLATED-NODE-005": 9,
+          "IR-LINT-MISSING-AUTH-010": 14,
+          "IR-LINT-MULTIPLE-HTTP-ENTRIES-009": 1
+        }
+      }],
+      "notes": {
+        "fixed": "On the canonical pinned checkout, findings dropped from the observed pre-fix 33 to 4 and nodes from 90 to 76.",
+        "known-gap": "The historical snapshot came from a directory named validation-target-backstage. Root service identity currently depends on the checkout basename; the corpus directory is canonically named backstage, which unifies that root with the declared gateway."
+      }
+    },
+    {
+      "name": "airflow",
+      "url": "https://github.com/apache/airflow.git",
+      "commit": "ff601cb5b75e77c1f28aaf014914f4e9d5cb0947",
+      "scope": "production",
+      "why": "Large Python monorepo with documentation Compose, provider packages, Helm templates, and test pod manifests.",
+      "expectedNodes": 21,
+      "expected": {
+        "IR-LINT-DIRECT-DB-ACCESS-002": 3,
+        "IR-LINT-HIGH-FANOUT-004": 1,
+        "IR-LINT-ISOLATED-NODE-005": 3
+      },
+      "baselineHistory": [{
+        "label": "before-production-scope-openapi-auth-external-sink-fixes",
+        "nodes": 34,
+        "findings": {
+          "IR-LINT-DEAD-NODE-011": 1,
+          "IR-LINT-DIRECT-DB-ACCESS-002": 4,
+          "IR-LINT-HIGH-FANOUT-004": 1,
+          "IR-LINT-ISOLATED-NODE-005": 10,
+          "IR-LINT-MISSING-AUTH-010": 2,
+          "IR-LINT-MULTIPLE-HTTP-ENTRIES-009": 1
+        }
+      }],
+      "notes": {
+        "fixed": "Findings dropped from 19 to 7 and nodes from 34 to 21.",
+        "known-gap": "The root service aggregates optional database providers; three Helm placeholder resources remain in production template directories."
+      }
+    },
+    {
+      "name": "keycloak",
+      "url": "https://github.com/keycloak/keycloak.git",
+      "commit": "ae1a37058febedf3fe89e6ff3bc3b0f20176a43f",
+      "scope": "production",
+      "why": "Large Java/Maven identity platform guarding test-resource filtering and OpenAPI security propagation.",
+      "expectedNodes": 16,
+      "expected": {
+        "IR-LINT-NO-HEALTHCHECK-003": 1
+      },
+      "baselineHistory": [{
+        "label": "before-production-scope-openapi-auth-external-sink-fixes",
+        "nodes": 22,
+        "findings": {
+          "IR-LINT-MISSING-AUTH-010": 2,
+          "IR-LINT-MULTIPLE-HTTP-ENTRIES-009": 1,
+          "IR-LINT-NO-HEALTHCHECK-003": 1
+        }
+      }],
+      "notes": {
+        "fixed": "Findings dropped from 4 to 1 and nodes from 22 to 16.",
+        "known-gap": "Keycloak exposes configurable health endpoints, but Java/Quarkus health detection is not implemented; the remaining health finding is known false-positive behavior."
+      }
+    }
+  ]
+}
