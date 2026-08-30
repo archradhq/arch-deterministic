@@ -8,7 +8,7 @@ Your architecture drifts before you write a single line of code. `archrad valida
 
 Define your system as a graph. ArchRAD compiles it, lints it against architecture rules, and tells you exactly what's wrong — with rule codes, not opinions.
 
-> **New in 0.7.0** — `archrad demo` runs a full example with zero setup, and `archrad scan`
+> **New in 0.7.x** — `archrad demo` runs a full example with zero setup, and `archrad scan`
 > drafts an IR from any repo with every node cited to `file:line`. Lint findings only
 > decrease in this release; nothing that passed on 0.6.x can start failing.
 > See the [changelog](./CHANGELOG.md).
@@ -18,10 +18,12 @@ Define your system as a graph. ArchRAD compiles it, lints it against architectur
 ## Quick start (60 seconds)
 
 ```bash
-npx @archrad/deterministic demo
+npm install -g @archrad/deterministic
+archrad demo
 ```
 
-No install, no IR file, no flags. Lints a bundled example and shows you the findings:
+No IR file, no flags, no config — runs from any directory. Lints a bundled example and
+shows you the findings:
 
 ```
     orders-api (http)  ──▶  orders-db (postgres)
@@ -35,8 +37,6 @@ No install, no IR file, no flags. Lints a bundled example and shows you the find
 ### Then run it on your own repo
 
 ```bash
-npm install -g @archrad/deterministic
-
 archrad scan . --out draft.ir.json    # draft an IR — every node cited to file:line
 archrad validate --ir draft.ir.json   # lint it
 ```

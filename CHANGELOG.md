@@ -5,6 +5,20 @@ All notable changes to **`@archrad/deterministic`** are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-08-30
+
+### Fixed
+
+- **Corrected the quick-start command in the README.** 0.7.0 documented
+  `npx @archrad/deterministic demo`, which fails with `could not determine executable to run`.
+  `npx <package>` resolves a bin whose name matches the package name; this package ships
+  `archrad` and `archrad-mcp`, so with two non-matching bins npx refuses to pick one. The
+  quick start is now `npm install -g @archrad/deterministic` followed by `archrad demo`.
+  For a one-shot run without installing, use `npx --package=@archrad/deterministic archrad demo`.
+- No functional changes. `archrad demo` itself worked correctly in 0.7.0 — only the
+  documented invocation was wrong. Since npmjs.com renders the README from the published
+  tarball, correcting it requires a release.
+
 ## [0.7.0] - 2026-08-28
 
 **Theme:** `archrad scan` — draft-IR generation from a real repository, graded by confidence, cited down to the line.
