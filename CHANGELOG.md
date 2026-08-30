@@ -384,7 +384,12 @@ IR-DRIFT-IMPL-* findings should be treated as "review required", not absolute tr
 - Documented **codegen vs validation** for retry/timeout IR fields and **InkByte vs OSS** scope in README and structural/semantic doc.
 - README positioning: **deterministic compiler and linter for system architecture**; validation layers table (OSS vs Cloud); **`validate-drift`**, drift GIF / trust-loop recording docs, library **`runValidateDrift`** example.
 
-[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/archradhq/arch-deterministic/compare/v0.7.0...v0.7.1
+[0.7.0]: https://github.com/archradhq/arch-deterministic/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/archradhq/arch-deterministic/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/archradhq/arch-deterministic/compare/v0.4.2...v0.5.0
+[0.4.2]: https://github.com/archradhq/arch-deterministic/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/archradhq/arch-deterministic/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/archradhq/arch-deterministic/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/archradhq/arch-deterministic/compare/v0.2.0...v0.3.0
