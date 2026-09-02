@@ -13,10 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated package, MCP server, and recording metadata for 0.7.2.
 - Refreshed the LLM-facing package summary to lead with repository scanning and the 0.7 first-run workflow.
 
+### Security
+
+- Raised the minimum `js-yaml` and Model Context Protocol SDK versions and refreshed their locked production
+  dependencies, eliminating all npm audit findings in the production dependency graph at release time.
+
 ### Fixed
 
 - Corrected remaining one-shot examples for this multi-binary package to use `npx --package=@archrad/deterministic archrad ...`.
-- No engine, CLI, rule, or output behavior changes.
+- No intended engine, CLI, rule, or output contract changes.
 
 ## [0.7.1] - 2026-08-30
 
