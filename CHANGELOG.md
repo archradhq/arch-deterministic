@@ -5,6 +5,19 @@ All notable changes to **`@archrad/deterministic`** are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] - 2026-09-02
+
+### Changed
+
+- Re-recorded the README demo from the 0.7.2 release candidate, showing the zero-setup demo and a cited repository scan.
+- Updated package, MCP server, and recording metadata for 0.7.2.
+- Refreshed the LLM-facing package summary to lead with repository scanning and the 0.7 first-run workflow.
+
+### Fixed
+
+- Corrected remaining one-shot examples for this multi-binary package to use `npx --package=@archrad/deterministic archrad ...`.
+- No engine, CLI, rule, or output behavior changes.
+
 ## [0.7.1] - 2026-08-30
 
 ### Fixed
@@ -384,7 +397,8 @@ IR-DRIFT-IMPL-* findings should be treated as "review required", not absolute tr
 - Documented **codegen vs validation** for retry/timeout IR fields and **InkByte vs OSS** scope in README and structural/semantic doc.
 - README positioning: **deterministic compiler and linter for system architecture**; validation layers table (OSS vs Cloud); **`validate-drift`**, drift GIF / trust-loop recording docs, library **`runValidateDrift`** example.
 
-[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/archradhq/arch-deterministic/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/archradhq/arch-deterministic/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/archradhq/arch-deterministic/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/archradhq/arch-deterministic/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/archradhq/arch-deterministic/compare/v0.5.0...v0.6.0

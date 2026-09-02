@@ -69,7 +69,7 @@ Three deployment modes — all use the same library core.
 flowchart LR
   subgraph dev["Developer machine"]
     IDE["Cursor / Copilot\nClaude Desktop"]
-    CLI_LOCAL["archrad CLI\nnpx @archrad/deterministic"]
+    CLI_LOCAL["archrad CLI\nnpx --package=@archrad/deterministic archrad"]
   end
 
   subgraph ci["CI pipeline\n(any platform)"]

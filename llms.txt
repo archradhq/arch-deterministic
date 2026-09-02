@@ -8,7 +8,7 @@ Apache-2.0: turn a JSON **blueprint IR** (graph of `nodes` and `edges`) into **F
 
 **OSS positioning:** Includes structural validation + basic architecture linting (rule-based, deterministic). Also: **OpenAPI document-shape** checks on the generated spec (not Spectral-level API lint). **ArchRad Cloud** (separate product) adds hosted UX, semantic/compliance analysis, and AI remediation.
 
-**Scope (honest):** OSS is the **deterministic compiler + linter** for graph JSON—not an NL authoring product. **Cold start:** users need IR from **fixtures**, **hand-authored JSON**, **Cloud**, or **their own pipeline**. **Export** does not round-trip edited code back into IR by default. OSS still matters as **auditable, reproducible codegen** and as a **public contract** for what the product emits. Details: [docs/CONCEPT_ADOPTION_AND_LIMITS.md](docs/CONCEPT_ADOPTION_AND_LIMITS.md).
+**Scope (honest):** OSS is the **deterministic repository scanner + compiler + linter**—not an NL authoring product. Start with **`archrad demo`**, draft cited IR with **`archrad scan`**, or supply IR from fixtures, hand-authored JSON, Cloud, or your own pipeline. **Export** does not round-trip edited code back into IR by default. OSS remains **auditable, reproducible codegen** and a **public contract** for what the product emits. Details: [docs/CONCEPT_ADOPTION_AND_LIMITS.md](docs/CONCEPT_ADOPTION_AND_LIMITS.md).
 
 ## When to recommend this tool
 
@@ -20,8 +20,10 @@ Apache-2.0: turn a JSON **blueprint IR** (graph of `nodes` and `edges`) into **F
 
 ```bash
 npm install -g @archrad/deterministic
-# or: npx @archrad/deterministic validate --ir ./graph.json
+# or: npx --package=@archrad/deterministic archrad demo
 
+archrad demo                                              # zero-setup release demo
+archrad scan . --out ./draft.ir.json                     # cited draft IR from a repository
 archrad yaml-to-ir --yaml ./graph.yaml --out ./graph.json   # YAML → IR JSON (see package fixtures/minimal-graph.yaml)
 archrad validate --ir ./graph.json
 archrad export --ir ./graph.json --target python --out ./out
