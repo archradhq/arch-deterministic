@@ -1,6 +1,6 @@
 {
   "name": "@archrad/deterministic",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "mcpName": "io.github.archradhq/deterministic",
   "description": "A deterministic compiler and linter for system architecture. Validate your architecture before you write code. OSS: structural validation + basic architecture lint (rule-based); FastAPI/Express export; OpenAPI document-shape; golden Docker/Makefile — no LLM.",
   "keywords": [
@@ -74,6 +74,7 @@
     "scan-corpus": "node scripts/scan-corpus.mjs",
     "scan-corpus:complex": "node scripts/scan-corpus.mjs --registry complex",
     "smoke:mcp": "node scripts/smoke-mcp.mjs",
+    "record:demo:validate": "vhs scripts/record-demo-validate.tape",
     "record:demo:payment-retry": "vhs scripts/record-demo-payment-retry.tape",
     "record:demo:drift": "vhs scripts/record-demo-drift.tape",
     "combine-corpus": "node scripts/combine-corpus.mjs"

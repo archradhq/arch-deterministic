@@ -6,12 +6,12 @@
     "url": "https://github.com/archradhq/arch-deterministic",
     "source": "github"
   },
-  "version": "0.4.1",
+  "version": "0.7.2",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@archrad/deterministic",
-      "version": "0.4.1",
+      "version": "0.7.2",
       "transport": {
         "type": "stdio"
       }

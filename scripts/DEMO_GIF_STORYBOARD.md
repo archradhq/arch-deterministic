@@ -2,11 +2,11 @@
 
 This doc covers GIFs shipped next to **`package.json`**: **npm** README, **GitHub** README, and **“one-command trust”** (tape → GIF). For **how** to record, see **[README_DEMO_RECORDING.md](./README_DEMO_RECORDING.md)**.
 
-## README hero (IR gate — still the primary npm clip)
+## README hero (0.7 release demo + repository scan)
 
 | Output file | Tape | What viewers see |
 |-------------|------|------------------|
-| **`demo-validate.gif`** | **`record-demo-validate.tape`** | **Failure first:** `validate` on **`fixtures/demo-direct-db-violation.json`** → **`IR-LINT-DIRECT-DB-ACCESS-002`** (red when stderr is a TTY) + **`IR-LINT-NO-HEALTHCHECK-003`** → comment → **`fixtures/demo-direct-db-layered.json`** → **clean** (no **IR-LINT-***). **No export** — gate on the blueprint. Stress-test many rules: **`fixtures/ecommerce-with-warnings.json`**. |
+| **`demo-validate.gif`** | **`record-demo-validate.tape`** | Runs the built **`@archrad/deterministic@0.7.2`** release candidate: **`archrad demo`** shows deterministic findings with no setup, then **`archrad scan`** processes the Compose/OpenAPI/code fixture and writes cited draft IR. |
 
 **Do not** overload the npm README with many GIFs unless total size stays small (&lt; ~3–5 MB each). Optional: **`demo.gif`** (**`record-demo.tape`**) — IR → project files in motion.
 
@@ -50,13 +50,12 @@ Terminal-only drift clips prove the **CLI**; they do not always prove **causalit
 - **`package.json` → `files`** includes **`demo-validate.gif`**, **`demo-drift.gif`**, etc., so published tarballs carry them when you **`npm publish`** (optional for **GitHub-only** OSS — commit the GIF either way).
 - **Record from a clone** of this package (fixtures + `dist/` after **`npm run build`**). Recording from **`npx`** is possible if fixture paths exist in your env.
 
-## Script beats — validate hero (recommended npm story)
+## Script beats — release hero (recommended npm story)
 
-1. Comment: enforcement on the **artifact** (not prose)
-2. `node dist/cli.js validate -i fixtures/demo-direct-db-violation.json` — hold on **IR-LINT-DIRECT-DB-ACCESS-002**
-3. Comment: fix the **graph** (service layer + health) — see **`demo-direct-db-layered.json`**
-4. `node dist/cli.js validate -i fixtures/demo-direct-db-layered.json` — clean pass
-5. Optional line: **`--fail-on-warning`** / **`--json`**
+1. Identify the exact release-candidate version and the zero-setup/no-account/no-LLM promise.
+2. Run **`archrad demo`** through the locally built CLI and hold on the cited rule findings.
+3. Run **`archrad scan`** through the same build against **`fixtures/export-golden-node-compose-demo`**.
+4. Hold on the six extractors, file count, node/edge count, and cited draft-IR message.
 
 ## Script beats — **validate-drift** (drift tape)
 
@@ -71,7 +70,7 @@ Terminal-only drift clips prove the **CLI**; they do not always prove **causalit
 ## Quality
 
 - Font **16–18px**, width **~1200px** in the tape, trim **`Sleep`** so each GIF stays under a few MB.
-- **Windows:** VHS needs **bash** (Git Bash / WSL).
+- **Windows:** the release tape uses **PowerShell** explicitly; the drift/export tapes still use **bash**.
 
 ## Not in scope here
 

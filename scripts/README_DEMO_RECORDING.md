@@ -6,9 +6,9 @@
 
 ## Recommended: `demo-validate.gif`
 
-**Story:** **failure first** — **`fixtures/demo-direct-db-violation.json`** → **`IR-LINT-DIRECT-DB-ACCESS-002`** (and **NO-HEALTHCHECK**) → layered **`fixtures/demo-direct-db-layered.json`** → **clean** validate. **No `export`** in the tape. **IR-LINT** lines use **ANSI red** when **stderr is a TTY** (unset **`NO_COLOR`**); VHS/ttyd counts as a TTY.
+**Story:** run the built **`@archrad/deterministic@0.7.2`** release candidate. **`archrad demo`** proves the zero-setup deterministic gate; **`archrad scan`** then processes a repository fixture and writes cited draft IR using the six 0.7 extractors.
 
-From **`packages/deterministic`**. The **`.tape`** files expect **bash** (Git Bash, WSL, or macOS/Linux). On **PowerShell alone**, `vhs` is not installed until you add it to `PATH` (see below).
+Run from **`packages/deterministic`**. **`record-demo-validate.tape`** explicitly uses PowerShell on Windows. The other export/drift tapes still use bash (Git Bash, WSL, or macOS/Linux).
 
 ### When VHS fails
 
@@ -18,7 +18,7 @@ VHS shells out to **`ttyd`** + **`ffmpeg`**; installs differ, and some environme
 |--------|----------------|
 | **`echo`: executable file not found** | VHS **`Require echo`** checks a real `echo` binary. Our **`record-demo-drift.tape`** omits it; for other tapes, delete the **`Require echo`** line or run VHS from **Git Bash** where **`echo`** exists. |
 | **`ttyd` / `ffmpeg` not found** | Install both, **restart the terminal**, confirm **`ttyd --version`** and **`ffmpeg -version`**. |
-| **Black screen, hang, or instant failure** | Update VHS; run from **Git Bash**; try WSL2; temporarily reduce **`Set Width` / `Set Height`** in the `.tape`. |
+| **Black screen, hang, or instant failure** | Update VHS; use PowerShell for the release tape or Git Bash for the bash tapes; temporarily reduce **`Set Width` / `Set Height`** in the `.tape`. |
 | **You want to skip VHS entirely** | Use the **same command sequence** as the tape while screen-recording (see below). |
 
 **Drift GIF without VHS:** from **`packages/deterministic`**, start **ShareX** (GIF) / **OBS** / **ScreenToGif**, then run one of:
@@ -67,17 +67,18 @@ Typical paths:
 
 Close and reopen the terminal, then:
 
-```bash
+```powershell
 npm run build
-vhs scripts/record-demo-validate.tape
+node dist/cli.js --version
+npm run record:demo:validate
 ```
 
-If `vhs` still says “not recognized”, run `where.exe vhs` or use the full path to `vhs.exe`. Easiest path on Windows is often **Git Bash** after install, since the tape uses `Set Shell "bash"`.
+If `vhs` still says “not recognized,” run `where.exe vhs` or use the full path to `vhs.exe`.
 
 Writes **`demo-validate.gif`** next to **`package.json`**. Add to **`README.md`** (below the title block):
 
 ```markdown
-![archrad validate — IR-LINT-DIRECT-DB-ACCESS-002 first, fix on the graph, clean gate](demo-validate.gif)
+![ArchRAD 0.7.2 running the zero-setup deterministic demo and scanning a repository into cited draft IR](demo-validate.gif)
 ```
 
 **`package.json` → `files`** already lists **`demo-validate.gif`** so it ships in the **npm tarball** once the file exists (commit the GIF or generate before publish).

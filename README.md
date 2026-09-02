@@ -1,6 +1,6 @@
 # @archrad/deterministic
 
-![archrad validate — IR-LINT-DIRECT-DB-ACCESS-002 first, fix on the graph, clean gate](demo-validate.gif)
+![ArchRAD 0.7.2 running the zero-setup deterministic demo and scanning a repository into cited draft IR](demo-validate.gif)
 
 ![Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue) ![no LLM](https://img.shields.io/badge/no%20LLM-deterministic-green) ![no account](https://img.shields.io/badge/no%20account-offline-lightgrey)
 

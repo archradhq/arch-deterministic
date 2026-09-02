@@ -1,6 +1,6 @@
 # Step-by-step: record `demo-validate.gif` (and use a branch, not `main`)
 
-Use this when regenerating the **npm README** hero GIF (**failure-first** validate: `demo-direct-db-violation` → `demo-direct-db-layered`). For install troubleshooting, see **[README_DEMO_RECORDING.md](./README_DEMO_RECORDING.md)**.
+Use this when regenerating the **npm README** hero GIF from the built 0.7 release candidate: zero-setup **`archrad demo`** followed by a cited **`archrad scan`**. For install troubleshooting, see **[README_DEMO_RECORDING.md](./README_DEMO_RECORDING.md)**.
 
 ---
 
@@ -32,7 +32,7 @@ Do **not** commit the new GIF (or tape tweaks) straight to `main` until reviewed
 
 - **Node.js ≥ 20** (`node -v`).
 - **This monorepo** cloned; you will run commands from **`packages/deterministic`**.
-- **VHS** + **ffmpeg** + **ttyd** on your `PATH` (VHS drives a headless terminal). On Windows, **Git Bash** (or WSL) is easiest because the tape uses **`Set Shell "bash"`**.
+- **VHS** + **ffmpeg** + **ttyd** on your `PATH` (VHS drives a headless terminal). On Windows, run the release tape from PowerShell; it uses **`Set Shell "powershell"`**.
 
 Install hints (Windows):
 
@@ -50,7 +50,7 @@ ttyd --version
 
 ---
 
-## Part C — Build CLI, then record
+## Part C — Build the release candidate, then record
 
 All steps from **`packages/deterministic`**:
 
@@ -61,16 +61,17 @@ All steps from **`packages/deterministic`**:
    npm ci
    ```
 
-2. **Compile TypeScript** (the tape runs **`node dist/cli.js`**):
+2. **Build and verify the exact release candidate** that will be published:
 
-   ```bash
+   ```powershell
    npm run build
+   node dist/cli.js --version
    ```
 
-3. **Record the GIF** (must be **bash** — run Git Bash here if you are on Windows):
+3. **Record the GIF** from PowerShell on Windows:
 
-   ```bash
-   vhs scripts/record-demo-validate.tape
+   ```powershell
+   npm run record:demo:validate
    ```
 
    This writes **`demo-validate.gif`** next to **`package.json`** (`packages/deterministic/demo-validate.gif`).
@@ -82,8 +83,8 @@ All steps from **`packages/deterministic`**:
 ## Part D — Check, commit on your branch, PR
 
 1. **Open the GIF** locally and confirm:
-   - First run shows **`IR-LINT-DIRECT-DB-ACCESS-002`** (and **`NO-HEALTHCHECK`**) on stderr.
-   - Second run ends with the **clean** success lines (no lint block).
+   - **`archrad demo`** shows deterministic architecture findings and the no-LLM/no-network statement.
+   - **`archrad scan`** lists all six extractors, scans seven files, and writes a two-node/one-edge draft graph.
    - File size is reasonable for npm (~**&lt; 3–5 MB** if possible).
 
 2. **Stage and commit** (still on your feature branch):
@@ -92,7 +93,7 @@ All steps from **`packages/deterministic`**:
    git add packages/deterministic/demo-validate.gif
    # include any tape/README changes you made
    git status
-   git commit -m "chore(deterministic): regenerate demo-validate.gif (failure-first IR gate)"
+   git commit -m "chore(deterministic): refresh 0.7 release demo GIF"
    ```
 
 3. **Push the branch** and open a **PR to `main`**:
