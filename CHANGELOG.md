@@ -5,7 +5,7 @@ All notable changes to **`@archrad/deterministic`** are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.2] - 2026-09-02
+## [0.7.2] - 2026-09-03
 
 ### Changed
 
@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Raised the minimum `js-yaml` and Model Context Protocol SDK versions and refreshed their locked production
   dependencies, eliminating all npm audit findings in the production dependency graph at release time.
+- Replaced three unbounded regular-expression/XML sanitization paths with linear operations for repository-controlled
+  names, Compose build contexts, and Maven comments; removed API credentials from optional research cache identifiers.
+- Refreshed the development lock and bundled fixture manifests to patched Vite, PostCSS, Nano ID, PostgreSQL JDBC,
+  Spring Kafka, pgx, and pytest versions, and added rate limiting to the Express scan fixtures.
 
 ### Fixed
 
@@ -86,7 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added (tests)
 
-70 new tests under `src/scan/` (six extractors, canonical ids, confidence-aware merge, cross-tier unification, determinism, byte-stable golden fixtures), 8 new regression tests in `src/reconstruct/reconstruct.test.ts` for the auth-usage and `singleService` changes, and coverage in `src/ir-lint.test.ts` for every lint change listed above. Full suite: **583 passing across 41 files**.
+72 new tests under `src/scan/` (six extractors, canonical ids, confidence-aware merge, cross-tier unification, determinism, byte-stable golden fixtures, and secure Maven comment handling), 8 new regression tests in `src/reconstruct/reconstruct.test.ts` for the auth-usage and `singleService` changes, and coverage in `src/ir-lint.test.ts` for every lint change listed above. Full suite: **585 passing across 41 files**.
 
 ## [0.6.1] - 2026-05-21
 

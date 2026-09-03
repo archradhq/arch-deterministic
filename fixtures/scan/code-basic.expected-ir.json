@@ -26,7 +26,7 @@
           "url": "/health",
           "provenance": [
             {
-              "inferred_from": "src/index.ts:21",
+              "inferred_from": "src/index.ts:23",
               "confidence": "low",
               "extractor": "code"
             }
@@ -40,7 +40,7 @@
         "config": {
           "provenance": [
             {
-              "inferred_from": "src/index.ts:5",
+              "inferred_from": "src/index.ts:6",
               "confidence": "low",
               "extractor": "code"
             }
@@ -61,7 +61,7 @@
         "config": {
           "provenance": [
             {
-              "inferred_from": "src/index.ts:21",
+              "inferred_from": "src/index.ts:23",
               "confidence": "low",
               "extractor": "code"
             }

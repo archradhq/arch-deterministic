@@ -20,7 +20,12 @@ const EXTENSIONS: Record<Language, string[]> = {
 };
 
 function slugId(s: string): string {
-  return s.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').toLowerCase().slice(0, 48) || 'svc';
+  const normalized = s.replace(/[^a-zA-Z0-9]+/g, '_');
+  let start = 0;
+  let end = normalized.length;
+  while (start < end && normalized[start] === '_') start++;
+  while (end > start && normalized[end - 1] === '_') end--;
+  return normalized.slice(start, end).toLowerCase().slice(0, 48) || 'svc';
 }
 
 /** Map detected DB detail string to a canonical IR node type. */

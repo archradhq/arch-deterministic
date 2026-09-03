@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { scanCodebase } from '../scan.js';
-import { parseRequirementLine } from './manifest.js';
+import { mavenComponentName, parseRequirementLine } from './manifest.js';
 import { NPM_LIB_MAP, PIP_LIB_MAP, GO_LIB_MAP, MAVEN_LIB_MAP } from './lib-map.js';
 import { canonicalIrToJsonString } from '../../yamlToIr.js';
 import { validateIrStructural, hasIrStructuralErrors } from '../../ir-structural.js';
@@ -22,6 +22,24 @@ describe('parseRequirementLine', () => {
     expect(parseRequirementLine('  # a comment')).toBeNull();
     expect(parseRequirementLine('-r base.txt')).toBeNull();
     expect(parseRequirementLine('')).toBeNull();
+  });
+});
+
+describe('mavenComponentName', () => {
+  it('rejects overlapping comment fragments instead of parsing through them', () => {
+    const pom = '<project><!<!-- harmless -->--><name>ignored</name><artifactId>billing</artifactId></project>';
+    expect(mavenComponentName(pom)).toBeNull();
+  });
+
+  it('ignores names in comments and repository blocks', () => {
+    const pom = [
+      '<project>',
+      '<!-- <name>comment-name</name> -->',
+      '<artifactId>billing</artifactId>',
+      '<repositories><repository><name>repository-name</name></repository></repositories>',
+      '</project>',
+    ].join('');
+    expect(mavenComponentName(pom)).toBe('billing');
   });
 });
 
