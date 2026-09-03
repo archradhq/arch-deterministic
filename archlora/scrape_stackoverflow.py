@@ -213,20 +213,19 @@ Return: {{"ir": <graph or null>, "violations": [...]}}"""
 
 def so_get(path: str, params: dict, api_key: str, session) -> Optional[dict]:
     """Make a Stack Overflow API request with caching and backoff."""
-    params["key"]  = api_key
-    params["site"] = "stackoverflow"
-
-    cache_key  = hashlib.sha256((path + json.dumps(params, sort_keys=True)).encode()).hexdigest()
+    cache_params = {**params, "site": "stackoverflow"}
+    cache_key  = hashlib.sha256((path + json.dumps(cache_params, sort_keys=True)).encode()).hexdigest()
     cache_file = CACHE_DIR / f"{cache_key}.json"
 
     if cache_file.exists():
         return json.loads(cache_file.read_text(encoding="utf-8"))
 
     url = f"{SO_API_BASE}{path}"
+    request_params = {**cache_params, "key": api_key}
 
     for attempt in range(3):
         try:
-            resp = session.get(url, params=params, timeout=15)
+            resp = session.get(url, params=request_params, timeout=15)
 
             if resp.status_code == 429:
                 wait = int(resp.headers.get("Retry-After", 30))

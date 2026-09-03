@@ -17,8 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Raised the minimum `js-yaml` and Model Context Protocol SDK versions and refreshed their locked production
   dependencies, eliminating all npm audit findings in the production dependency graph at release time.
-- Replaced three unbounded regular-expression/XML sanitization paths with linear scanners for repository-controlled
-  names, Compose build contexts, and Maven comments; switched the optional research cache key from MD5 to SHA-256.
+- Replaced three unbounded regular-expression/XML sanitization paths with linear operations for repository-controlled
+  names, Compose build contexts, and Maven comments; removed API credentials from optional research cache identifiers.
 - Refreshed the development lock and bundled fixture manifests to patched Vite, PostCSS, Nano ID, PostgreSQL JDBC,
   Spring Kafka, pgx, and pytest versions, and added rate limiting to the Express scan fixtures.
 
