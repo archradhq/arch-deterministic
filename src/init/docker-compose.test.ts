@@ -159,6 +159,7 @@ services:
     expect(composeLocalBuildContext({ build: { context: '.' } })).toBe('.');
     expect(composeLocalBuildContext({ build: './tests/' })).toBe('tests');
     expect(composeLocalBuildContext({ build: { context: './vote' } })).toBe('vote');
+    expect(composeLocalBuildContext({ build: `./vote${'/'.repeat(100_000)}` })).toBe('vote');
     // Not a local build at all.
     expect(composeLocalBuildContext({ image: 'postgres:15' })).toBeNull();
     expect(composeLocalBuildContext({ build: 'https://github.com/acme/repo.git' })).toBeNull();

@@ -13,7 +13,7 @@ aioredis = "^2.0"
 # Dev dependencies are not runtime infrastructure and are not read.
 [tool.poetry.group.dev.dependencies]
 pymongo = "^4.0"
-pytest = "^8.0"
+pytest = "^9.0.3"
 
 [build-system]
 requires = ["poetry-core"]

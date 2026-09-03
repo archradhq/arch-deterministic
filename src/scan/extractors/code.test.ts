@@ -78,8 +78,8 @@ describe('scanCodebase — code extractor', () => {
       expect(prov.extractor).toBe('code');
       expect(prov.inferred_from).toMatch(/^src\/index\.ts:\d+$/);
     }
-    // The DB connection is on line 5 of the fixture source.
-    expect(readProvenance(db)[0]!.inferred_from).toBe('src/index.ts:5');
+    // The DB connection is on line 6 of the fixture source.
+    expect(readProvenance(db)[0]!.inferred_from).toBe('src/index.ts:6');
   });
 
   it('emits nothing when there is no code signal (no phantom service node)', async () => {

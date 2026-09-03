@@ -216,7 +216,7 @@ def so_get(path: str, params: dict, api_key: str, session) -> Optional[dict]:
     params["key"]  = api_key
     params["site"] = "stackoverflow"
 
-    cache_key  = hashlib.md5((path + json.dumps(params, sort_keys=True)).encode()).hexdigest()
+    cache_key  = hashlib.sha256((path + json.dumps(params, sort_keys=True)).encode()).hexdigest()
     cache_file = CACHE_DIR / f"{cache_key}.json"
 
     if cache_file.exists():

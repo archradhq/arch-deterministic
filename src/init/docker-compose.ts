@@ -650,7 +650,10 @@ export function composeLocalBuildContext(serviceDef: Record<string, unknown>): s
   if (!trimmed) return '.';
   if (/^(?:[a-z][a-z0-9+.-]*:\/\/|git@|github\.com\/)/i.test(trimmed)) return null;
   // Normalize './', './/', 'a/b/' → '.', 'a/b'
-  const normalized = trimmed.replace(/\\/g, '/').replace(/\/+$/, '');
+  const slashNormalized = trimmed.replace(/\\/g, '/');
+  let end = slashNormalized.length;
+  while (end > 0 && slashNormalized[end - 1] === '/') end--;
+  const normalized = slashNormalized.slice(0, end);
   return normalized === '' || normalized === '.' ? '.' : normalized.replace(/^\.\//, '');
 }
 

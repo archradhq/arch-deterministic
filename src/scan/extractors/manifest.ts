@@ -272,16 +272,38 @@ function mavenHits(text: string): Hit[] {
  * component — and a pom with no `<name>` of its own would otherwise be named
  * after it.
  */
-function mavenComponentName(text: string): string | null {
-  const header =
-    text
-      // Comments first: a pom that merely MENTIONS <repositories> in a comment
-      // would otherwise have everything up to the real closing tag stripped.
-      .replace(/<!--[\s\S]*?-->/g, '')
-      .replace(/<parent>[\s\S]*?<\/parent>/g, '')
-      .replace(/<pluginRepositories>[\s\S]*?<\/pluginRepositories>/g, '')
-      .replace(/<repositories>[\s\S]*?<\/repositories>/g, '')
-      .split(/<dependencies>/)[0] ?? '';
+/**
+ * Remove literal XML regions in one linear pass per region type.
+ *
+ * A separating space is retained so removing a region cannot join attacker-
+ * controlled fragments into a new XML comment or tag boundary.
+ */
+function withoutXmlRegions(text: string, open: string, close: string): string {
+  let cursor = 0;
+  const result: string[] = [];
+  while (cursor < text.length) {
+    const start = text.indexOf(open, cursor);
+    if (start === -1) {
+      result.push(text.slice(cursor));
+      break;
+    }
+    result.push(text.slice(cursor, start), ' ');
+    const end = text.indexOf(close, start + open.length);
+    if (end === -1) break;
+    cursor = end + close.length;
+  }
+  return result.join('');
+}
+
+export function mavenComponentName(text: string): string | null {
+  // Comments first: a pom that merely MENTIONS <repositories> in a comment
+  // would otherwise have everything up to the real closing tag stripped.
+  let header = withoutXmlRegions(text, '<!--', '-->');
+  if (header.includes('<!--') || header.includes('-->')) return null;
+  for (const tag of ['parent', 'pluginRepositories', 'repositories']) {
+    header = withoutXmlRegions(header, `<${tag}>`, `</${tag}>`);
+  }
+  header = header.split('<dependencies>')[0] ?? '';
   const displayName = header.match(/<name>([^<]+)<\/name>/)?.[1]?.trim();
   if (displayName && !displayName.includes('${')) return displayName;
   return header.match(/<artifactId>([^<]+)<\/artifactId>/)?.[1]?.trim() || null;

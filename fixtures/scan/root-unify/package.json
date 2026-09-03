@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "dependencies": {
     "express": "^4.19.0",
-    "pg": "^8.11.0"
+    "pg": "^8.11.0",
+    "express-rate-limit": "^8.7.0"
   }
 }
